@@ -18,15 +18,15 @@ public class Device {
     @Column(name = "device_type", nullable = false)
     private String deviceType;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mapped_flat_id")
     private Flat flat;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mapped_common_area_id")
     private CommonArea commonArea;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "society_id",nullable = false)
     private Society society;
 
@@ -37,7 +37,6 @@ public class Device {
     @Column(name = "registered_at", nullable = false, updatable = false)
     private LocalDateTime registeredAt;
 
-    @CreationTimestamp
     @Column(name = "last_seen_at")
     private LocalDateTime lastSeenAt;
 

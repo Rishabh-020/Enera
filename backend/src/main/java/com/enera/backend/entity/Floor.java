@@ -8,7 +8,7 @@ import jakarta.persistence.*;
 public class Floor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
     @ManyToOne
     @JoinColumn(name = "block_id",nullable = false)

@@ -10,7 +10,7 @@ public class CommonArea {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long  id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "society_id",nullable = false)
     private Society society;
 

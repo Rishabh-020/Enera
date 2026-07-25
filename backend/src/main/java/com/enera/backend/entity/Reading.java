@@ -12,17 +12,9 @@ public class Reading {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "device_id",nullable = false)
     private Device device;
-
-    @ManyToOne
-    @JoinColumn(name = "flat_id")
-    private Flat flat;
-
-    @ManyToOne
-    @JoinColumn(name = "common_area_id")
-    private CommonArea commonArea;
 
     @Column(nullable = false)
     private Double kw;
