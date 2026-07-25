@@ -7,17 +7,17 @@ import jakarta.persistence.*;
 public class Flat {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "floor_id",nullable = false)
     private Floor floor;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "block_id",nullable = false)
     private Block block;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "society_id",nullable = false)
     private Society society;
 

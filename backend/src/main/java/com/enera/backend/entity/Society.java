@@ -14,7 +14,7 @@ public class Society {
     @Column(nullable = false)
     private String name;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "builder_id",nullable = false)
     private Builder builder;
 
