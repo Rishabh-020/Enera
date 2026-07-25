@@ -37,7 +37,6 @@ public class Device {
     @Column(name = "registered_at", nullable = false, updatable = false)
     private LocalDateTime registeredAt;
 
-    @CreationTimestamp
     @Column(name = "last_seen_at")
     private LocalDateTime lastSeenAt;
 
