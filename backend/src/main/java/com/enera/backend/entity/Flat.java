@@ -13,14 +13,6 @@ public class Flat {
     @JoinColumn(name = "floor_id",nullable = false)
     private Floor floor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "block_id",nullable = false)
-    private Block block;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "society_id",nullable = false)
-    private Society society;
-
     @Column(name = "flat_number", nullable = false)
     private String flatNumber;
 
