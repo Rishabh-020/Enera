@@ -1,8 +1,9 @@
 package com.enera.backend.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
-
+@Data
 @Entity
 @Table(name = "common_areas")
 public class CommonArea {
