@@ -1,7 +1,9 @@
 package com.enera.backend.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "blocks")
 public class Block {
