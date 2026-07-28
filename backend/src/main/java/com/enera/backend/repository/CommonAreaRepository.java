@@ -19,6 +19,7 @@ public interface CommonAreaRepository extends JpaRepository<CommonArea,Long> {
 
     Optional<CommonArea> findBySocietyAndName(Society society, String name);
 
-    boolean existsBySocietyAndNameAndFloorOrLocation(Society society,
-                                                     String name, String floorOrLocation);
+//    The naming issue is causing server to crash
+//    boolean existsBySocietyAndNameAndFloorOrLocation(Society society,
+//                                                     String name, String floorOrLocation);
 }
