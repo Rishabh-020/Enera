@@ -1,1 +1,65 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap");
 @import "tailwindcss";
+
+/* ── Arcadia Design Tokens ──────────────────────────────────── */
+:root {
+  --color-canopy:      #104336;
+  --color-mint-pulse:  #0fff87;
+  --color-cream-paper: #f3f1ec;
+  --color-sheet-white: #ffffff;
+  --color-bark:        #101f1e;
+  --color-sage-mist:   #afc4bf;
+  --color-slate:       #535e5d;
+  --color-orb-violet:  #7c18d3;
+  --color-amber:       #f59e0b;
+  --color-amber-light: #facc15;
+
+  --radius-card:   16px;
+  --radius-btn:    8px;
+  --radius-input:  4px;
+
+  --font-body:    'DM Sans', 'Inter', sans-serif;
+  --font-display: 'Space Grotesk', 'DM Sans', sans-serif;
+}
+
+/* ── Global Reset ───────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-cream-paper);
+  color: var(--color-bark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+/* Remove default button/input styles */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ── Scrollbar (subtle) ─────────────────────────────────────── */
+::-webkit-scrollbar         { width: 6px; }
+::-webkit-scrollbar-track   { background: transparent; }
+::-webkit-scrollbar-thumb   { background: var(--color-sage-mist); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-slate); }

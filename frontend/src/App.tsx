@@ -1,8 +1,9 @@
 import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import api from "./api/api";
+import SignIn from "./app/signin/SignIn";
 
 function App() {
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -12,11 +13,17 @@ function App() {
         console.error(error);
       }
     };
-
     fetchData();
   }, []);
 
-  return <h1 className="bg-cyan-300">React + Spring Boot</h1>;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="*" element={<Navigate to="/signin" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
