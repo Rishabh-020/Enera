@@ -2,7 +2,7 @@ package com.enera.backend.entity;
 
 public enum  Role {
     SUPER_ADMIN,
-    BUILDER,
+    BUILDER_ADMIN,
     SOCIETY_ADMIN,
     RESIDENT
 }
