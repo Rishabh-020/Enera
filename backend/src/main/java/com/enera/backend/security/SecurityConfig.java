@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .hasAuthority("SOCIETY_ADMIN")
 
                         .requestMatchers("/flat/**")
-                        .hasAuthority("FLAT_OWNER")
+                        .hasAnyAuthority("RESIDENT","SOCIETY_ADMIN")
 
                         .anyRequest().authenticated()
                 )
