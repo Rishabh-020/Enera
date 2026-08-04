@@ -1,6 +1,6 @@
 package com.enera.backend.service;
 
-import com.enera.backend.dto.UserResponseDto;
+import com.enera.backend.dto.user.UserResponse;
 import com.enera.backend.entity.User;
 import com.enera.backend.repository.UserRepository;
 import org.springframework.security.core.Authentication;
@@ -18,7 +18,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponseDto getCurrentUser(){
+    public UserResponse getCurrentUser(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String email = authentication.getName();
@@ -26,7 +26,7 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return new UserResponseDto(
+        return new UserResponse(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),

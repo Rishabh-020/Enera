@@ -35,15 +35,15 @@ public class GlobalExceptionHandler {
             InvalidCredentialException.class,
             JwtAuthenticationException.class
     })
-    public ResponseEntity<ErrorResponse> handleUnauthorized(RuntimeException ex){
+    public ResponseEntity<ErrorResponse> handleUnauthorized(Exception ex){
         return buildErrorResponse(HttpStatus.UNAUTHORIZED,ex.getMessage());
     }
 
     // For 403 forbidden access
     @ExceptionHandler({
-            AccessDeniedException.class
+            CustomAccessDeniedException.class
     })
-    public ResponseEntity<ErrorResponse> handleAccess(AccessDeniedException ex){
+    public ResponseEntity<ErrorResponse> handleAccess(CustomAccessDeniedException ex){
         return buildErrorResponse(HttpStatus.FORBIDDEN,ex.getMessage());
     }
 

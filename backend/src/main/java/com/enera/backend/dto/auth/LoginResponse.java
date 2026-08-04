@@ -1,4 +1,4 @@
-package com.enera.backend.dto;
+package com.enera.backend.dto.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

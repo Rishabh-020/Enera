@@ -218,7 +218,7 @@ const roles: { id: Role; label: string; icon: React.ReactNode; desc: string }[] 
   { id: "builder", label: "Builder", icon: <HardHat size={16} />, desc: "Project oversight" },
 ];
 
-const ACCENT = "#f59e0b";
+// const ACCENT = "#f59e0b";
 
 export default function SignIn() {
   const [activeRole, setActiveRole] = useState<Role>("resident");
@@ -278,7 +278,7 @@ export default function SignIn() {
           alignItems: "center",
           justifyContent: "center",
           background: "#f3f1ec",
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: "var(--font-inter)",
           position: "relative",
           overflow: "hidden",
           padding: "32px 24px",
@@ -318,7 +318,7 @@ export default function SignIn() {
               </div>
               <span
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-polysans)",
                   fontWeight: 700,
                   fontSize: "22px",
                   letterSpacing: "0.08em",
@@ -332,7 +332,7 @@ export default function SignIn() {
 
             <h1
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-polysans)",
                 fontWeight: 700,
                 fontSize: "clamp(32px, 4vw, 46px)",
                 lineHeight: 1.15,
@@ -383,7 +383,7 @@ export default function SignIn() {
                     {icon}
                   </div>
                   <div>
-                    <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: "15px", color: "#101f1e" }}>
+                    <p style={{ fontFamily: "var(--font-polysans)", fontWeight: 700, fontSize: "15px", color: "#101f1e" }}>
                       {title}
                     </p>
                     <p style={{ fontSize: "13px", color: "#535e5d" }}>{desc}</p>
@@ -407,7 +407,7 @@ export default function SignIn() {
           >
             <h2
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-polysans)",
                 fontWeight: 700,
                 fontSize: "24px",
                 color: "#101f1e",
@@ -452,7 +452,7 @@ export default function SignIn() {
                       background: active ? "rgba(16,67,54,0.12)" : "transparent",
                       color: active ? "#104336" : "#535e5d",
                       cursor: "pointer",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-polysans)",
                       fontWeight: 600,
                       fontSize: "11px",
                       transition: "all 0.2s ease",
@@ -602,7 +602,7 @@ export default function SignIn() {
                   border: "none",
                   background: loading || isLocked ? "rgba(0,0,0,0.06)" : "#104336",
                   color: loading || isLocked ? "#9CA3AF" : "#0fff87",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-polysans)",
                   fontWeight: 700,
                   fontSize: "14px",
                   letterSpacing: "0.03em",
@@ -642,7 +642,7 @@ export default function SignIn() {
                     background: "rgba(255,255,255,0.6)",
                     color: "#535e5d",
                     cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "var(--font-inter)",
                     fontSize: "11px",
                     fontWeight: 500,
                     transition: "all 0.2s ease",

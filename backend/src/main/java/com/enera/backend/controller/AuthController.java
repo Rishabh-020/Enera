@@ -1,11 +1,9 @@
 package com.enera.backend.controller;
 
-import com.enera.backend.dto.LoginRequest;
-import com.enera.backend.dto.LoginResponse;
+import com.enera.backend.dto.auth.LoginRequest;
+import com.enera.backend.dto.auth.LoginResponse;
 import com.enera.backend.security.JwtService;
-import io.jsonwebtoken.Jwt;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.PostMapping;

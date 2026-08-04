@@ -1,65 +1,94 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
 @import "tailwindcss";
 
-/* ── Arcadia Design Tokens ──────────────────────────────────── */
+@font-face {
+  font-family: 'PolySans';
+  src: local('PolySans'), local('PolySans Neutral'), local('PolySans Bulky'), local('Space Grotesk'), local('Plus Jakarta Sans');
+  font-weight: 400 800;
+  font-display: swap;
+}
+
 :root {
-  --color-canopy:      #104336;
-  --color-mint-pulse:  #0fff87;
-  --color-cream-paper: #f3f1ec;
-  --color-sheet-white: #ffffff;
-  --color-bark:        #101f1e;
-  --color-sage-mist:   #afc4bf;
-  --color-slate:       #535e5d;
-  --color-orb-violet:  #7c18d3;
-  --color-amber:       #f59e0b;
-  --color-amber-light: #facc15;
-
-  --radius-card:   16px;
-  --radius-btn:    8px;
-  --radius-input:  4px;
-
-  --font-body:    'DM Sans', 'Inter', sans-serif;
-  --font-display: 'Space Grotesk', 'DM Sans', sans-serif;
+  --font-inter: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-polysans: 'PolySans', 'Space Grotesk', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* ── Global Reset ───────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@theme {
+  --font-sans: var(--font-inter);
+  --font-inter: var(--font-inter);
+  --font-display: var(--font-polysans);
+  --font-polysans: var(--font-polysans);
+  --font-mono: "JetBrains Mono", monospace;
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
+  --color-grid-950: #070c18;
+  --color-grid-900: #0b1120;
+  --color-grid-800: #131c30;
+  --color-grid-700: #1c2740;
+  --color-grid-600: #2a3757;
+
+  --color-amp-400: #ffb84d;
+  --color-amp-500: #f5a623;
+  --color-amp-600: #d98a0f;
+
+  --color-live-500: #16a34a;
+  --color-warn-500: #f59e0b;
+  --color-high-500: #dc2626;
+  --color-teal-500: #0d9488;
 }
 
 body {
-  font-family: var(--font-body);
-  background: var(--color-cream-paper);
-  color: var(--color-bark);
+  font-family: var(--font-inter);
+  background: #f4f5f8;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  line-height: 1.6;
 }
 
-/* Remove default button/input styles */
-button {
-  font-family: inherit;
-  cursor: pointer;
+h1, h2, h3, h4, h5, h6,
+.font-display,
+.font-polysans,
+.brand-title,
+.financial-figure {
+  font-family: var(--font-polysans);
 }
 
-input, textarea, select {
-  font-family: inherit;
+.font-inter {
+  font-family: var(--font-inter);
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+.font-polysans {
+  font-family: var(--font-polysans);
 }
 
-/* ── Scrollbar (subtle) ─────────────────────────────────────── */
-::-webkit-scrollbar         { width: 6px; }
-::-webkit-scrollbar-track   { background: transparent; }
-::-webkit-scrollbar-thumb   { background: var(--color-sage-mist); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-slate); }
+.font-mono-data {
+  font-family: var(--font-mono);
+}
+
+/* subtle pulse for live meter glow */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.animate-glow {
+  animation: pulse-glow 2.4s ease-in-out infinite;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd2de;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
