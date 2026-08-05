@@ -77,8 +77,8 @@ public class GlobalExceptionHandler {
 
     // For 400 Error
     @ExceptionHandler({
-            IllegalArgumentException.class,
-            MethodArgumentNotValidException.class
+            BadRequestException.class,
+            RequestValidationException.class
     })
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception  ex){
         return buildErrorResponse(HttpStatus.BAD_REQUEST,ex.getMessage());

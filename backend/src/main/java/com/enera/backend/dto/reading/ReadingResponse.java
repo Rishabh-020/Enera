@@ -5,16 +5,16 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class ReadingRequest {
-    @NotNull(message = "Device ID is required")
+public class ReadingResponse {
+    private Long id;
+
     private Long deviceId;
 
-    @NotNull(message = "Power (kW) is required")
     private Double kw;
 
-    @NotNull(message = "Energy (kWh) is required")
     private Double kwh;
 
-    @NotNull(message = "Reading timestamp is required")
     private LocalDateTime timestamp;
+
+    private LocalDateTime createdAt;
 }
