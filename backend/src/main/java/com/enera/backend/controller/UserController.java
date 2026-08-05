@@ -1,6 +1,6 @@
 package com.enera.backend.controller;
 
-import com.enera.backend.dto.UserResponseDto;
+import com.enera.backend.dto.user.UserResponse;
 import com.enera.backend.service.UserService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +16,7 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public UserResponseDto useCurrentUser(){
+    public UserResponse useCurrentUser(){
         return userService.getCurrentUser();
     }
 }

@@ -47,10 +47,10 @@ public class SecurityConfig {
                         .hasAuthority("SUPER_ADMIN")
 
                         .requestMatchers("/builder/**")
-                        .hasAuthority("BUILDER_ADMIN")
+                        .hasAnyAuthority("SUPER_ADMIN", "BUILDER")
 
-                        .requestMatchers("/society/**")
-                        .hasAuthority("SOCIETY_ADMIN")
+                        .requestMatchers("/society-admin/**")
+                        .hasAnyAuthority("SUPER_ADMIN", "SOCIETY_ADMIN")
 
                         .requestMatchers("/flat/**")
                         .hasAnyAuthority("RESIDENT","SOCIETY_ADMIN")
