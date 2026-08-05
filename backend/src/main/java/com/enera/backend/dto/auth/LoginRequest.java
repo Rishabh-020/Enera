@@ -1,5 +1,6 @@
 package com.enera.backend.dto.auth;
 
+import com.enera.backend.entity.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -12,4 +13,7 @@ public class LoginRequest {
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
     private String email;
+
+    @NotBlank(message = "Role is required")
+    private Role role;
 }
