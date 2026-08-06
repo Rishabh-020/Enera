@@ -10,30 +10,40 @@ import type { BuilderOverview, BuilderSocietyRow } from "../../lib/types";
 export default function BuilderAdminDashboard() {
   const { builderId } = useParams<{ builderId: string }>();
   const navigate = useNavigate();
-
   const [overview, setOverview] = useState<BuilderOverview | null>(null);
   const [societies, setSocieties] = useState<BuilderSocietyRow[] | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     if (!builderId) return;
+
     api.getBuilderOverview(builderId).then(setOverview);
+
     api.getBuilderSocieties(builderId).then(setSocieties);
   }, [builderId]);
 
-  const sorted = societies ? [...societies].sort((a, b) => (sortDir === "desc" ? b.mtdKwh - a.mtdKwh : a.mtdKwh - b.mtdKwh)) : null;
+  const sorted = societies ? [...societies].sort((a, b) => (sortDir === "desc" ?
+    b.mtdKwh - a.mtdKwh : a.mtdKwh - b.mtdKwh)) : null;
 
   return (
-    <DashboardLayout nav={[{ key: "dashboard", label: "Portfolio", icon: <LayoutGrid size={16} /> }]} activeKey="dashboard">
+    <DashboardLayout nav={[{
+      key: "dashboard", label: "Portfolio",
+      icon: <LayoutGrid size={16} />
+    }]} activeKey="dashboard">
       <div className="mb-5">
         <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Builder Admin</p>
         <h1 className="font-display text-2xl font-bold text-grid-900">Portfolio overview</h1>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Societies" value={overview ? overview.totalSocieties : "—"} icon={<Building2 size={16} />} loading={!overview} accent />
-        <StatCard label="Total flats" value={overview ? overview.totalFlats : "—"} sub={overview ? `${overview.devicesOnline} meters live` : ""} icon={<Users size={16} />} loading={!overview} />
-        <StatCard label="Month-to-date" value={overview ? `${overview.mtdKwh} kWh` : "—"} sub={overview ? `₹${overview.mtdCost.toLocaleString("en-IN")}` : ""} icon={<Zap size={16} />} loading={!overview} />
+        <StatCard label="Societies" value={overview ? overview.totalSocieties : "—"}
+          icon={<Building2 size={16} />} loading={!overview} accent />
+        <StatCard label="Total flats" value={overview ? overview.totalFlats : "—"}
+          sub={overview ? `${overview.devicesOnline} meters live` : ""} icon={<Users size={16} />}
+          loading={!overview} />
+        <StatCard label="Month-to-date" value={overview ? `${overview.mtdKwh} kWh` : "—"}
+          sub={overview ? `₹${overview.mtdCost.toLocaleString("en-IN")}` : ""} icon={<Zap size={16} />}
+          loading={!overview} />
       </div>
 
       <Card className="mt-6">

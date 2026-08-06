@@ -13,7 +13,4 @@ public class LoginRequest {
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
     private String email;
-
-    @NotBlank(message = "Role is required")
-    private Role role;
 }

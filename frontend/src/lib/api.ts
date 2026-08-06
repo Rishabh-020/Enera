@@ -1,33 +1,14 @@
 import { db, getFlatDevice, getCommonAreaDevice, getSocietyFlats, getFloorFlats } from "./mockData";
 import * as engine from "./readingEngine";
 import type {
-  BlockFloorRow,
-  BuilderOverview,
-  BuilderSocietyRow,
-  Device,
-  DeviceRow,
-  FlatHourlyProfile,
-  FlatLive,
-  FlatSummary,
-  FlatTrend,
-  FloorFlatRow,
-  HeatmapGrid,
-  MeterStatus,
-  RegisterDeviceInput,
-  Session,
-  SocietyBlockRow,
-  SocietyCommonAreaRow,
-  SocietyFlatRow,
-  SocietyOverview,
+  BlockFloorRow, BuilderOverview, BuilderSocietyRow, Device, DeviceRow, FlatHourlyProfile, FlatLive,
+  FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, MeterStatus, RegisterDeviceInput, Session,
+  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview,
 } from "./types";
-
-// Single seam: flip to a real backend later without touching any component.
-export const USE_MOCK = true;
+import api from '../api/api'
 
 const delay = (ms = 220): Promise<void> => new Promise((res) => setTimeout(res, ms));
 
-// Runtime-mutable device registry so registrations/deregistrations made in the
-// UI persist for the session without needing a real backend.
 const extraDevices: Device[] = [];
 const deregisteredIds = new Set<string>();
 
@@ -43,15 +24,33 @@ function deviceStatus(device: Device): MeterStatus {
   return mins > 30 ? "offline-long" : "offline";
 }
 
-// ---------------------------------------------------------------- Auth ----
+
+// This function is used in the login request to return the whole detail of the user
 export async function login(email: string, password: string): Promise<Session> {
-  await delay(350);
-  const user = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-  if (!user) throw new Error("Invalid email or password. Please try again.");
-  return { token: `mock-jwt.${user.id}`, user };
+  const response = await api.post("/auth/login", {
+    email,
+    password
+  });
+
+  const data = response.data;
+
+  return {
+    token: data.token,
+    user: {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      flatId: data.flatId,
+      societyId: data.societyId,
+      builderId: data.builderId,
+    }
+  }
+
 }
 
-// ---------------------------------------------------------- Flat Owner ----
+
+
 export async function getFlatLive(flatId: string): Promise<FlatLive> {
   await delay();
   const device = getFlatDevice(flatId)!;
@@ -66,6 +65,8 @@ export async function getFlatLive(flatId: string): Promise<FlatLive> {
   const level = kw > currentHourAvg * 1.25 ? "high" : kw > currentHourAvg * 1.05 ? "amber" : "normal";
   return { online: true, kw, level, pctVsUsual, timestamp: new Date() };
 }
+
+
 
 export async function getFlatSummary(flatId: string, monthDate: Date = new Date()): Promise<FlatSummary> {
   await delay();
@@ -114,7 +115,7 @@ export async function getSocietyOverview(societyId: string): Promise<SocietyOver
   let mtdKwh = 0;
   const now = new Date();
   for (const flat of flats) {
-    const device = getFlatDevice(flat.id)!;
+    const device = getFlatDevice(String(flat.id))!;
     if (deviceStatus(device) === "live") liveKwTotal += engine.liveKw(device.id, false);
     mtdKwh += engine.monthSeries(device.id, false, now).reduce((s, d) => s + d.kwh, 0);
   }
@@ -140,7 +141,7 @@ export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockR
     let todayKwh = 0;
     let mtdKwh = 0;
     for (const flat of flats) {
-      const device = getFlatDevice(flat.id)!;
+      const device = getFlatDevice(String(flat.id))!;
       if (deviceStatus(device) === "live") liveKw += engine.liveKw(device.id, false);
       todayKwh += engine.dailyKwh(device.id, now, false);
       mtdKwh += engine.monthSeries(device.id, false, now).reduce((s, d) => s + d.kwh, 0);
@@ -234,7 +235,6 @@ export async function getSocietyFlatsList(
   return rows;
 }
 
-// ------------------------------------------------------- Builder Admin ----
 export async function getBuilderOverview(_builderId: string): Promise<BuilderOverview> {
   await delay();
   const societies = db.builder.societies;

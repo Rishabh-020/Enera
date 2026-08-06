@@ -13,13 +13,13 @@ interface RoleOption {
 }
 
 const ROLES: RoleOption[] = [
-  { key: "flat_owner", label: "Flat Owner", demo: "rishabh.owner@enra.io" },
-  { key: "society_admin", label: "Society Admin", demo: "admin.s1@demo.io" },
-  { key: "builder_admin", label: "Builder Admin", demo: "builder@demo.io" },
+  { key: "FLAT_OWNER", label: "Flat Owner", demo: "rishabh.owner@enra.io" },
+  { key: "SOCIETY_ADMIN", label: "Society Admin", demo: "admin.s1@demo.io" },
+  { key: "BUILDER_ADMIN", label: "Builder Admin", demo: "builder@demo.io" },
 ];
 
 export default function Login() {
-  const [role, setRole] = useState<Role>("flat_owner");
+  const [role, setRole] = useState<Role>("FLAT_OWNER");
   const [email, setEmail] = useState(ROLES[0].demo);
   const [password, setPassword] = useState("demo123");
   const [error, setError] = useState("");
@@ -44,8 +44,8 @@ export default function Login() {
         setLoading(false);
         return;
       }
-      if (user.role === "flat_owner") navigate(`/flat/${user.flatId}`);
-      else if (user.role === "society_admin") navigate(`/society/${user.societyId}`);
+      if (user.role === "FLAT_OWNER") navigate(`/flat/${user.flatId}`);
+      else if (user.role === "SOCIETY_ADMIN") navigate(`/society/${user.societyId}`);
       else navigate(`/builder/${user.builderId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
