@@ -4,6 +4,13 @@ import lombok.Data;
 
 @Data
 public class BuilderDashboardResponse {
-    private Long id;
+    private Long totalSocieties;
 
+    private Long totalBlocks;
+
+    private Long totalFlats;
+
+    private Long totalDevices;
+
+    private Double totalEnergyConsumed;
 }

@@ -47,9 +47,9 @@ public class SecurityConfig {
                         .hasAuthority("SUPER_ADMIN")
 
                         .requestMatchers("/builder/**")
-                        .hasAnyAuthority("SUPER_ADMIN", "BUILDER")
+                        .hasAnyAuthority("SUPER_ADMIN", "BUILDER_ADMIN")
 
-                        .requestMatchers("/society-admin/**")
+                        .requestMatchers("/society/**")
                         .hasAnyAuthority("SUPER_ADMIN", "SOCIETY_ADMIN")
 
                         .requestMatchers("/flat/**")
