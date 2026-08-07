@@ -9,10 +9,25 @@ import BuilderAdminDashboard from "./app/dashboard/BuilderAdminDashboard";
 
 function Root() {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.role === "flat_owner") return <Navigate to={`/flat/${user.flatId}`} replace />;
-  if (user.role === "society_admin") return <Navigate to={`/society/${user.societyId}`} replace />;
-  return <Navigate to={`/builder/${user.builderId}`} replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === "FLAT_OWNER") {
+    return <Navigate to={`/flat/${user.flatId}`} replace />;
+  }
+
+  if (user.role === "SOCIETY_ADMIN") {
+    return <Navigate to={`/society/${user.societyId}`} replace />;
+  }
+
+  if (user.role === "BUILDER_ADMIN") {
+    return <Navigate to={`/builder/${user.builderId}`} replace />;
+  }
+
+  if (user.role === "SUPER_ADMIN") {
+    return <Navigate to={`/superAdmin/${user.id}`} replace />;
+  }
 }
 
 export default function App() {
@@ -21,39 +36,55 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+
           <Route path="/" element={<Root />} />
+
           <Route
             path="/flat/:flatId"
             element={
-              <RequireRole roles={["flat_owner"]}>
+              <RequireRole roles={["FLAT_OWNER"]}>
                 <FlatOwnerDashboard />
               </RequireRole>
             }
           />
+
           <Route
             path="/society/:societyId"
             element={
-              <RequireRole roles={["society_admin", "builder_admin"]}>
+              <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
                 <SocietyAdminDashboard />
               </RequireRole>
             }
           />
+
           <Route
             path="/society/:societyId/devices"
             element={
-              <RequireRole roles={["society_admin"]}>
+              <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
                 <DeviceManagement />
               </RequireRole>
             }
           />
+
           <Route
             path="/builder/:builderId"
             element={
-              <RequireRole roles={["builder_admin"]}>
+              <RequireRole roles={["BUILDER_ADMIN", "SUPER_ADMIN"]}>
                 <BuilderAdminDashboard />
               </RequireRole>
             }
           />
+
+          <Route
+            path="/superAdmin"
+            element={
+              <RequireRole roles={["SUPER_ADMIN"]}>
+                {/* <SuperAdminDashboard /> */}
+                <p>Super Admin Dashboard</p>
+              </RequireRole>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

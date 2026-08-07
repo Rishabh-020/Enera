@@ -14,7 +14,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => {
     const raw = sessionStorage.getItem("energy_session");
-    return raw ? (JSON.parse(raw) as Session) : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as Session;
+    } catch {
+      sessionStorage.removeItem("energy_session");
+      return null;
+    }
   });
 
   const doLogin = useCallback(async (email: string, password: string) => {

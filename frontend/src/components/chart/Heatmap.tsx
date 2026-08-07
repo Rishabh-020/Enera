@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription } from "../ui/primitives";
 import type { HeatmapGrid } from "../../lib/types";
 
-const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface HoverState {
   d: number;
