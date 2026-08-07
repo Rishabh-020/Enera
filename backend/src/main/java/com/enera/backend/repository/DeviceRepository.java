@@ -22,4 +22,6 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
     List<Device> findBySocietyAndCommonArea(Society society,CommonArea  commonArea);
 
     boolean existsBySocietyAndCommonAreaAndFlat(Society society,CommonArea  commonArea,Flat flat);
+
+    Integer countBySocietyBuilderIdAndStatus(Long builderId,Boolean online);
 }

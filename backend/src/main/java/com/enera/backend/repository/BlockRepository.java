@@ -17,4 +17,6 @@ public interface BlockRepository extends JpaRepository<Block,Long> {
     List<Block> findByBlockName(String blockName);
 
     boolean existsByBlockName(String blockName);
+
+    Integer countBySocietyBuilderId(Long builderId);
 }

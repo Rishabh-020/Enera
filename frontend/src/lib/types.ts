@@ -190,8 +190,9 @@ export interface SocietyFlatRow extends Flat {
 }
 
 export interface BuilderOverview {
+  name: string;
   totalSocieties: number;
-  totalFlats: number;
+  totalBlocks: number;
   devicesOnline: number;
   mtdKwh: number;
   mtdCost: number;

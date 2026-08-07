@@ -31,14 +31,17 @@ export default function BuilderAdminDashboard() {
       icon: <LayoutGrid size={16} />
     }]} activeKey="dashboard">
       <div className="mb-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Builder Admin</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Builder Admin <br />
+          {overview ? overview.name : "—"}</p>
         <h1 className="font-display text-2xl font-bold text-grid-900">Portfolio overview</h1>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Societies" value={overview ? overview.totalSocieties : "—"}
-          icon={<Building2 size={16} />} loading={!overview} accent />
-        <StatCard label="Total flats" value={overview ? overview.totalFlats : "—"}
+        <StatCard label="Societies"
+          value={overview ? overview.totalSocieties : "—"}
+          icon={<Building2 size={16} />}
+          loading={!overview} accent />
+        <StatCard label="Total Blocks" value={overview ? overview.totalBlocks : "—"}
           sub={overview ? `${overview.devicesOnline} meters live` : ""} icon={<Users size={16} />}
           loading={!overview} />
         <StatCard label="Month-to-date" value={overview ? `${overview.mtdKwh} kWh` : "—"}
