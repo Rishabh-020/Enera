@@ -13,4 +13,6 @@ public class BuilderDashboardResponse {
     private Long totalDevices;
 
     private Double totalEnergyConsumed;
+
+    private Double totalCost;
 }

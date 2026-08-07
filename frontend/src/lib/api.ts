@@ -235,43 +235,50 @@ export async function getSocietyFlatsList(
   return rows;
 }
 
-export async function getBuilderOverview(_builderId: string): Promise<BuilderOverview> {
-  await delay();
-  const societies = db.builder.societies;
-  let totalFlats = 0;
-  let totalKwh = 0;
-  let devicesOnline = 0;
-  const now = new Date();
-  for (const s of societies) {
-    totalFlats += s.flats.length;
-    for (const flat of s.flats) {
-      const device = getFlatDevice(flat.id)!;
-      if (deviceStatus(device) === "live") devicesOnline++;
-      totalKwh += engine.monthSeries(device.id, false, now).reduce((sum, d) => sum + d.kwh, 0);
-    }
-  }
-  return { totalSocieties: societies.length, totalFlats, devicesOnline, mtdKwh: +totalKwh.toFixed(0), mtdCost: totalKwh * 10 };
+
+// These function make call to the api from the backend for the builder
+export async function getBuilderOverview(builderId: string): Promise<BuilderOverview> {
+  const response = await api.get(`/builder/${builderId}/overview`);
+  return response.data;
+  // await delay();  
+  // const societies = db.builder.societies;
+  // let totalFlats = 0;
+  // let totalKwh = 0;
+  // let devicesOnline = 0;
+  // const now = new Date();
+  // for (const s of societies) {
+  //   totalFlats += s.flats.length;
+  //   for (const flat of s.flats) {
+  //     const device = getFlatDevice(flat.id)!;
+  //     if (deviceStatus(device) === "live") devicesOnline++;
+  //     totalKwh += engine.monthSeries(device.id, false, now).reduce((sum, d) => sum + d.kwh, 0);
+  //   }
+  // }
+  // return { totalSocieties: societies.length, totalFlats, devicesOnline, mtdKwh: +totalKwh.toFixed(0), mtdCost: totalKwh * 10 };
 }
 
-export async function getBuilderSocieties(_builderId: string): Promise<BuilderSocietyRow[]> {
-  await delay();
-  const now = new Date();
-  return db.builder.societies.map((s) => {
-    let mtdKwh = 0;
-    for (const flat of s.flats) {
-      const device = getFlatDevice(flat.id)!;
-      mtdKwh += engine.monthSeries(device.id, false, now).reduce((sum, d) => sum + d.kwh, 0);
-    }
-    return {
-      id: s.id,
-      name: s.name,
-      city: s.city,
-      totalFlats: s.flats.length,
-      occupiedFlats: s.flats.filter((f) => f.status === "occupied").length,
-      mtdKwh: +mtdKwh.toFixed(0),
-      avgPerFlat: +(mtdKwh / s.flats.length).toFixed(1),
-    };
-  });
+export async function getBuilderSocieties(builderId: string): Promise<BuilderSocietyRow[]> {
+  const response = await api.get(`/builder/${builderId}/societies`);
+
+  return response.data;
+  // await delay();
+  // const now = new Date();
+  // return db.builder.societies.map((s) => {
+  //   let mtdKwh = 0;
+  //   for (const flat of s.flats) {
+  //     const device = getFlatDevice(flat.id)!;
+  //     mtdKwh += engine.monthSeries(device.id, false, now).reduce((sum, d) => sum + d.kwh, 0);
+  //   }
+  //   return {
+  //     id: s.id,
+  //     name: s.name,
+  //     city: s.city,
+  //     totalFlats: s.flats.length,
+  //     occupiedFlats: s.flats.filter((f) => f.status === "occupied").length,
+  //     mtdKwh: +mtdKwh.toFixed(0),
+  //     avgPerFlat: +(mtdKwh / s.flats.length).toFixed(1),
+  //   };
+  // });
 }
 
 // ------------------------------------------------------ Device Manager ----

@@ -21,4 +21,8 @@ public interface FlatRepository extends JpaRepository<Flat,Long> {
 
     boolean existsByFloorAndFlatNumber(Floor floor,String flatNumber);
 
+    Integer countByFloorBlockSocietyId(Long societyId);
+
+    Integer countByFloorBlockSocietyIdAndStatus(Long societyId,boolean occupied);
+
 }
