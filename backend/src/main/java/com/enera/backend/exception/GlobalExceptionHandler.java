@@ -3,6 +3,7 @@ package com.enera.backend.exception;
 import com.enera.backend.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -33,7 +34,8 @@ public class GlobalExceptionHandler {
     // For 401 unauthorized
     @ExceptionHandler({
             InvalidCredentialException.class,
-            JwtAuthenticationException.class
+            JwtAuthenticationException.class,
+            BadCredentialsException.class
     })
     public ResponseEntity<ErrorResponse> handleUnauthorized(Exception ex){
         return buildErrorResponse(HttpStatus.UNAUTHORIZED,ex.getMessage());

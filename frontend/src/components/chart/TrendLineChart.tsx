@@ -26,7 +26,7 @@ export function TrendLineChart({ trend, loading }: TrendLineChartProps) {
         </div>
         <div className={`flex items-center gap-1 text-sm font-semibold ${up ? "text-high-500" : "text-live-500"}`}>
           {up ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-          {Math.abs(trend.pctChange)}% vs previous 30 days
+          {Math.abs(trend.pctChange)}% vs previous 15 days
         </div>
       </CardHeader>
       <div className="h-64 px-2 pb-5 pt-4">

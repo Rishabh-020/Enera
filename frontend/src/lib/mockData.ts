@@ -116,10 +116,9 @@ const RESIDENT_NAMES = [
 ];
 
 const users: User[] = [];
-let residentIdx = 0;
 for (const society of societiesRaw) {
   society.flats.forEach((flat, i) => {
-    if (flat.status === "occupied" && residentIdx < RESIDENT_NAMES.length + 40) {
+    if (flat.status === "occupied") {
       const name = RESIDENT_NAMES[i % RESIDENT_NAMES.length];
       flat.residentName = name;
     }

@@ -44,7 +44,7 @@ const badgeVariants = cva("inline-flex items-center gap-1.5 rounded-full px-2.5 
     variant: {
       live: "bg-live-500/10 text-live-500",
       normal: "bg-live-500/10 text-live-500",
-      amber: "bg-warn-500/10 text-warn-600 text-amber-700",
+      amber: "bg-warn-500/10 text-amber-700",
       warn: "bg-amp-500/10 text-amp-600",
       high: "bg-high-500/10 text-high-500",
       offline: "bg-slate-100 text-slate-500",
@@ -55,7 +55,7 @@ const badgeVariants = cva("inline-flex items-center gap-1.5 rounded-full px-2.5 
   defaultVariants: { variant: "neutral" },
 });
 
-interface BadgeProps extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
+interface BadgeProps extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> { }
 
 export function Badge({ className, variant, children, ...props }: BadgeProps) {
   return (
@@ -86,7 +86,7 @@ const buttonVariants = cva(
   }
 );
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> { }
 
 export function Button({ className, variant, size, children, ...props }: ButtonProps) {
   return (

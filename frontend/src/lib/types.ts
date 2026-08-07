@@ -1,6 +1,4 @@
-// Shared domain types for the Amperly energy dashboard.
-
-export type Role = "flat_owner" | "society_admin" | "builder_admin";
+export type Role = "FLAT_OWNER" | "SOCIETY_ADMIN" | "BUILDER_ADMIN" | "SUPER_ADMIN";
 
 export type MeterStatus = "live" | "offline" | "offline-long" | "deregistered";
 
@@ -66,10 +64,9 @@ export interface Device {
 }
 
 export interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
-  password: string;
   role: Role;
   flatId: string | null;
   societyId: string | null;
