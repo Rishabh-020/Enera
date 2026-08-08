@@ -1,6 +1,6 @@
 package com.enera.backend.controller;
 
-import com.enera.backend.dto.block.BlockFlatsResponse;
+import com.enera.backend.dto.block.BlockFloorResponse;
 import com.enera.backend.service.BlockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,11 +20,11 @@ public class BlockController {
         this.blockService = blockService;
     }
 
-    @GetMapping("/{id}/flats")
-    @PreAuthorize("hasAuthority('SOCIETY_ADMIN')")
-    public ResponseEntity<List<BlockFlatsResponse>> getBlockFlats(@PathVariable Long id){
+    @GetMapping("/{id}/floors")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
+    public ResponseEntity<List<BlockFloorResponse>> getBlockFloors(@PathVariable Long id){
         return ResponseEntity.ok(
-                blockService.getBlockFlats(id)
+                blockService.getBlockFloors(id)
         );
     }
 }

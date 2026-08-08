@@ -67,7 +67,7 @@ public class BuilderService {
         response.setTotalBlocks(totalBlocks);
         response.setDevicesOnline(onlineDeviceCount);
         response.setMtdKwh(mtdKwh);
-        response.setMtdCost(mtdKwh*8);
+        response.setMtdCost(mtdKwh * 8);
 
         return response;
     }

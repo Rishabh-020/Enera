@@ -6,7 +6,13 @@ import lombok.Data;
 public class FloorFlatResponse {
     private Long id;
 
-    private Boolean status;
+    private String flatNumber;
+
+    private String bhkType;
+
+    private String residentName;
+
+    private String meterStatus;
 
     private Double mtdKwh;
 }

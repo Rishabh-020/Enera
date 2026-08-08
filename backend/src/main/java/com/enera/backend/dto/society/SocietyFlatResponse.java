@@ -4,11 +4,21 @@ import lombok.Data;
 
 @Data
 public class SocietyFlatResponse {
-    private  String name;
+    private Long id;
+
+    private String flatNumber;
+
+    private String bhkType;
+
+    private boolean occupied;
+
+    private String residentName;
+
+    private String blockName;
 
     private Long floorNumber;
 
-    private Boolean status;
+    private String meterStatus;
 
     private Double mtdKwh;
 }

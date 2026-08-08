@@ -22,7 +22,7 @@ public class FloorController {
     }
 
     @GetMapping("/{id}/flats")
-    @PreAuthorize("Authorized('SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<FloorFlatResponse>> getFloorFlats(@PathVariable Long id){
         return ResponseEntity.ok(
                 floorService.getFloorFlats(id)

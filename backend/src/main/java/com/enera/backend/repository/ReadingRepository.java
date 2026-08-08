@@ -149,4 +149,15 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     """, nativeQuery = true)
     Double getMonthKwhByFlatId(
             @Param("flatId") Long flatId);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kwh), 0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    WHERE f.floor_id = :floorId
+    AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
+    """, nativeQuery = true)
+    Double getMonthKwhByFloorId(
+            @Param("floorId") Long floorId);
 }

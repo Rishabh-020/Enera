@@ -4,6 +4,8 @@ import lombok.Data;
 
 @Data
 public class SocietyOverviewResponse {
+    private String name;
+
     private Double liveKw;
 
     private Integer totalFlats;

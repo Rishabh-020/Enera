@@ -1,4 +1,4 @@
-export type Role = "FLAT_OWNER" | "SOCIETY_ADMIN" | "BUILDER_ADMIN" | "SUPER_ADMIN";
+export type Role = "RESIDENT" | "SOCIETY_ADMIN" | "BUILDER_ADMIN" | "SUPER_ADMIN";
 
 export type MeterStatus = "live" | "offline" | "offline-long" | "deregistered";
 export type CommonAreaType = "SECURITY" | "RECREATION" | "FITNESS" | "PARKING";
@@ -143,6 +143,7 @@ export interface FlatHourlyProfile {
 }
 
 export interface SocietyOverview {
+  name?: string;
   liveKw: number;
   totalFlats: number;
   occupiedFlats: number;
@@ -169,8 +170,11 @@ export interface BlockFloorRow {
   mtdKwh: number;
 }
 
-export interface FloorFlatRow extends Flat {
-  deviceId?: string;
+export interface FloorFlatRow {
+  id: number;
+  flatNumber: string;
+  bhkType: string;
+  residentName: string | null;
   meterStatus: MeterStatus;
   mtdKwh: number;
 }
@@ -183,7 +187,12 @@ export interface SocietyCommonAreaRow extends CommonArea {
 
 export type HeatmapGrid = number[][];
 
-export interface SocietyFlatRow extends Flat {
+export interface SocietyFlatRow {
+  id: number;
+  flatNumber: string;
+  bhkType: string;
+  occupied: boolean;
+  residentName: string | null;
   blockName: string;
   floorNumber: number;
   meterStatus: MeterStatus;

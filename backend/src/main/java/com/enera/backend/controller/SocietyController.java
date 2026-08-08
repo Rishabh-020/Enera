@@ -24,7 +24,7 @@ public class SocietyController {
     }
 
     @GetMapping("/{id}/overview")
-    @PreAuthorize("hasAuthority('SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<SocietyOverviewResponse> getSocietyOverview(@PathVariable Long id){
         return ResponseEntity.ok(
                 societyService.getSocietyOverview(id)
@@ -32,7 +32,7 @@ public class SocietyController {
     }
 
     @GetMapping("/{id}/blocks")
-    @PreAuthorize("hasAuthority('SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<SocietyBlockResponse>> getSocietyBlocks(@PathVariable Long id){
         return ResponseEntity.ok(
                 societyService.getSocietyBlocks(id)
@@ -40,7 +40,7 @@ public class SocietyController {
     }
 
     @GetMapping("/{id}/common_areas")
-    @PreAuthorize("hasAuthority('SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<SocietyCommonAreaResponse>> getSocietyCommonAreas(@PathVariable Long id){
         return ResponseEntity.ok(
                 societyService.getSocietyCommonAreas(id)
@@ -48,7 +48,7 @@ public class SocietyController {
     }
 
     @GetMapping("/{id}/heatmap")
-    @PreAuthorize("hasAuthority('SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<double[][]> getSocietyHeatmap(@PathVariable Long id){
         return ResponseEntity.ok(
                 societyService.getSocietyHeatmap(id)
@@ -56,7 +56,7 @@ public class SocietyController {
     }
 
     @GetMapping("/{id}/flats")
-    @PreAuthorize("hasAuthority('SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<SocietyFlatResponse>> getSocietyFlatHeatmap(@PathVariable Long id){
         return ResponseEntity.ok(
                 societyService.getSocietyFlatResponse(id)

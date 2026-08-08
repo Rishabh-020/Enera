@@ -13,7 +13,7 @@ function Root() {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role === "FLAT_OWNER") {
+  if (user.role === "RESIDENT") {
     return <Navigate to={`/flat/${user.flatId}`} replace />;
   }
 
@@ -42,7 +42,7 @@ export default function App() {
           <Route
             path="/flat/:flatId"
             element={
-              <RequireRole roles={["FLAT_OWNER"]}>
+              <RequireRole roles={["RESIDENT"]}>
                 <FlatOwnerDashboard />
               </RequireRole>
             }

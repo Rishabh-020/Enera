@@ -29,11 +29,13 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
 
     Integer countBySocietyIdAndStatus(Long societyId,Boolean online);
 
-    @Query("""
+    @Query(value = """
     SELECT d.status
-    FROM Device d
-    WHERE d.flat.id = :flatId
-    """)
+    FROM devices d
+    WHERE d.mapped_flat_id = :flatId
+    ORDER BY d.last_seen_at DESC NULLS LAST
+    LIMIT 1
+    """, nativeQuery = true)
     Boolean getStatusByFlatId(
             @Param("flatId") Long flatId);
 }
