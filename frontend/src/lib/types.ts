@@ -1,6 +1,7 @@
 export type Role = "FLAT_OWNER" | "SOCIETY_ADMIN" | "BUILDER_ADMIN" | "SUPER_ADMIN";
 
 export type MeterStatus = "live" | "offline" | "offline-long" | "deregistered";
+export type CommonAreaType = "SECURITY" | "RECREATION" | "FITNESS" | "PARKING";
 
 export interface Flat {
   id: string;
@@ -176,7 +177,7 @@ export interface FloorFlatRow extends Flat {
 
 export interface SocietyCommonAreaRow extends CommonArea {
   deviceId?: string;
-  status: MeterStatus;
+  type: CommonAreaType;
   currentKw: number;
 }
 

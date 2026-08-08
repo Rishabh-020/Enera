@@ -169,7 +169,8 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat }: Soci
               <p className="font-display text-sm font-semibold text-grid-900">{ca.name}</p>
               <div className="mt-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <StatusDot status={ca.status} /> {ca.status === "live" ? "On" : "Off"}
+                  <StatusDot status={ca.type} />
+                  {/* {ca.type === "Parking" ? "On" : "Off"} */}
                 </span>
                 <span className="font-mono-data text-xs font-semibold text-grid-900">{ca.currentKw.toFixed(1)} kW</span>
               </div>

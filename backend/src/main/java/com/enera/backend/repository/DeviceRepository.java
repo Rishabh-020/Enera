@@ -5,6 +5,8 @@ import com.enera.backend.entity.Device;
 import com.enera.backend.entity.Flat;
 import com.enera.backend.entity.Society;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -24,4 +26,14 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
     boolean existsBySocietyAndCommonAreaAndFlat(Society society,CommonArea  commonArea,Flat flat);
 
     Integer countBySocietyBuilderIdAndStatus(Long builderId,Boolean online);
+
+    Integer countBySocietyIdAndStatus(Long societyId,Boolean online);
+
+    @Query("""
+    SELECT d.status
+    FROM Device d
+    WHERE d.flat.id = :flatId
+    """)
+    Boolean getStatusByFlatId(
+            @Param("flatId") Long flatId);
 }
