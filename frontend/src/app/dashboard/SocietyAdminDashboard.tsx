@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LayoutGrid, Cpu, Search, ChevronRight, Zap, Building2, Users, PlugZap } from "lucide-react";
 import * as api from "../../lib/api";
-import { db } from "../../lib/mockData";
 import { DashboardLayout } from "../../components/layout/DashboardLayout";
 import { StatCard } from "../../components/chart/StatCard";
 import { Heatmap } from "../../components/chart/Heatmap";
@@ -20,12 +19,20 @@ export default function SocietyAdminDashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const readOnly = searchParams.get("readonly") === "true";
-  const society = db.societyById.get(societyId ?? "");
+
+  // Use overview data for society name instead of mock db
+  const [overview, setOverview] = useState<SocietyOverview | null>(null);
+  const [societyName, setSocietyName] = useState<string>("");
 
   // drill-down state: block -> floor -> flat
   const [blockId, setBlockId] = useState<string | null>(null);
   const [floorId, setFloorId] = useState<string | null>(null);
   const [flatId, setFlatId] = useState<string | null>(null);
+
+  // Store labels for breadcrumbs from API data
+  const [blockName, setBlockName] = useState<string>("");
+  const [floorLabel, setFloorLabel] = useState<string>("");
+  const [flatLabel, setFlatLabel] = useState<string>("");
 
   function reset() {
     setBlockId(null);
@@ -33,10 +40,28 @@ export default function SocietyAdminDashboard() {
     setFlatId(null);
   }
 
-  const crumbs: BreadcrumbItem[] = [{ label: society?.name, onClick: reset }];
-  if (blockId) crumbs.push({ label: db.blockById.get(blockId)!.name, onClick: () => { setFloorId(null); setFlatId(null); } });
-  if (floorId) crumbs.push({ label: `Floor ${db.floorById.get(floorId)!.floorNumber}`, onClick: () => setFlatId(null) });
-  if (flatId) crumbs.push({ label: `Flat ${db.flatById.get(flatId)!.flatNumber}` });
+  function selectBlock(id: string, name: string) {
+    setBlockId(id);
+    setBlockName(name);
+    setFloorId(null);
+    setFlatId(null);
+  }
+
+  function selectFloor(id: string, floorNumber: number) {
+    setFloorId(id);
+    setFloorLabel(`Floor ${floorNumber}`);
+    setFlatId(null);
+  }
+
+  function selectFlat(id: string, flatNumber?: string) {
+    setFlatId(id);
+    if (flatNumber) setFlatLabel(`Flat ${flatNumber}`);
+  }
+
+  const crumbs: BreadcrumbItem[] = [{ label: societyName || "Society", onClick: reset }];
+  if (blockId) crumbs.push({ label: blockName, onClick: () => { setFloorId(null); setFlatId(null); } });
+  if (floorId) crumbs.push({ label: floorLabel, onClick: () => setFlatId(null) });
+  if (flatId) crumbs.push({ label: flatLabel });
 
   return (
     <DashboardLayout
@@ -64,7 +89,7 @@ export default function SocietyAdminDashboard() {
       <div className="mb-5">
         <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Society Admin</p>
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-bold text-grid-900">{society?.name}</h1>
+          <h1 className="font-display text-2xl font-bold text-grid-900">{societyName || "Loading…"}</h1>
         </div>
         <div className="mt-2">
           <Breadcrumb items={crumbs} />
@@ -74,23 +99,33 @@ export default function SocietyAdminDashboard() {
       {flatId ? (
         <FlatDashboardView flatId={flatId} />
       ) : floorId ? (
-        <FloorFlatList floorId={floorId} onSelectFlat={setFlatId} />
+        <FloorFlatList floorId={floorId} onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)} />
       ) : blockId ? (
-        <BlockFloorList blockId={blockId} onSelectFloor={setFloorId} />
+        <BlockFloorList blockId={blockId} onSelectFloor={(id, floorNumber) => selectFloor(id, floorNumber)} />
       ) : (
-        <SocietyOverviewSection societyId={societyId ?? ""} onSelectBlock={setBlockId} onSelectFlat={setFlatId} />
+        <SocietyOverviewSection
+          societyId={societyId ?? ""}
+          onSelectBlock={(id, name) => selectBlock(id, name)}
+          onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)}
+          onOverviewLoaded={(o) => { setOverview(o); }}
+          onSocietyNameLoaded={setSocietyName}
+        />
       )}
     </DashboardLayout>
   );
 }
 
+
+
 interface SocietyOverviewSectionProps {
   societyId: string;
-  onSelectBlock: (id: string) => void;
-  onSelectFlat: (id: string) => void;
+  onSelectBlock: (id: string, name: string) => void;
+  onSelectFlat: (id: string, flatNumber: string) => void;
+  onOverviewLoaded: (o: SocietyOverview) => void;
+  onSocietyNameLoaded: (name: string) => void;
 }
 
-function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat }: SocietyOverviewSectionProps) {
+function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat, onOverviewLoaded, onSocietyNameLoaded }: SocietyOverviewSectionProps) {
   const [overview, setOverview] = useState<SocietyOverview | null>(null);
   const [blocks, setBlocks] = useState<SocietyBlockRow[] | null>(null);
   const [commonAreas, setCommonAreas] = useState<SocietyCommonAreaRow[] | null>(null);
@@ -100,11 +135,31 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat }: Soci
   const [sortBy, setSortBy] = useState<"flatNumber" | "mtdKwh">("flatNumber");
 
   useEffect(() => {
-    api.getSocietyOverview(societyId).then(setOverview);
-    api.getSocietyBlocks(societyId).then(setBlocks);
+    api.getSocietyOverview(societyId).then((o) => {
+      setOverview(o);
+      onOverviewLoaded(o);
+      if (o.name) {
+        onSocietyNameLoaded(o.name);
+      }
+    });
+    api.getSocietyBlocks(societyId).then((b) => {
+      setBlocks(b);
+      // Use the first block's response to infer society name is loaded
+      if (b.length > 0) {
+        // Society name will come from overview; we can also fetch it separately if needed
+      }
+    });
     api.getSocietyCommonAreas(societyId).then(setCommonAreas);
     api.getSocietyHeatmap(societyId).then(setHeatmap);
   }, [societyId]);
+
+  // Set society name from overview when available
+  useEffect(() => {
+    if (overview) {
+      // The overview doesn't have the society name, so we'll keep the name from blocks/flats
+      // For now we need to add it to the overview or fetch separately
+    }
+  }, [overview]);
 
   useEffect(() => {
     api.getSocietyFlatsList(societyId, { search, sortBy }).then(setFlats);
@@ -130,7 +185,7 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat }: Soci
           {(blocks ?? Array.from({ length: 3 })).map((b: SocietyBlockRow | undefined, i) => (
             <button
               key={b?.id ?? i}
-              onClick={() => b && onSelectBlock(b.id)}
+              onClick={() => b && onSelectBlock(String(b.id), b.name)}
               disabled={!b}
               className="flex flex-col gap-2 rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-amp-500 hover:bg-amp-500/5 disabled:animate-pulse disabled:bg-slate-50"
             >
@@ -169,9 +224,10 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat }: Soci
               <p className="font-display text-sm font-semibold text-grid-900">{ca.name}</p>
               <div className="mt-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <StatusDot status={ca.status} /> {ca.status === "live" ? "On" : "Off"}
+                  <StatusDot status={ca.type} />
+                  On
                 </span>
-                <span className="font-mono-data text-xs font-semibold text-grid-900">{ca.currentKw.toFixed(1)} kW</span>
+                <span className="font-mono-data text-xs font-semibold text-grid-900">{ca.currentKw?.toFixed(1)} kW</span>
               </div>
             </div>
           ))}
@@ -211,14 +267,14 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat }: Soci
             </Thead>
             <tbody>
               {(flats ?? []).map((f) => (
-                <Tr key={f.id} onClick={() => onSelectFlat(f.id)} className="cursor-pointer">
+                <Tr key={f.id} onClick={() => onSelectFlat(String(f.id), f.flatNumber)} className="cursor-pointer">
                   <Td className="font-medium text-grid-900">{f.flatNumber}</Td>
                   <Td>{f.blockName}</Td>
                   <Td>{f.floorNumber}</Td>
                   <Td>{f.residentName ?? <span className="text-slate-400">Vacant</span>}</Td>
                   <Td>
                     <span className="flex items-center gap-1.5">
-                      <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : f.meterStatus === "offline" ? "Offline" : "Offline"}
+                      <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : "Offline"}
                     </span>
                   </Td>
                   <Td className="font-mono-data">{f.mtdKwh}</Td>
@@ -235,9 +291,8 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat }: Soci
   );
 }
 
-function BlockFloorList({ blockId, onSelectFloor }: { blockId: string; onSelectFloor: (id: string) => void }) {
+function BlockFloorList({ blockId, onSelectFloor }: { blockId: string; onSelectFloor: (id: string, floorNumber: number) => void }) {
   const [floors, setFloors] = useState<BlockFloorRow[] | null>(null);
-  const block = db.blockById.get(blockId)!;
 
   useEffect(() => {
     api.getBlockFloors(blockId).then(setFloors);
@@ -247,7 +302,7 @@ function BlockFloorList({ blockId, onSelectFloor }: { blockId: string; onSelectF
     <Card>
       <CardHeader>
         <div>
-          <CardTitle>{block.name} — floors</CardTitle>
+          <CardTitle>Floors</CardTitle>
           <CardDescription>Click a floor to see its flats</CardDescription>
         </div>
       </CardHeader>
@@ -255,7 +310,7 @@ function BlockFloorList({ blockId, onSelectFloor }: { blockId: string; onSelectF
         {(floors ?? Array.from({ length: 4 })).map((f: BlockFloorRow | undefined, i) => (
           <button
             key={f?.id ?? i}
-            onClick={() => f && onSelectFloor(f.id)}
+            onClick={() => f && onSelectFloor(String(f.id), f.floorNumber)}
             disabled={!f}
             className="flex flex-col gap-1.5 rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-amp-500 hover:bg-amp-500/5 disabled:animate-pulse disabled:bg-slate-50"
           >
@@ -273,9 +328,8 @@ function BlockFloorList({ blockId, onSelectFloor }: { blockId: string; onSelectF
   );
 }
 
-function FloorFlatList({ floorId, onSelectFlat }: { floorId: string; onSelectFlat: (id: string) => void }) {
+function FloorFlatList({ floorId, onSelectFlat }: { floorId: string; onSelectFlat: (id: string, flatNumber: string) => void }) {
   const [flats, setFlats] = useState<FloorFlatRow[] | null>(null);
-  const floor = db.floorById.get(floorId)!;
 
   useEffect(() => {
     api.getFloorFlatsList(floorId).then(setFlats);
@@ -285,7 +339,7 @@ function FloorFlatList({ floorId, onSelectFlat }: { floorId: string; onSelectFla
     <Card>
       <CardHeader>
         <div>
-          <CardTitle>Floor {floor.floorNumber} — flats</CardTitle>
+          <CardTitle>Flats</CardTitle>
           <CardDescription>Click a flat to open its dashboard</CardDescription>
         </div>
       </CardHeader>
@@ -303,7 +357,7 @@ function FloorFlatList({ floorId, onSelectFlat }: { floorId: string; onSelectFla
           </Thead>
           <tbody>
             {(flats ?? []).map((f) => (
-              <Tr key={f.id} onClick={() => onSelectFlat(f.id)} className="cursor-pointer">
+              <Tr key={f.id} onClick={() => onSelectFlat(String(f.id), f.flatNumber)} className="cursor-pointer">
                 <Td className="font-medium text-grid-900">{f.flatNumber}</Td>
                 <Td>{f.bhkType}</Td>
                 <Td>{f.residentName ?? <span className="text-slate-400">Vacant</span>}</Td>
