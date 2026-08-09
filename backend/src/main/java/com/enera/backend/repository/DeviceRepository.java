@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DeviceRepository extends JpaRepository<Device,Long> {
@@ -24,6 +25,8 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
     List<Device> findBySocietyAndCommonArea(Society society,CommonArea  commonArea);
 
     boolean existsBySocietyAndCommonAreaAndFlat(Society society,CommonArea  commonArea,Flat flat);
+
+    Optional<Device> findByFlatId(Long flatId);
 
     Integer countBySocietyBuilderIdAndStatus(Long builderId,Boolean online);
 

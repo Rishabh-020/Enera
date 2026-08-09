@@ -1,22 +1,54 @@
 package com.enera.backend.controller;
 
 
+import com.enera.backend.dto.FlatOwner.FlatHourlyProfileResponse;
+import com.enera.backend.dto.FlatOwner.FlatLiveResponse;
+import com.enera.backend.dto.FlatOwner.FlatSummaryResponse;
+import com.enera.backend.dto.FlatOwner.FlatTrendResponse;
+import com.enera.backend.service.FlatService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 
 @RestController
 @RequestMapping("/flat")
 public class FlatController {
-    @GetMapping("/dashboard")
-    @PreAuthorize("hasAuthority('RESIDENT')")
-    public Map<String,String> dashboard(){
-        return Map.of(
-                "message" , "Welcome to the dashboard",
-                "role" ,"RESIDENT"
+    private final FlatService flatService;
+
+    FlatController(FlatService flatService){
+        this.flatService = flatService;
+    }
+
+    @GetMapping("/{id}/live")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    public ResponseEntity<FlatLiveResponse> getFlatLive(@PathVariable Long id){
+        return ResponseEntity.ok(
+                flatService.getFlatLive(id)
+        );
+    }
+
+    @GetMapping("{id}/summary")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    public ResponseEntity<FlatSummaryResponse> getFlatSummary(@PathVariable Long id, @RequestParam String month){
+        return ResponseEntity.ok(
+                flatService.getFlatSummary(id,month)
+        );
+    }
+
+    @GetMapping("{id}/trend")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    public ResponseEntity<FlatTrendResponse> getFlatTrend(@PathVariable Long id){
+        return ResponseEntity.ok(
+                flatService.getFlatTrend(id)
+        );
+    }
+
+    @GetMapping("{id}/hourly-profile")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    public ResponseEntity<FlatHourlyProfileResponse> getFlatHourlyProfile(@PathVariable Long id){
+        return ResponseEntity.ok(
+                flatService.getFlatHourlyProfile(id)
         );
     }
 }
