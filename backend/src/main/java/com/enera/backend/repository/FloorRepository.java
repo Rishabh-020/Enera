@@ -16,4 +16,6 @@ public interface FloorRepository extends JpaRepository<Floor,Long> {
     Optional<Floor> findByBlockAndFloorNumber(Block block, Long floorNumber);
 
     boolean existsByBlockAndFloorNumber(Block block, Long floorNumber);
+
+    List<Floor> findByBlockId(Long blockId);
 }

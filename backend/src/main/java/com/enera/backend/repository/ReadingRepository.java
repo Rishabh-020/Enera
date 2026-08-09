@@ -3,6 +3,8 @@ package com.enera.backend.repository;
 import com.enera.backend.entity.Device;
 import com.enera.backend.entity.Reading;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -21,4 +23,141 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     List<Reading> findByTimestampAfter(LocalDateTime timestamp);
 
     List<Reading> findByTimestampBefore(LocalDateTime timestamp);
+
+    @Query("""
+    SELECT COALESCE(SUM(r.kwh), 0)
+    FROM Reading r
+    JOIN r.device d
+    JOIN d.society s
+    WHERE s.builder.id = :builderId
+      AND r.timestamp BETWEEN :startDate AND :endDate
+    """)
+    Double getMonthKwh(
+            @Param("builderId") Long builderId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+    // Param is used to define the parameter what we are using
+
+    @Query("""
+    SELECT COALESCE(SUM(r.kwh), 0)
+    FROM Reading r
+    JOIN r.device d
+    JOIN d.society s
+    WHERE s.id = :societyId
+      AND r.timestamp BETWEEN :startDate AND :endDate
+    """)
+    Double getMonthKwhBySociety(
+            @Param("societyId") Long societyId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kw), 0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    WHERE d.society_id = :societyId
+    AND r.timestamp = (
+        SELECT MAX(r2.timestamp)
+        FROM readings r2
+        WHERE r2.device_id = r.device_id
+    )
+    """, nativeQuery = true)
+    Double getLiveKwBySocietyId(@Param("societyId") Long societyId);
+
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kwh), 0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    JOIN floors fl ON f.floor_id = fl.id
+    WHERE fl.block_id = :blockId
+    AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
+    """, nativeQuery = true)
+    Double getMonthKwhBySocietyBlockId(
+            @Param("blockId") Long blockId);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kw), 0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    JOIN floors fl ON f.floor_id = fl.id
+    WHERE fl.block_id = :blockId
+    AND r.timestamp = (
+        SELECT MAX(r2.timestamp)
+        FROM readings r2
+        WHERE r2.device_id = r.device_id
+    )
+    """, nativeQuery = true)
+    Double getLiveKwBySocietyBlockId(
+            @Param("blockId") Long blockId);
+
+    @Query(value = """
+    SELECT COALESCE(AVG(r.kwh), 0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    JOIN floors fl ON f.floor_id = fl.id
+    WHERE fl.block_id = :blockId
+    AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
+    """, nativeQuery = true)
+    Double getAverageKwhBySocietyBlockId(
+            @Param("blockId") Long blockId);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kw), 0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    WHERE d.mapped_common_area_id = :commonAreaId
+    AND r.timestamp = (
+        SELECT MAX(r2.timestamp)
+        FROM readings r2
+        WHERE r2.device_id = r.device_id
+    )
+    """, nativeQuery = true)
+    Double getCurrentKwByCommonAreaId(
+            @Param("commonAreaId") Long commonAreaId);
+
+    @Query(value = """
+    SELECT
+        EXTRACT(DOW FROM r.timestamp) AS day_of_week,
+        EXTRACT(HOUR FROM r.timestamp) AS hour,
+        AVG(r.kw) AS average_kw
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    WHERE d.society_id = :societyId
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
+    GROUP BY
+        EXTRACT(DOW FROM r.timestamp),
+        EXTRACT(HOUR FROM r.timestamp)
+    ORDER BY
+        day_of_week,
+        hour
+    """, nativeQuery = true)
+    List<Object[]> getSocietyHeatmap(
+            @Param("societyId") Long societyId);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kwh), 0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    WHERE d.mapped_flat_id = :flatId
+    AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
+    """, nativeQuery = true)
+    Double getMonthKwhByFlatId(
+            @Param("flatId") Long flatId);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kwh), 0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    WHERE f.floor_id = :floorId
+    AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
+    """, nativeQuery = true)
+    Double getMonthKwhByFloorId(
+            @Param("floorId") Long floorId);
 }

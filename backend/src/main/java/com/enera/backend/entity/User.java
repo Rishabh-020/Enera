@@ -32,7 +32,7 @@ public class User {
     private Flat flat;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "society_id", nullable = false)
+    @JoinColumn(name = "society_id")
     private Society society;
 
     @ManyToOne(fetch = FetchType.LAZY)
