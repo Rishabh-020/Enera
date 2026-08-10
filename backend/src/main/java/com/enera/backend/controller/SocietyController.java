@@ -1,12 +1,10 @@
 package com.enera.backend.controller;
 
-import com.enera.backend.dto.society.SocietyBlockResponse;
-import com.enera.backend.dto.society.SocietyCommonAreaResponse;
-import com.enera.backend.dto.society.SocietyFlatResponse;
-import com.enera.backend.dto.society.SocietyOverviewResponse;
+import com.enera.backend.dto.society.*;
 import com.enera.backend.service.SocietyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -60,6 +58,14 @@ public class SocietyController {
     public ResponseEntity<List<SocietyFlatResponse>> getSocietyFlatHeatmap(@PathVariable Long id){
         return ResponseEntity.ok(
                 societyService.getSocietyFlatResponse(id)
+        );
+    }
+
+    @GetMapping("/{id}/devices")
+    @PreAuthorize("hasAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<List<SocietyDeviceResponse>> getSocietyDevice(@PathVariable Long id){
+        return ResponseEntity.ok(
+                societyService.getSocietyDevice(id)
         );
     }
 

@@ -5,6 +5,7 @@ import com.enera.backend.entity.Flat;
 import com.enera.backend.entity.Floor;
 import com.enera.backend.entity.Role;
 import com.enera.backend.entity.User;
+import com.enera.backend.exception.FloorNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.DeviceRepository;
 import com.enera.backend.repository.FlatRepository;
@@ -40,7 +41,7 @@ public class FloorService {
         List<FloorFlatResponse> responses = new ArrayList<>();
 
         Floor floor = floorRepository.findById(floorId).
-                orElseThrow(()-> new UserNotFoundException("Floor not found"));
+                orElseThrow(()-> new FloorNotFoundException("Floor not found"));
 
         List<Flat> flats = flatRepository.findByFloorId(floorId);
 

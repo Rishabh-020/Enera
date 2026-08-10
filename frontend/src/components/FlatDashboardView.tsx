@@ -4,8 +4,7 @@ import { LiveMeterCard } from "./chart/LiveMeterCard";
 import { MonthlyBarChart } from "./chart/MonthlyBarChart";
 import { TrendLineChart } from "./chart/TrendLineChart";
 import { HourlyProfileChart } from "./chart/HourlyProfileChart";
-import { db } from "../lib/mockData";
-import type { FlatHourlyProfile, FlatLive, FlatSummary, FlatTrend } from "../lib/types";
+import type { FlatHourlyProfile, FlatLive, FlatSummary, FlatTrend, FlatDetail } from "../lib/types";
 
 const POLL_MS = 24 * 60 * 60 * 1000; // per spec: poll every 24h in V0
 
@@ -15,8 +14,7 @@ export function FlatDashboardView({ flatId }: { flatId: string }) {
   const [summary, setSummary] = useState<FlatSummary | null>(null);
   const [trend, setTrend] = useState<FlatTrend | null>(null);
   const [hourly, setHourly] = useState<FlatHourlyProfile | null>(null);
-
-  const flat = db.flatById.get(flatId);
+  const [flatDetails, setFlatDetails] = useState<FlatDetail | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,20 +22,23 @@ export function FlatDashboardView({ flatId }: { flatId: string }) {
     setSummary(null);
     setTrend(null);
     setHourly(null);
+    setFlatDetails(null);
 
     async function load() {
-      const [l, s, t, h] = await Promise.all([
+      const [live, summary, trend, hourlyProfile, detail] = await Promise.all([
         api.getFlatLive(flatId),
         api.getFlatSummary(flatId),
         api.getFlatTrend(flatId),
         api.getFlatHourlyProfile(flatId),
+        api.getFlatDetail(flatId)
       ]);
       if (cancelled) return;
-      setLive(l);
+      setLive(live);
       setLiveLoading(false);
-      setSummary(s);
-      setTrend(t);
-      setHourly(h);
+      setSummary(summary);
+      setTrend(trend);
+      setHourly(hourlyProfile);
+      setFlatDetails(detail)
     }
     load();
 
@@ -56,10 +57,10 @@ export function FlatDashboardView({ flatId }: { flatId: string }) {
     <div className="flex flex-col gap-6">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-          {db.blockById.get(flat?.blockId ?? "")?.name} · Floor {db.floorById.get(flat?.floorId ?? "")?.floorNumber}
+          {flatDetails?.blockName} · Floor {flatDetails?.floorNumber}
         </p>
-        <h1 className="font-display text-2xl font-bold text-grid-900">Flat {flat?.flatNumber}</h1>
-        <p className="text-sm text-slate-500">{flat?.residentName ?? "Vacant unit"} · {flat?.bhkType}</p>
+        <h1 className="font-display text-2xl font-bold text-grid-900">Flat {flatDetails?.flatNumber}</h1>
+        <p className="text-sm text-slate-500">{flatDetails?.residentName ?? "Vacant unit"} · {flatDetails?.bhkType}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

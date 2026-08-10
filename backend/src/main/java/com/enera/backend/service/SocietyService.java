@@ -2,6 +2,7 @@ package com.enera.backend.service;
 
 import com.enera.backend.dto.society.*;
 import com.enera.backend.entity.*;
+import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.*;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ public class SocietyService {
 
     public SocietyOverviewResponse getSocietyOverview(Long societyId){
         Society society = societyRepository.findById(societyId).
-                orElseThrow(()-> new UserNotFoundException("Society not found"));
+                orElseThrow(()-> new SocietyNotFoundException("Society not found"));
 
         Double liveKw = readingRepository.getLiveKwBySocietyId(societyId);
 
@@ -77,7 +78,7 @@ public class SocietyService {
         List<SocietyBlockResponse> responses = new ArrayList<>();
 
         Society society = societyRepository.findById(societyId)
-                .orElseThrow(() -> new UserNotFoundException("Society not found"));
+                .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
 
         List<Block> blocks = blockRepository.findBySocietyId(societyId);
 
@@ -121,7 +122,7 @@ public class SocietyService {
         List<SocietyCommonAreaResponse> responses = new ArrayList<>();
 
         Society society = societyRepository.findById(societyId)
-                .orElseThrow(() -> new UserNotFoundException("Society not found"));
+                .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
 
         List<CommonArea> commonAreas = commonAreaRepository.findBySocietyId(societyId);
 
@@ -170,7 +171,7 @@ public class SocietyService {
         List<SocietyFlatResponse> responses = new ArrayList<>();
 
         Society society = societyRepository.findById(societyId).
-                orElseThrow(()-> new UserNotFoundException("Society not found"));
+                orElseThrow(()-> new SocietyNotFoundException("Society not found"));
 
         List<Flat> flats = flatRepository.findByFloorBlockSocietyId(societyId);
 
@@ -197,6 +198,35 @@ public class SocietyService {
             // Map boolean device status to string status for frontend
             Boolean deviceOnline = deviceRepository.getStatusByFlatId(flat.getId());
             response.setMeterStatus(Boolean.TRUE.equals(deviceOnline) ? "live" : "offline");
+
+            responses.add(response);
+        }
+
+        return responses;
+    }
+
+    public List<SocietyDeviceResponse> getSocietyDevice(Long societyId){
+        Society society = societyRepository.findById(societyId).
+                orElseThrow(()-> new SocietyNotFoundException("Society not found"));
+
+        List<Device> devices = deviceRepository.findBySocietyId(societyId);
+
+        List<SocietyDeviceResponse> responses = new ArrayList<>();
+
+        for(Device device : devices){
+            SocietyDeviceResponse response = new SocietyDeviceResponse();
+
+            String mappedTo = "";
+
+            if(device.getFlat() != null){
+                mappedTo = "FLAT";
+            }else{
+                mappedTo = "FLOOR";
+            }
+
+            response.setMeterStatus(device.isStatus());
+            response.setMappedTo(mappedTo);
+            response.setLastSeenAt(device.getLastSeenAt());
 
             responses.add(response);
         }

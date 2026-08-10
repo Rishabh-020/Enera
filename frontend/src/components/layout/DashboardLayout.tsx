@@ -6,9 +6,10 @@ import { cn } from "../../lib/utils";
 import type { Role } from "../../lib/types";
 
 const ROLE_LABEL: Record<Role, string> = {
-  flat_owner: "Flat Owner",
-  society_admin: "Society Admin",
-  builder_admin: "Builder Admin",
+  RESIDENT: "Flat Owner",
+  SOCIETY_ADMIN: "Society Admin",
+  BUILDER_ADMIN: "Builder Admin",
+  SUPER_ADMIN: "Super Admin",
 };
 
 export interface NavItem {

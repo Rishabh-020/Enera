@@ -74,6 +74,17 @@ export interface User {
   builderId: string | null;
 }
 
+export interface mockUser {
+  id: number;
+  name: string;
+  email: string;
+  password: string;
+  role: Role
+  flatId: string | null;
+  societyId: string | null;
+  builderId: string | null;
+}
+
 export interface Db {
   builder: Builder;
   societies: Society[];
@@ -125,6 +136,14 @@ export interface TrendPoint {
   date: Date;
   kwh: number;
   rollingAvg?: number;
+}
+
+export interface FlatDetail {
+  flatNumber: string;
+  residentName: string;
+  bhkType: string;
+  blockName: string;
+  floorNumber: number;
 }
 
 export interface FlatTrend {
