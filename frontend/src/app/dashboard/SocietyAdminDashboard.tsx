@@ -97,11 +97,19 @@ export default function SocietyAdminDashboard() {
       </div>
 
       {flatId ? (
-        <FlatDashboardView flatId={flatId} />
+        <FlatDashboardView
+          flatId={flatId}
+        />
       ) : floorId ? (
-        <FloorFlatList floorId={floorId} onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)} />
+        <FloorFlatList
+          floorId={floorId}
+          onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)}
+        />
       ) : blockId ? (
-        <BlockFloorList blockId={blockId} onSelectFloor={(id, floorNumber) => selectFloor(id, floorNumber)} />
+        <BlockFloorList
+          blockId={blockId}
+          onSelectFloor={(id, floorNumber) => selectFloor(id, floorNumber)}
+        />
       ) : (
         <SocietyOverviewSection
           societyId={societyId ?? ""}
@@ -135,17 +143,17 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat, onOver
   const [sortBy, setSortBy] = useState<"flatNumber" | "mtdKwh">("flatNumber");
 
   useEffect(() => {
-    api.getSocietyOverview(societyId).then((o) => {
-      setOverview(o);
-      onOverviewLoaded(o);
-      if (o.name) {
-        onSocietyNameLoaded(o.name);
+    api.getSocietyOverview(societyId).then((overview) => {
+      setOverview(overview);
+      onOverviewLoaded(overview);
+      if (overview.name) {
+        onSocietyNameLoaded(overview.name);
       }
     });
-    api.getSocietyBlocks(societyId).then((b) => {
-      setBlocks(b);
+    api.getSocietyBlocks(societyId).then((blocks) => {
+      setBlocks(blocks);
       // Use the first block's response to infer society name is loaded
-      if (b.length > 0) {
+      if (blocks.length > 0) {
         // Society name will come from overview; we can also fetch it separately if needed
       }
     });
@@ -168,10 +176,10 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat, onOver
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Live consumption" value={overview ? `${overview.liveKw} kW` : "—"} icon={<Zap size={16} />} loading={!overview} accent />
+        <StatCard label="Live consumption" value={overview ? `${overview.liveKw.toFixed(2)} kW` : "—"} icon={<Zap size={16} />} loading={!overview} accent />
         <StatCard label="Flats" value={overview ? `${overview.occupiedFlats}/${overview.totalFlats}` : "—"} sub="occupied / total" icon={<Users size={16} />} loading={!overview} />
         <StatCard label="Devices online" value={overview ? overview.devicesOnline : "—"} sub={overview ? `${overview.devicesOffline} offline` : ""} icon={<PlugZap size={16} />} loading={!overview} />
-        <StatCard label="Month-to-date" value={overview ? `${overview.mtdKwh} kWh` : "—"} sub={overview ? `₹${overview.mtdCost.toLocaleString("en-IN")}` : ""} icon={<Building2 size={16} />} loading={!overview} />
+        <StatCard label="Month-to-date" value={overview ? `${overview.mtdKwh.toFixed(2)} kWh` : "—"} sub={overview ? `₹${overview.mtdCost.toLocaleString("en-IN")}` : ""} icon={<Building2 size={16} />} loading={!overview} />
       </div>
 
       <Card>
@@ -197,11 +205,11 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat, onOver
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span>{b.flatCount} flats</span>
-                    <span className="font-mono-data font-semibold text-grid-900">{b.liveKw} kW live</span>
+                    <span className="font-mono-data font-semibold text-grid-900">{b.liveKw.toFixed(2)} kW live</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>Today: {b.todayKwh} kWh</span>
-                    <span>MTD: {b.mtdKwh} kWh</span>
+                    <span>Today: {b.todayKwh.toFixed(2)} kWh</span>
+                    <span>MTD: {b.mtdKwh.toFixed(2)} kWh</span>
                   </div>
                 </>
               )}
@@ -259,7 +267,7 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat, onOver
                 <Th>Flat</Th>
                 <Th>Block</Th>
                 <Th>Floor</Th>
-                <Th>Resident</Th>
+                <Th>Resident/Flat-Type</Th>
                 <Th>Meter</Th>
                 <Th>Month kWh</Th>
                 <Th></Th>
@@ -271,7 +279,7 @@ function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat, onOver
                   <Td className="font-medium text-grid-900">{f.flatNumber}</Td>
                   <Td>{f.blockName}</Td>
                   <Td>{f.floorNumber}</Td>
-                  <Td>{f.residentName ?? <span className="text-slate-400">Vacant</span>}</Td>
+                  <Td>{f.residentName ?? <span className="text-slate-400">{f.bhkType}</span>}</Td>
                   <Td>
                     <span className="flex items-center gap-1.5">
                       <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : "Offline"}

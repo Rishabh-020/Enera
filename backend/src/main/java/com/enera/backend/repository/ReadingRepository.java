@@ -24,6 +24,8 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
 
     List<Reading> findByTimestampBefore(LocalDateTime timestamp);
 
+    Optional<Reading> findTopByDevice_Flat_IdOrderByTimestampDesc(Long flatId);
+
     @Query("""
     SELECT COALESCE(SUM(r.kwh), 0)
     FROM Reading r
@@ -160,4 +162,53 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     """, nativeQuery = true)
     Double getMonthKwhByFloorId(
             @Param("floorId") Long floorId);
+
+    @Query("""
+    SELECT AVG(r.kw)
+    FROM Reading r
+    WHERE r.device.flat.id = :flatId
+""")
+    Double findAverageKwByFlatId(@Param("flatId") Long flatId);
+
+    @Query("""
+    SELECT r
+    FROM Reading r
+    WHERE r.device.flat.id = :flatId
+    AND r.timestamp >= :start
+    AND r.timestamp < :end
+    ORDER BY r.timestamp
+""")
+    List<Reading> findReadingsForFlatAndPeriod(
+            @Param("flatId") Long flatId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    @Query("""
+    SELECT r
+    FROM Reading r
+    WHERE r.device.flat.id = :flatId
+    AND r.timestamp >= :start
+    AND r.timestamp < :end
+    ORDER BY r.timestamp
+""")
+    List<Reading> findReadingsForPeriod(
+            @Param("flatId") Long flatId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    @Query("""
+    SELECT r
+    FROM Reading r
+    WHERE r.device.flat.id = :flatId
+      AND r.timestamp >= :start
+      AND r.timestamp < :end
+    ORDER BY r.timestamp
+""")
+    List<Reading> findReadingsHourlyForPeriod(
+            @Param("flatId") Long flatId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
 }

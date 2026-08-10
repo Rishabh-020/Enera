@@ -3,7 +3,7 @@ import * as engine from "./readingEngine";
 import type {
   BlockFloorRow, BuilderOverview, BuilderSocietyRow, Device, DeviceRow, FlatHourlyProfile, FlatLive,
   FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, MeterStatus, RegisterDeviceInput, Session,
-  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview,
+  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint
 } from "./types";
 import api from '../api/api'
 
@@ -52,58 +52,89 @@ export async function login(email: string, password: string): Promise<Session> {
 
 
 export async function getFlatLive(flatId: string): Promise<FlatLive> {
-  await delay();
-  const device = getFlatDevice(flatId)!;
-  const status = deviceStatus(device);
-  if (status !== "live") {
-    return { online: false, lastReadingAt: new Date(Date.now() - engine.lastSeenMinutesAgo(device.id) * 60000) };
-  }
-  const kw = engine.liveKw(device.id, false);
-  const profile = engine.hourlyProfile(device.id, false, 14);
-  const currentHourAvg = profile[new Date().getHours()];
-  const pctVsUsual = currentHourAvg ? Math.round(((kw - currentHourAvg) / currentHourAvg) * 100) : 0;
-  const level = kw > currentHourAvg * 1.25 ? "high" : kw > currentHourAvg * 1.05 ? "amber" : "normal";
-  return { online: true, kw, level, pctVsUsual, timestamp: new Date() };
+  const response = await api.get(`/flat/${flatId}/live`);
+  const data = response.data;
+
+  return {
+    ...data,
+    lastReadingAt: data.lastReadingAt
+      ? new Date(data.lastReadingAt)
+      : undefined,
+
+    timestamp: data.timestamp
+      ? new Date(data.timestamp)
+      : undefined,
+  };
+  // await delay();
+  // const device = getFlatDevice(flatId)!;
+  // const status = deviceStatus(device);
+  // if (status !== "live") {
+  //   return { online: false, lastReadingAt: new Date(Date.now() - engine.lastSeenMinutesAgo(device.id) * 60000) };
+  // }
+  // const kw = engine.liveKw(device.id, false);
+  // const profile = engine.hourlyProfile(device.id, false, 14);
+  // const currentHourAvg = profile[new Date().getHours()];
+  // const pctVsUsual = currentHourAvg ? Math.round(((kw - currentHourAvg) / currentHourAvg) * 100) : 0;
+  // const level = kw > currentHourAvg * 1.25 ? "high" : kw > currentHourAvg * 1.05 ? "amber" : "normal";
+  // return { online: true, kw, level, pctVsUsual, timestamp: new Date() };
 }
 
 
 
 export async function getFlatSummary(flatId: string, monthDate: Date = new Date()): Promise<FlatSummary> {
-  await delay();
-  const device = getFlatDevice(flatId)!;
-  const series = engine.monthSeries(device.id, false, monthDate);
-  const totalKwh = series.reduce((s, d) => s + d.kwh, 0);
-  const daysElapsed = series.length;
-  const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
-  const projected = (totalKwh / daysElapsed) * daysInMonth;
-  const peakDay = series.reduce((max, d) => (d.kwh > max.kwh ? d : max), series[0]);
-  return {
-    series,
-    totalKwh: +totalKwh.toFixed(1),
-    estCost: totalKwh * 10,
-    projectedTotal: +projected.toFixed(1),
-    projectedCost: projected * 10,
-    peakDay,
-  };
+  const month = monthDate.toISOString().slice(0, 7);
+  const response = await api.get(
+    `/flat/${flatId}/summary?month=${month}`
+  );
+  return response.data;
+  // await delay();
+  // const device = getFlatDevice(flatId)!;
+  // const series = engine.monthSeries(device.id, false, monthDate);
+  // const totalKwh = series.reduce((s, d) => s + d.kwh, 0);
+  // const daysElapsed = series.length;
+  // const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+  // const projected = (totalKwh / daysElapsed) * daysInMonth;
+  // const peakDay = series.reduce((max, d) => (d.kwh > max.kwh ? d : max), series[0]);
+  // return {
+  //   series,
+  //   totalKwh: +totalKwh.toFixed(1),
+  //   estCost: totalKwh * 10,
+  //   projectedTotal: +projected.toFixed(1),
+  //   projectedCost: projected * 10,
+  //   peakDay,
+  // };
 }
 
 export async function getFlatTrend(flatId: string): Promise<FlatTrend> {
-  await delay();
-  const device = getFlatDevice(flatId)!;
-  const points = engine.trend30Day(device.id, false);
-  const first15 = points.slice(0, 15).reduce((s, p) => s + p.kwh, 0);
-  const last15 = points.slice(15).reduce((s, p) => s + p.kwh, 0);
-  const pctChange = first15 ? Math.round(((last15 - first15) / first15) * 100) : 0;
-  return { points, pctChange };
+  const response = await api.get(`/flat/${flatId}/trend`);
+
+  const data = response.data;
+
+  return {
+    ...data,
+    points: data.points.map((point: TrendPoint) => ({
+      ...point,
+      date: new Date(point.date),
+    })),
+  };
+  // await delay();
+  // const device = getFlatDevice(flatId)!;
+  // const points = engine.trend30Day(device.id, false);
+  // const first15 = points.slice(0, 15).reduce((s, p) => s + p.kwh, 0);
+  // const last15 = points.slice(15).reduce((s, p) => s + p.kwh, 0);
+  // const pctChange = first15 ? Math.round(((last15 - first15) / first15) * 100) : 0;
+  // return { points, pctChange };
 }
 
 export async function getFlatHourlyProfile(flatId: string): Promise<FlatHourlyProfile> {
-  await delay();
-  const device = getFlatDevice(flatId)!;
-  const profile = engine.hourlyProfile(device.id, false);
-  const withHour = profile.map((kwh, hour) => ({ hour, kwh }));
-  const peaks = [...withHour].sort((a, b) => b.kwh - a.kwh).slice(0, 3).map((p) => p.hour);
-  return { profile: withHour, peakHours: peaks };
+  const response = await api.get(`/flat/${flatId}/hourly-profile`);
+  return response.data;
+  // await delay();
+  // const device = getFlatDevice(flatId)!;
+  // const profile = engine.hourlyProfile(device.id, false);
+  // const withHour = profile.map((kwh, hour) => ({ hour, kwh }));
+  // const peaks = [...withHour].sort((a, b) => b.kwh - a.kwh).slice(0, 3).map((p) => p.hour);
+  // return { profile: withHour, peakHours: peaks };
 }
 
 // ------------------------------------------------------- Society Admin ----
