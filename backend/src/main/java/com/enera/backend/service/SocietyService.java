@@ -212,19 +212,18 @@ public class SocietyService {
 
         List<SocietyDeviceResponse> responses = new ArrayList<>();
 
+        // This will assign proper naming for the device, to whom it is mapped to
+
         for(Device device : devices){
             SocietyDeviceResponse response = new SocietyDeviceResponse();
 
-            String mappedTo = "";
-
             if(device.getFlat() != null){
-                mappedTo = "FLAT";
+                response.setMappedTo(device.getFlat().getFlatNumber());
             }else{
-                mappedTo = "FLOOR";
+                response.setMappedTo(device.getCommonArea().getCategory());
             }
 
             response.setMeterStatus(device.isStatus());
-            response.setMappedTo(mappedTo);
             response.setLastSeenAt(device.getLastSeenAt());
 
             responses.add(response);
@@ -266,7 +265,7 @@ public class SocietyService {
             );
 
             device.setFlat(flat);
-        }        else{
+        }else{
             CommonArea commonArea = commonAreaRepository.findById(commonAreaId).orElseThrow(
                     ()-> new FlatNotFoundException("Common Area not found")
             );

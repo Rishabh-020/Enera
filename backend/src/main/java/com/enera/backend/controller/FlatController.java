@@ -50,7 +50,7 @@ public class FlatController {
     }
 
     @GetMapping("{id}/details")
-    @PreAuthorize("hasAnyAuthority('RESIDENT',SOCIETY_ADMIN'")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
     public ResponseEntity<FlatDetailResponse> getFlatDetail(@PathVariable Long id){
         return ResponseEntity.ok(
             flatService.getFlatDetail(id)
