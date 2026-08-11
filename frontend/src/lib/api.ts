@@ -482,7 +482,7 @@ export async function registerDevice({ deviceSerial, deviceType, mappedTo, socie
 }
 
 export async function deregisterDevice(deviceId: string): Promise<{ id: string; deregistered: boolean }> {
-  const response = await api.delete(`/society/${deviceId}/deregister-device`);
+  const response = await api.delete(`/device/${deviceId}`);
   return response.data;
   // await delay(300);
   // deregisteredIds.add(deviceId);
