@@ -34,6 +34,8 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
 
     Integer countBySocietyIdAndStatus(Long societyId,Boolean online);
 
+    Optional<Device> findByDeviceSerial(Long deviceSerial);
+
     @Query(value = """
     SELECT d.status
     FROM devices d

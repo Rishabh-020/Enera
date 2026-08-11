@@ -1,18 +1,17 @@
 package com.enera.backend.service;
 
+import com.enera.backend.dto.device.RegisterDeviceRequest;
+import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
 import com.enera.backend.entity.*;
+import com.enera.backend.exception.DuplicateDeviceException;
+import com.enera.backend.exception.FlatNotFoundException;
 import com.enera.backend.exception.SocietyNotFoundException;
-import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.*;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class SocietyService {
@@ -232,5 +231,60 @@ public class SocietyService {
         }
 
         return responses;
+    }
+
+    public RegisterDeviceResponse registerDevice(Long societyId, RegisterDeviceRequest request){
+        Society society = societyRepository.findById(societyId).
+                orElseThrow(()-> new SocietyNotFoundException("Society does not exist"));
+
+        Long deviceSerial = request.getDeviceSerial();
+
+        Device existingDevice = deviceRepository.findByDeviceSerial(deviceSerial)
+                .orElse(null);
+
+        if (existingDevice != null) {
+            throw new DuplicateDeviceException("Device already registered");
+        }
+
+        Device device = new Device();
+
+        String deviceType = request.getDeviceType();
+        Long flatId = request.getFlatId();
+        Long commonAreaId = request.getCommonAreaId();
+
+        device.setDeviceSerial(deviceSerial);
+        device.setDeviceType(deviceType);
+        device.setSociety(society);
+
+        LocalDateTime time = LocalDateTime.now();
+
+        device.setLastSeenAt(time);
+
+        if(request.getFlatId() != null){
+            Flat flat = flatRepository.findById(flatId).orElseThrow(
+                    ()-> new FlatNotFoundException("Flat not found")
+            );
+
+            device.setFlat(flat);
+        }        else{
+            CommonArea commonArea = commonAreaRepository.findById(commonAreaId).orElseThrow(
+                    ()-> new FlatNotFoundException("Common Area not found")
+            );
+
+            device.setCommonArea(commonArea);
+        }
+
+        Device savedDevice = deviceRepository.save(device);
+
+        RegisterDeviceResponse  response = new RegisterDeviceResponse();
+
+        String mappedTo = savedDevice.getFlat() != null ? "Flat" : "Common Area";
+
+        response.setSocietyId(savedDevice.getSociety().getId());
+        response.setDeviceSerial(savedDevice.getDeviceSerial());
+        response.setDeviceType(savedDevice.getDeviceType());
+        response.setMappedTo(mappedTo);
+
+        return response;
     }
 }

@@ -1,8 +1,7 @@
-import { db, getFlatDevice, getCommonAreaDevice, getSocietyFlats, getFloorFlats } from "./mockData";
-import * as engine from "./readingEngine";
+import { db } from "./mockData";
 import type {
   BlockFloorRow, BuilderOverview, BuilderSocietyRow, Device, DeviceRow, FlatHourlyProfile, FlatLive,
-  FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, MeterStatus, RegisterDeviceInput, Session,
+  FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, RegisterDeviceInput, Session,
   SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint, FlatDetail
 } from "./types";
 import api from '../api/api'
@@ -12,41 +11,67 @@ const delay = (ms = 220): Promise<void> => new Promise((res) => setTimeout(res, 
 const extraDevices: Device[] = [];
 const deregisteredIds = new Set<string>();
 
-function allActiveDevices(): Device[] {
-  return [...db.devices, ...extraDevices].filter((d) => !deregisteredIds.has(d.id));
+export function allActiveDevices(): Device[] {
+  return [...db.devices, ...extraDevices].filter((d: Device) => !deregisteredIds.has(d.id));
 }
 
-function deviceStatus(device: Device): MeterStatus {
-  if (deregisteredIds.has(device.id)) return "deregistered";
-  const offline = engine.isOffline(device.id);
-  if (!offline) return "live";
-  const mins = engine.lastSeenMinutesAgo(device.id);
-  return mins > 30 ? "offline-long" : "offline";
-}
+// function deviceStatus(device: Device): MeterStatus {
+//   if (deregisteredIds.has(device.id)) return "deregistered";
+//   const offline = engine.isOffline(device.id);
+//   if (!offline) return "live";
+//   const mins = engine.lastSeenMinutesAgo(device.id);
+//   return mins > 30 ? "offline-long" : "offline";
+// }
 
 
 // This function is used in the login request to return the whole detail of the user
+// Tries real backend first, falls back to mock users if backend is unavailable
 export async function login(email: string, password: string): Promise<Session> {
-  const response = await api.post("/auth/login", {
-    email,
-    password
-  });
+  try {
+    const response = await api.post("/auth/login", {
+      email,
+      password
+    });
 
-  const data = response.data;
+    const data = response.data;
 
-  return {
-    token: data.token,
-    user: {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      flatId: data.flatId,
-      societyId: data.societyId,
-      builderId: data.builderId,
+    return {
+      token: data.token,
+      user: {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        flatId: data.flatId,
+        societyId: data.societyId,
+        builderId: data.builderId,
+      }
+    };
+  } catch (err: any) {
+    if (err.code === "ERR_NETWORK" || err.message === "Network Error" || !err.response) {
+      await delay(300);
+      const mockUser = db.users.find(
+        (u) => u.email === email && "password123" === password
+      );
+      if (!mockUser) throw new Error("Invalid email or password.");
+      return {
+        token: "mock-token-" + mockUser.id,
+        user: {
+          id: mockUser.id,
+          name: mockUser.name,
+          email: mockUser.email,
+          role: mockUser.role,
+          flatId: mockUser.flatId,
+          societyId: mockUser.societyId,
+          builderId: mockUser.builderId,
+        },
+      };
     }
+    // If it's a real backend error (401, 403, etc.), throw it
+    throw err.response?.data?.message
+      ? new Error(err.response.data.message)
+      : err;
   }
-
 }
 
 
@@ -457,7 +482,9 @@ export async function registerDevice({ deviceSerial, deviceType, mappedTo, socie
 }
 
 export async function deregisterDevice(deviceId: string): Promise<{ id: string; deregistered: boolean }> {
-  await delay(300);
-  deregisteredIds.add(deviceId);
-  return { id: deviceId, deregistered: true };
+  const response = await api.delete(`/society/${deviceId}/deregister-device`);
+  return response.data;
+  // await delay(300);
+  // deregisteredIds.add(deviceId);
+  // return { id: deviceId, deregistered: true };
 }
