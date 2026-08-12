@@ -45,6 +45,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/ws/energy/**").permitAll()
 
                         .requestMatchers("/superAdmin/**")
                         .hasAuthority("SUPER_ADMIN")
