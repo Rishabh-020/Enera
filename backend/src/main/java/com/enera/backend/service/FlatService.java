@@ -4,10 +4,15 @@ import com.enera.backend.dto.FlatOwner.*;
 import com.enera.backend.entity.Device;
 import com.enera.backend.entity.Flat;
 import com.enera.backend.entity.Reading;
+import com.enera.backend.entity.User;
+import com.enera.backend.exception.DeviceNotFoundException;
+import com.enera.backend.exception.FlatNotFoundException;
+import com.enera.backend.exception.ReadingNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.DeviceRepository;
 import com.enera.backend.repository.FlatRepository;
 import com.enera.backend.repository.ReadingRepository;
+import com.enera.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
@@ -21,31 +26,36 @@ public class FlatService {
     private final FlatRepository flatRepository;
     private final ReadingRepository readingRepository;
     private final DeviceRepository deviceRepository;
+    private final UserRepository userRepository;
+    private static final double LOW_KW_THRESHOLD = 2.0;
+    private static final double MID_KW_THRESHOLD = 4.0;
 
     FlatService(FlatRepository flatRepository,
                 ReadingRepository readingRepository,
-                DeviceRepository deviceRepository){
+                DeviceRepository deviceRepository,
+                UserRepository userRepository){
         this.flatRepository = flatRepository;
         this.readingRepository = readingRepository;
         this.deviceRepository = deviceRepository;
+        this.userRepository = userRepository;
     }
     public FlatLiveResponse getFlatLive(Long flatId){
         Flat flat = flatRepository.findById(flatId).
-                orElseThrow(()-> new UserNotFoundException("Flat not found"));
+                orElseThrow(()-> new FlatNotFoundException("Flat not found"));
 
         Reading reading = readingRepository.findTopByDevice_Flat_IdOrderByTimestampDesc(flatId)
-                .orElseThrow(()-> new UserNotFoundException("Reading not found"));
+                .orElseThrow(()-> new ReadingNotFoundException("Reading not found"));
 
         Device device = deviceRepository.findByFlatId(flatId)
-                .orElseThrow(()-> new UserNotFoundException("Device not found"));
+                .orElseThrow(()-> new DeviceNotFoundException("Device not found"));
 
         FlatLiveResponse response = new FlatLiveResponse();
 
         Double kw = reading.getKw();
 
-        if (kw < 2) {
+        if (kw < LOW_KW_THRESHOLD) {
             response.setLevel("normal");
-        } else if (kw < 4) {
+        } else if (kw < MID_KW_THRESHOLD) {
             response.setLevel("amber");
         } else {
             response.setLevel("high");
@@ -66,7 +76,7 @@ public class FlatService {
 
     public FlatSummaryResponse getFlatSummary(Long flatId,String month){
         Flat flat = flatRepository.findById(flatId).orElseThrow(
-                ()-> new UserNotFoundException("Flat not found")
+                ()-> new FlatNotFoundException("Flat not found")
         );
 
         FlatSummaryResponse response = new FlatSummaryResponse();
@@ -135,7 +145,7 @@ public class FlatService {
 
     public FlatTrendResponse getFlatTrend(Long flatId){
         Flat flat = flatRepository.findById(flatId).orElseThrow(
-                ()-> new UserNotFoundException("Flat not found")
+                ()-> new FlatNotFoundException("Flat not found")
         );
 
         LocalDate today = LocalDate.now();
@@ -230,7 +240,7 @@ public class FlatService {
 
     public FlatHourlyProfileResponse getFlatHourlyProfile(Long flatId){
         Flat flat = flatRepository.findById(flatId).orElseThrow(
-                ()-> new UserNotFoundException("Flat not found")
+                ()-> new FlatNotFoundException("Flat not found")
         );
 
         LocalDateTime st = LocalDate.now().atStartOfDay();
@@ -292,6 +302,34 @@ public class FlatService {
         response.setProfile(hourlyPointResponses);
         response.setPeakHours(peakHours);
 
+
+        return response;
+    }
+
+    public FlatDetailResponse getFlatDetail(Long flatId){
+        FlatDetailResponse response = new FlatDetailResponse();
+
+        Flat flat = flatRepository.findById(flatId).
+                orElseThrow(() -> new FlatNotFoundException("Flat not found"));
+
+        User user = userRepository.findById(flatId).
+                orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        String flatNumber = flat.getFlatNumber();
+
+        String bhkType = flat.getBhkType();
+
+        Long floorNumber = flat.getFloor().getFloorNumber();
+
+        String blockName = flat.getFloor().getBlock().getBlockName();
+
+        String residentName = user != null ? user.getName() : null;
+
+        response.setResidentName(residentName);
+        response.setFlatNumber(flatNumber);
+        response.setBlockName(blockName);
+        response.setBhkType(bhkType);
+        response.setFloorNumber(floorNumber);
 
         return response;
     }

@@ -3,6 +3,7 @@ package com.enera.backend.service;
 import com.enera.backend.dto.block.BlockFloorResponse;
 import com.enera.backend.entity.Block;
 import com.enera.backend.entity.Floor;
+import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.BlockRepository;
 import com.enera.backend.repository.FlatRepository;
@@ -34,7 +35,7 @@ public class BlockService {
         List<BlockFloorResponse> responses = new ArrayList<>();
 
         Block block = blockRepository.findById(blockId)
-                .orElseThrow(()-> new UserNotFoundException("Block not found"));
+                .orElseThrow(()-> new SocietyNotFoundException("Block not found"));
 
         List<Floor> floors = floorRepository.findByBlockId(blockId);
 

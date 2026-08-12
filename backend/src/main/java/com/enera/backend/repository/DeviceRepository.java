@@ -26,11 +26,15 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
 
     boolean existsBySocietyAndCommonAreaAndFlat(Society society,CommonArea  commonArea,Flat flat);
 
+    List<Device> findBySocietyId(Long societyId);
+
     Optional<Device> findByFlatId(Long flatId);
 
     Integer countBySocietyBuilderIdAndStatus(Long builderId,Boolean online);
 
     Integer countBySocietyIdAndStatus(Long societyId,Boolean online);
+
+    Optional<Device> findByDeviceSerial(Long deviceSerial);
 
     @Query(value = """
     SELECT d.status

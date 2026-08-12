@@ -1,16 +1,15 @@
 package com.enera.backend.controller;
 
-import com.enera.backend.dto.society.SocietyBlockResponse;
-import com.enera.backend.dto.society.SocietyCommonAreaResponse;
-import com.enera.backend.dto.society.SocietyFlatResponse;
-import com.enera.backend.dto.society.SocietyOverviewResponse;
+import com.enera.backend.dto.device.RegisterDeviceRequest;
+import com.enera.backend.dto.device.RegisterDeviceResponse;
+import com.enera.backend.dto.society.*;
 import com.enera.backend.service.SocietyService;
+import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.parameters.P;
+import org.springframework.stereotype.Repository;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -63,5 +62,21 @@ public class SocietyController {
         );
     }
 
+    @GetMapping("/{id}/devices")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<List<SocietyDeviceResponse>> getSocietyDevice(@PathVariable Long id){
+        return ResponseEntity.ok(
+                societyService.getSocietyDevice(id)
+        );
+    }
 
+    @PostMapping("/{id}/register-device")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<RegisterDeviceResponse> SocietyDeviceRegister(
+            @PathVariable Long id, @RequestBody RegisterDeviceRequest request){
+        return ResponseEntity.ok(
+                societyService.registerDevice(id,request)
+        );
+
+    }
 }

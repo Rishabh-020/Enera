@@ -1,9 +1,8 @@
-import { db, getFlatDevice, getCommonAreaDevice, getSocietyFlats, getFloorFlats } from "./mockData";
-import * as engine from "./readingEngine";
+import { db } from "./mockData";
 import type {
   BlockFloorRow, BuilderOverview, BuilderSocietyRow, Device, DeviceRow, FlatHourlyProfile, FlatLive,
-  FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, MeterStatus, RegisterDeviceInput, Session,
-  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint
+  FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, RegisterDeviceInput, Session,
+  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint, FlatDetail
 } from "./types";
 import api from '../api/api'
 
@@ -12,41 +11,67 @@ const delay = (ms = 220): Promise<void> => new Promise((res) => setTimeout(res, 
 const extraDevices: Device[] = [];
 const deregisteredIds = new Set<string>();
 
-function allActiveDevices(): Device[] {
-  return [...db.devices, ...extraDevices].filter((d) => !deregisteredIds.has(d.id));
+export function allActiveDevices(): Device[] {
+  return [...db.devices, ...extraDevices].filter((d: Device) => !deregisteredIds.has(d.id));
 }
 
-function deviceStatus(device: Device): MeterStatus {
-  if (deregisteredIds.has(device.id)) return "deregistered";
-  const offline = engine.isOffline(device.id);
-  if (!offline) return "live";
-  const mins = engine.lastSeenMinutesAgo(device.id);
-  return mins > 30 ? "offline-long" : "offline";
-}
+// function deviceStatus(device: Device): MeterStatus {
+//   if (deregisteredIds.has(device.id)) return "deregistered";
+//   const offline = engine.isOffline(device.id);
+//   if (!offline) return "live";
+//   const mins = engine.lastSeenMinutesAgo(device.id);
+//   return mins > 30 ? "offline-long" : "offline";
+// }
 
 
 // This function is used in the login request to return the whole detail of the user
+// Tries real backend first, falls back to mock users if backend is unavailable
 export async function login(email: string, password: string): Promise<Session> {
-  const response = await api.post("/auth/login", {
-    email,
-    password
-  });
+  try {
+    const response = await api.post("/auth/login", {
+      email,
+      password
+    });
 
-  const data = response.data;
+    const data = response.data;
 
-  return {
-    token: data.token,
-    user: {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      flatId: data.flatId,
-      societyId: data.societyId,
-      builderId: data.builderId,
+    return {
+      token: data.token,
+      user: {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        flatId: data.flatId,
+        societyId: data.societyId,
+        builderId: data.builderId,
+      }
+    };
+  } catch (err: any) {
+    if (err.code === "ERR_NETWORK" || err.message === "Network Error" || !err.response) {
+      await delay(300);
+      const mockUser = db.users.find(
+        (u) => u.email === email && "password123" === password
+      );
+      if (!mockUser) throw new Error("Invalid email or password.");
+      return {
+        token: "mock-token-" + mockUser.id,
+        user: {
+          id: mockUser.id,
+          name: mockUser.name,
+          email: mockUser.email,
+          role: mockUser.role,
+          flatId: mockUser.flatId,
+          societyId: mockUser.societyId,
+          builderId: mockUser.builderId,
+        },
+      };
     }
+    // If it's a real backend error (401, 403, etc.), throw it
+    throw err.response?.data?.message
+      ? new Error(err.response.data.message)
+      : err;
   }
-
 }
 
 
@@ -65,6 +90,11 @@ export async function getFlatLive(flatId: string): Promise<FlatLive> {
       ? new Date(data.timestamp)
       : undefined,
   };
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const device = getFlatDevice(flatId)!;
   // const status = deviceStatus(device);
@@ -87,6 +117,11 @@ export async function getFlatSummary(flatId: string, monthDate: Date = new Date(
     `/flat/${flatId}/summary?month=${month}`
   );
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const device = getFlatDevice(flatId)!;
   // const series = engine.monthSeries(device.id, false, monthDate);
@@ -117,6 +152,11 @@ export async function getFlatTrend(flatId: string): Promise<FlatTrend> {
       date: new Date(point.date),
     })),
   };
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const device = getFlatDevice(flatId)!;
   // const points = engine.trend30Day(device.id, false);
@@ -129,6 +169,11 @@ export async function getFlatTrend(flatId: string): Promise<FlatTrend> {
 export async function getFlatHourlyProfile(flatId: string): Promise<FlatHourlyProfile> {
   const response = await api.get(`/flat/${flatId}/hourly-profile`);
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const device = getFlatDevice(flatId)!;
   // const profile = engine.hourlyProfile(device.id, false);
@@ -137,10 +182,20 @@ export async function getFlatHourlyProfile(flatId: string): Promise<FlatHourlyPr
   // return { profile: withHour, peakHours: peaks };
 }
 
+export async function getFlatDetail(flatId: string): Promise<FlatDetail> {
+  const response = await api.get(`/flat/${flatId}/details`)
+  return response.data;
+}
+
 // ------------------------------------------------------- Society Admin ----
 export async function getSocietyOverview(societyId: string): Promise<SocietyOverview> {
   const response = await api.get(`/society/${societyId}/overview`);
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const flats = getSocietyFlats(societyId);
   // const devices = allActiveDevices().filter((d) => d.societyId === societyId);
@@ -167,6 +222,11 @@ export async function getSocietyOverview(societyId: string): Promise<SocietyOver
 export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockRow[]> {
   const response = await api.get(`/society/${societyId}/blocks`)
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const society = db.societyById.get(societyId)!;
   // const now = new Date();
@@ -190,6 +250,11 @@ export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockR
 export async function getBlockFloors(blockId: string): Promise<BlockFloorRow[]> {
   const response = await api.get(`/block/${blockId}/floors`);
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   //   await delay();
   //   const block = db.blockById.get(blockId)!;
   //   const now = new Date();
@@ -206,6 +271,11 @@ export async function getBlockFloors(blockId: string): Promise<BlockFloorRow[]> 
 export async function getFloorFlatsList(floorId: string): Promise<FloorFlatRow[]> {
   const response = await api.get(`/floor/${floorId}/flats`);
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const flats = getFloorFlats(floorId);
   // const now = new Date();
@@ -225,6 +295,11 @@ export async function getSocietyCommonAreas(societyId: string): Promise<SocietyC
   const response = await api.get(`/society/${societyId}/common_areas`);
 
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const society = db.societyById.get(societyId)!;
   // return society.commonAreas.map((ca) => {
@@ -242,6 +317,11 @@ export async function getSocietyCommonAreas(societyId: string): Promise<SocietyC
 export async function getSocietyHeatmap(societyId: string): Promise<HeatmapGrid> {
   const response = await api.get(`/society/${societyId}/heatmap`);
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay(300);
   // const flats = getSocietyFlats(societyId);
   // const deviceIds = flats.map((f) => getFlatDevice(f.id)!.id);
@@ -254,6 +334,11 @@ export async function getSocietyFlatsList(
 ): Promise<SocietyFlatRow[]> {
   const response = await api.get(`/society/${societyId}/flats`, { params: { search, sortBy } });
   return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const flats = getSocietyFlats(societyId);
   // const now = new Date();
@@ -285,7 +370,12 @@ export async function getSocietyFlatsList(
 // These function make call to the api from the backend for the builder
 export async function getBuilderOverview(builderId: string): Promise<BuilderOverview> {
   const response = await api.get(`/builder/${builderId}/overview`);
+
   return response.data;
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();  
   // const societies = db.builder.societies;
   // let totalFlats = 0;
@@ -307,6 +397,10 @@ export async function getBuilderSocieties(builderId: string): Promise<BuilderSoc
   const response = await api.get(`/builder/${builderId}/societies`);
 
   return response.data;
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
   // await delay();
   // const now = new Date();
   // return db.builder.societies.map((s) => {
@@ -329,43 +423,68 @@ export async function getBuilderSocieties(builderId: string): Promise<BuilderSoc
 
 // ------------------------------------------------------ Device Manager ----
 export async function getSocietyDevices(societyId: string): Promise<DeviceRow[]> {
-  await delay();
-  return allActiveDevices()
-    .filter((d) => d.societyId === societyId)
-    .map((d) => {
-      const status = deviceStatus(d);
-      const mappedTo = d.mappedFlatId ? db.flatById.get(d.mappedFlatId)?.flatNumber : db.commonAreaById.get(d.mappedCommonAreaId!)?.name;
-      return {
-        ...d,
-        status,
-        mappedTo,
-        lastSeenAt: status === "live" ? new Date() : new Date(Date.now() - engine.lastSeenMinutesAgo(d.id) * 60000),
-      };
-    });
+  const response = await api.get(`/society/${societyId}/devices`);
+
+  const data = response.data;
+
+  return data.map((point: DeviceRow) => ({
+    ...point,
+    lastSeenAt: new Date(point.lastSeenAt)
+  }));
+
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
+  // await delay();
+  // return allActiveDevices()
+  //   .filter((d) => d.societyId === societyId)
+  //   .map((d) => {
+  //     const status = deviceStatus(d);
+  //     const mappedTo = d.mappedFlatId ? db.flatById.get(d.mappedFlatId)?.flatNumber : db.commonAreaById.get(d.mappedCommonAreaId!)?.name;
+  //     return {
+  //       ...d,
+  //       status,
+  //       mappedTo,
+  //       lastSeenAt: status === "live" ? new Date() : new Date(Date.now() - engine.lastSeenMinutesAgo(d.id) * 60000),
+  //     };
+  //   });
 }
 
 export async function registerDevice({ deviceSerial, deviceType, mappedTo, societyId }: RegisterDeviceInput): Promise<Device> {
-  await delay(400);
-  const exists = allActiveDevices().some((d) => d.id === deviceSerial);
-  if (exists) throw new Error("Device ID already exists. Choose a unique ID.");
-  let mappedFlatId: string | null = null;
-  let mappedCommonAreaId: string | null = null;
-  if (deviceType === "Flat Meter") {
-    const flat = getSocietyFlats(societyId).find((f) => f.flatNumber === mappedTo);
-    if (!flat) throw new Error("No matching flat found for that flat number.");
-    mappedFlatId = flat.id;
-  } else {
-    const ca = db.societyById.get(societyId)!.commonAreas.find((c) => c.name.toLowerCase() === mappedTo.toLowerCase());
-    if (!ca) throw new Error("No matching common area asset found.");
-    mappedCommonAreaId = ca.id;
-  }
-  const device: Device = { id: deviceSerial, deviceType, mappedFlatId, mappedCommonAreaId, societyId, registeredAt: new Date() };
-  extraDevices.push(device);
-  return device;
+  const response = await api.post(
+    `/society/${societyId}/register-device?deviceId=${deviceSerial}&deviceType=${deviceType}&mappedTo=${mappedTo}`
+  );
+  return response.data;
+
+  // Mock data fallback:
+  // This logic is commented out because the data is now fetched from the backend API.
+  // Uncomment this block if mock data is used instead of the API.
+
+  // await delay(400);
+  // const exists = allActiveDevices().some((d) => d.id === deviceSerial);
+  // if (exists) throw new Error("Device ID already exists. Choose a unique ID.");
+  // let mappedFlatId: string | null = null;
+  // let mappedCommonAreaId: string | null = null;
+  // if (deviceType === "Flat Meter") {
+  //   const flat = getSocietyFlats(societyId).find((f) => f.flatNumber === mappedTo);
+  //   if (!flat) throw new Error("No matching flat found for that flat number.");
+  //   mappedFlatId = flat.id;
+  // } else {
+  //   const ca = db.societyById.get(societyId)!.commonAreas.find((c) => c.name.toLowerCase() === mappedTo.toLowerCase());
+  //   if (!ca) throw new Error("No matching common area asset found.");
+  //   mappedCommonAreaId = ca.id;
+  // }
+  // const device: Device = { id: deviceSerial, deviceType, mappedFlatId, mappedCommonAreaId, societyId, registeredAt: new Date() };
+  // extraDevices.push(device);
+  // return device;
 }
 
 export async function deregisterDevice(deviceId: string): Promise<{ id: string; deregistered: boolean }> {
-  await delay(300);
-  deregisteredIds.add(deviceId);
-  return { id: deviceId, deregistered: true };
+  const response = await api.delete(`/device/${deviceId}`);
+  return response.data;
+  // await delay(300);
+  // deregisteredIds.add(deviceId);
+  // return { id: deviceId, deregistered: true };
 }

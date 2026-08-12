@@ -4,6 +4,7 @@ import com.enera.backend.dto.builder.BuilderOverviewResponse;
 import com.enera.backend.dto.builder.BuilderSocietyResponse;
 import com.enera.backend.entity.Builder;
 import com.enera.backend.entity.Society;
+import com.enera.backend.exception.BuilderNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.*;
 import org.hibernate.property.access.spi.BuiltInPropertyAccessStrategies;
@@ -39,7 +40,7 @@ public class BuilderService {
 
     public BuilderOverviewResponse getBuilderOverview(Long builderId){
         Builder builder = builderRepository.findById(builderId).
-                orElseThrow(()-> new UserNotFoundException("Builder not found"));
+                orElseThrow(()-> new BuilderNotFoundException("Builder not found"));
 
         Integer totalSocieties = societyRepository.countByBuilderId(builderId);
 
@@ -74,7 +75,7 @@ public class BuilderService {
 
     public List<BuilderSocietyResponse> getBuilderSocieties(Long builderId){
         Builder builder = builderRepository.findById(builderId)
-                .orElseThrow(()-> new UserNotFoundException("Builder not found"));
+                .orElseThrow(()-> new BuilderNotFoundException("Builder not found"));
 
         List<Society> societies = societyRepository.findByBuilderId(builderId);
 

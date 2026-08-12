@@ -2,9 +2,10 @@
 // Mirrors the V0 data model: builders -> societies -> blocks -> floors -> flats
 // plus common_areas and devices, all wired with the ids the PRD's API layer expects.
 
-import type { Block, Builder, CommonArea, Db, Device, Flat, Floor, Society, User } from "./types";
+import type { Block, Builder, CommonArea, Db, Device, Flat, Floor, mockUser, Society } from "./types";
 
 const BHK_TYPES = ["1BHK", "2BHK", "2BHK", "3BHK"];
+
 const COMMON_AREA_TEMPLATES = [
   { name: "Lift 1", category: "Vertical Transport" },
   { name: "Lift 2", category: "Vertical Transport" },
@@ -115,7 +116,8 @@ const RESIDENT_NAMES = [
   "Neha Kapoor", "Arjun Malhotra", "Simran Kaur", "Vikram Rao", "Divya Menon",
 ];
 
-const users: User[] = [];
+const users: mockUser[] = [];
+
 for (const society of societiesRaw) {
   society.flats.forEach((flat, i) => {
     if (flat.status === "occupied") {
@@ -127,11 +129,11 @@ for (const society of societiesRaw) {
 
 // A handful of explicit, easy-to-demo logins
 users.push(
-  { id: "u1", name: "Rishabh Sharma", email: "rishabh.owner@enra.io", password: "demo123", role: "flat_owner", flatId: societiesRaw[0].flats[0].id, societyId: "s1", builderId: null },
-  { id: "u2", name: "Anjali Mehta", email: "anjali.owner@demo.io", password: "demo123", role: "flat_owner", flatId: societiesRaw[0].flats[5].id, societyId: "s1", builderId: null },
-  { id: "u3", name: "Society Admin — Palm Meadows", email: "admin.s1@demo.io", password: "demo123", role: "society_admin", flatId: null, societyId: "s1", builderId: null },
-  { id: "u4", name: "Society Admin — Cedar Heights", email: "admin.s2@demo.io", password: "demo123", role: "society_admin", flatId: null, societyId: "s2", builderId: null },
-  { id: "u5", name: "Ashoka Realty — Builder Admin", email: "builder@demo.io", password: "demo123", role: "builder_admin", flatId: null, societyId: null, builderId: "b1" }
+  { id: 1, name: "Rishabh Sharma", email: "rishabh.owner@enra.io", password: "demo123", role: 'RESIDENT', flatId: societiesRaw[0].flats[0].id, societyId: "s1", builderId: null },
+  { id: 2, name: "Anjali Mehta", email: "anjali.owner@demo.io", password: "demo123", role: 'RESIDENT', flatId: societiesRaw[0].flats[5].id, societyId: "s1", builderId: null },
+  { id: 3, name: "Society Admin — Palm Meadows", email: "admin.s1@demo.io", password: "demo123", role: 'SOCIETY_ADMIN', flatId: null, societyId: "s1", builderId: null },
+  { id: 4, name: "Society Admin — Cedar Heights", email: "admin.s2@demo.io", password: "demo123", role: 'SOCIETY_ADMIN', flatId: null, societyId: "s2", builderId: null },
+  { id: 5, name: "Ashoka Realty — Builder Admin", email: "builder@demo.io", password: "demo123", role: 'BUILDER_ADMIN', flatId: null, societyId: null, builderId: 'b1' }
 );
 societiesRaw[0].flats[0].residentName = "Rishabh Sharma";
 societiesRaw[0].flats[5].residentName = "Anjali Mehta";
@@ -156,6 +158,7 @@ for (const s of societiesRaw) {
   }
   for (const ca of s.commonAreas) commonAreaById.set(ca.id, ca);
 }
+
 for (const d of devices) {
   if (d.mappedFlatId) deviceByFlatId.set(d.mappedFlatId, d);
   if (d.mappedCommonAreaId) deviceByCommonAreaId.set(d.mappedCommonAreaId, d);

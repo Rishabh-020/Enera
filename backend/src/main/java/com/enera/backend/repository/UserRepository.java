@@ -30,4 +30,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByBuilder(Builder builder);
 
     List<User> findByBuilderAndRole(Builder builder, Role role);
+
+    Optional<User> findByFlatId(Long flatId);
 }

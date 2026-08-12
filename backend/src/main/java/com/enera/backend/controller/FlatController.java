@@ -1,10 +1,7 @@
 package com.enera.backend.controller;
 
 
-import com.enera.backend.dto.FlatOwner.FlatHourlyProfileResponse;
-import com.enera.backend.dto.FlatOwner.FlatLiveResponse;
-import com.enera.backend.dto.FlatOwner.FlatSummaryResponse;
-import com.enera.backend.dto.FlatOwner.FlatTrendResponse;
+import com.enera.backend.dto.FlatOwner.*;
 import com.enera.backend.service.FlatService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,6 +46,14 @@ public class FlatController {
     public ResponseEntity<FlatHourlyProfileResponse> getFlatHourlyProfile(@PathVariable Long id){
         return ResponseEntity.ok(
                 flatService.getFlatHourlyProfile(id)
+        );
+    }
+
+    @GetMapping("{id}/details")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    public ResponseEntity<FlatDetailResponse> getFlatDetail(@PathVariable Long id){
+        return ResponseEntity.ok(
+            flatService.getFlatDetail(id)
         );
     }
 }
