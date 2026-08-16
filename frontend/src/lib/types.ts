@@ -85,6 +85,22 @@ export interface mockUser {
   builderId: string | null;
 }
 
+export interface WebSocketReading {
+  deviceId?: number;
+  deviceSerial?: number;
+  deviceType?: "FLAT_METER" | "COMMON_AREA_METER";
+  mappedTo?: string;
+  societyId: number;
+  flatId?: number | null;
+  flatNumber?: string | null;
+  commonAreaId?: number | null;
+  commonAreaName?: string | null;
+  kw: number;
+  kwh: number;
+  timestamp: string;
+  isDemo?: boolean;
+}
+
 export interface Db {
   builder: Builder;
   societies: Society[];
@@ -235,6 +251,8 @@ export interface BuilderSocietyRow {
   occupiedFlats: number;
   mtdKwh: number;
   avgPerFlat: number;
+  mom?: number;
+  prevMonthKwh?: number;
 }
 
 export interface DeviceRow extends Device {

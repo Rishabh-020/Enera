@@ -2,10 +2,13 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { RequireRole } from "./components/RequireRole";
 import Login from "./app/login/LogIn";
+import Demo from "./app/demo/DemoHub"
+import { EnergyWebSocketProvider } from "./context/WebSocketContext";
 import FlatOwnerDashboard from "./app/dashboard/FlatOwnerDashboard";
 import SocietyAdminDashboard from "./app/dashboard/SocietyAdminDashboard";
 import DeviceManagement from "./app/dashboard/DeviceManagement";
 import BuilderAdminDashboard from "./app/dashboard/BuilderAdminDashboard";
+import BuilderAnalytics from "./app/dashboard/BuilderAnalytics";
 
 function Root() {
   const { user } = useAuth();
@@ -33,61 +36,74 @@ function Root() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+      <EnergyWebSocketProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          <Route path="/" element={<Root />} />
+            <Route path="/demo" element={<Demo />} />
 
-          <Route
-            path="/flat/:flatId"
-            element={
-              <RequireRole roles={["RESIDENT"]}>
-                <FlatOwnerDashboard />
-              </RequireRole>
-            }
-          />
+            <Route path="/" element={<Root />} />
 
-          <Route
-            path="/society/:societyId"
-            element={
-              <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
-                <SocietyAdminDashboard />
-              </RequireRole>
-            }
-          />
+            <Route
+              path="/flat/:flatId"
+              element={
+                <RequireRole roles={["RESIDENT"]}>
+                  <FlatOwnerDashboard />
+                </RequireRole>
+              }
+            />
 
-          <Route
-            path="/society/:societyId/devices"
-            element={
-              <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
-                <DeviceManagement />
-              </RequireRole>
-            }
-          />
+            <Route
+              path="/society/:societyId"
+              element={
+                <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
+                  <SocietyAdminDashboard />
+                </RequireRole>
+              }
+            />
 
-          <Route
-            path="/builder/:builderId"
-            element={
-              <RequireRole roles={["BUILDER_ADMIN", "SUPER_ADMIN"]}>
-                <BuilderAdminDashboard />
-              </RequireRole>
-            }
-          />
+            <Route
+              path="/society/:societyId/devices"
+              element={
+                <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
+                  <DeviceManagement />
+                </RequireRole>
+              }
+            />
 
-          <Route
-            path="/superAdmin"
-            element={
-              <RequireRole roles={["SUPER_ADMIN"]}>
-                {/* <SuperAdminDashboard /> */}
-                <p>Super Admin Dashboard</p>
-              </RequireRole>
-            }
-          />
+            <Route
+              path="/builder/:builderId"
+              element={
+                <RequireRole roles={["BUILDER_ADMIN", "SUPER_ADMIN"]}>
+                  <BuilderAdminDashboard />
+                </RequireRole>
+              }
+            />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            <Route
+              path="/builder/:builderId/analytics"
+              element={
+                <RequireRole roles={["BUILDER_ADMIN", "SUPER_ADMIN"]}>
+                  <BuilderAnalytics />
+                </RequireRole>
+              }
+            />
+
+            <Route
+              path="/superAdmin"
+              element={
+                <RequireRole roles={["SUPER_ADMIN"]}>
+                  {/* <SuperAdminDashboard /> */}
+                  <p>Super Admin Dashboard</p>
+                </RequireRole>
+              }
+            />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </EnergyWebSocketProvider>
     </AuthProvider>
   );
 }

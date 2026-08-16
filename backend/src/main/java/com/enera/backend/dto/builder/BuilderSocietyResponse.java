@@ -17,4 +17,8 @@ public class BuilderSocietyResponse {
     private Double mtdKwh;
 
     private Double avgPerFlat;
+
+    private Double mom;
+
+    private Double prevMonthKwh;
 }

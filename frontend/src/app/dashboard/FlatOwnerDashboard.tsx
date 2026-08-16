@@ -1,6 +1,5 @@
 import { useParams } from "react-router-dom";
-import { LayoutGrid } from "lucide-react";
-import { DashboardLayout } from "../../components/layout/DashboardLayout";
+import { DashboardLayout, NAV_ITEMS_RESIDENT } from "../../components/layout/DashboardLayout";
 import { FlatDashboardView } from "../../components/FlatDashboardView";
 
 export default function FlatOwnerDashboard() {
@@ -8,10 +7,10 @@ export default function FlatOwnerDashboard() {
 
   return (
     <DashboardLayout
-      nav={[{ key: "dashboard", label: "My Dashboard", icon: <LayoutGrid size={16} /> }]}
+      nav={NAV_ITEMS_RESIDENT}
       activeKey="dashboard"
     >
       <FlatDashboardView flatId={flatId!} />
     </DashboardLayout>
   );
-} 
+}

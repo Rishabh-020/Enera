@@ -1,7 +1,3 @@
-// Static data model, generated once at module load.
-// Mirrors the V0 data model: builders -> societies -> blocks -> floors -> flats
-// plus common_areas and devices, all wired with the ids the PRD's API layer expects.
-
 import type { Block, Builder, CommonArea, Db, Device, Flat, Floor, mockUser, Society } from "./types";
 
 const BHK_TYPES = ["1BHK", "2BHK", "2BHK", "3BHK"];

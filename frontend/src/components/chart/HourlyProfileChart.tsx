@@ -2,11 +2,13 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip } from 
 import { Card, CardHeader, CardTitle, CardDescription, Badge } from "../ui/primitives";
 import type { FlatHourlyProfile } from "../../lib/types";
 
+// Multi-color per intensity matching VoltWise stacked bar style
 function levelColor(kwh: number, max: number): string {
   const ratio = kwh / max;
-  if (ratio > 0.7) return "#dc2626"; // coral/high
-  if (ratio > 0.4) return "#f5a623"; // amber
-  return "#0d9488"; // teal/low
+  if (ratio > 0.8) return "#dc2626"; // red - high
+  if (ratio > 0.6) return "#7c3aed"; // purple - elevated
+  if (ratio > 0.35) return "#f59e0b"; // amber - mid
+  return "#0d9488"; // teal - low
 }
 
 interface HourlyProfileChartProps {
@@ -25,8 +27,8 @@ export function HourlyProfileChart({ data, loading }: HourlyProfileChartProps) {
     <Card>
       <CardHeader>
         <div>
-          <CardTitle>Time-of-day profile</CardTitle>
-          <CardDescription>Average kWh per hour, last 30 days</CardDescription>
+          <CardTitle>Hourly profile</CardTitle>
+          <CardDescription>Average consumption by hour · Last 7 days</CardDescription>
         </div>
         <div className="flex gap-1">
           {data.peakHours.map((h) => (
@@ -44,7 +46,7 @@ export function HourlyProfileChart({ data, loading }: HourlyProfileChartProps) {
             <Tooltip
               formatter={(v: any) => [`${v} kWh`, "Avg"]}
               labelFormatter={(h: any) => `${h}:00 - ${(h + 1) % 24}:00`}
-              contentStyle={{ borderRadius: 12, border: "1px solid #e2e5eb", fontSize: 12 }}
+              contentStyle={{ borderRadius: 12, border: "1px solid #e2e5eb", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
             />
             <Bar dataKey="kwh" radius={[4, 4, 0, 0]} maxBarSize={14}>
               {data.profile.map((d, i) => (

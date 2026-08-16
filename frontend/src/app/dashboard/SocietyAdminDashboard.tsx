@@ -1,38 +1,61 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { LayoutGrid, Cpu, Search, ChevronRight, Zap, Building2, Users, PlugZap } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
 import * as api from "../../lib/api";
-import { DashboardLayout } from "../../components/layout/DashboardLayout";
-import { StatCard } from "../../components/chart/StatCard";
-import { Heatmap } from "../../components/chart/Heatmap";
+import { DashboardLayout, NAV_ITEMS_SOCIETY } from "../../components/layout/DashboardLayout";
 import { FlatDashboardView } from "../../components/FlatDashboardView";
-import {
-  Card, CardHeader, CardTitle, CardDescription, Badge, Input, Button,
-  Table, Thead, Th, Td, Tr, Breadcrumb, StatusDot, type BreadcrumbItem,
-} from "../../components/ui/primitives";
-import type {
-  BlockFloorRow, HeatmapGrid, SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, FloorFlatRow,
-} from "../../lib/types";
+import { Card, CardHeader, CardTitle, CardDescription, Breadcrumb, Table, Thead, Th, Td, Tr, type BreadcrumbItem } from "../../components/ui/primitives";
+import type { BlockFloorRow, FloorFlatRow, SocietyFlatRow } from "../../lib/types";
+
+// Import sub-views
+import { DashboardTab } from "./society/DashboardTab";
+import { AnalyticsTab } from "./society/AnalyticsTab";
+import { AlertsTab } from "./society/AlertsTab";
+import { ResidentsTab } from "./society/ResidentsTab";
+import { BillingTab } from "./society/BillingTab";
+import { SettingsTab } from "./society/SettingsTab";
 
 export default function SocietyAdminDashboard() {
   const { societyId } = useParams<{ societyId: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const readOnly = searchParams.get("readonly") === "true";
 
-  // Use overview data for society name instead of mock db
-  const [overview, setOverview] = useState<SocietyOverview | null>(null);
-  const [societyName, setSocietyName] = useState<string>("");
+  const initialTab = searchParams.get("tab") || "dashboard";
+  const [activeKey, setActiveKey] = useState(initialTab);
+
+  // Sync state with URL search parameters
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) {
+      setActiveKey(tab);
+    }
+  }, [searchParams]);
 
   // drill-down state: block -> floor -> flat
   const [blockId, setBlockId] = useState<string | null>(null);
   const [floorId, setFloorId] = useState<string | null>(null);
   const [flatId, setFlatId] = useState<string | null>(null);
 
-  // Store labels for breadcrumbs from API data
+  const [societyName, setSocietyName] = useState<string>("");
   const [blockName, setBlockName] = useState<string>("");
   const [floorLabel, setFloorLabel] = useState<string>("");
   const [flatLabel, setFlatLabel] = useState<string>("");
+
+  const [flats, setFlats] = useState<SocietyFlatRow[] | null>(null);
+  const [anomalies, setAnomalies] = useState([
+    { id: "a1", flat: "Flat 402", desc: "Drawing 5.8 kWh at 2:00 AM — expected 1.8 kWh", multiplier: "3.2x usual", resolved: false },
+    { id: "a2", flat: "Flat 112", desc: "Drawing 4.2 kWh at 11:00 PM — expected 1.5 kWh", multiplier: "2.8x usual", resolved: false },
+  ]);
+
+  useEffect(() => {
+    if (societyId) {
+      api.getSocietyOverview(societyId).then((o) => {
+        if (o.name) setSocietyName(o.name);
+      });
+      api.getSocietyFlatsList(societyId).then(setFlats);
+    }
+  }, [societyId]);
 
   function reset() {
     setBlockId(null);
@@ -63,241 +86,94 @@ export default function SocietyAdminDashboard() {
   if (floorId) crumbs.push({ label: floorLabel, onClick: () => setFlatId(null) });
   if (flatId) crumbs.push({ label: flatLabel });
 
+  const handleNav = (key: string) => {
+    if (key === "devices") {
+      navigate(`/society/${societyId}/devices`);
+    } else {
+      reset();
+      setSearchParams({ tab: key });
+      setActiveKey(key);
+    }
+  };
+
   return (
     <DashboardLayout
-      nav={
-        readOnly
-          ? [{ key: "dashboard", label: "Dashboard", icon: <LayoutGrid size={16} /> }]
-          : [
-            { key: "dashboard", label: "Dashboard", icon: <LayoutGrid size={16} /> },
-            { key: "devices", label: "Devices", icon: <Cpu size={16} /> },
-          ]
+      nav={readOnly
+        ? [{ key: "dashboard", label: "Dashboard", icon: <Building2 size={16} /> }]
+        : NAV_ITEMS_SOCIETY
       }
-      activeKey="dashboard"
-      onNav={(key) => key === "devices" && navigate(`/society/${societyId}/devices`)}
+      activeKey={activeKey}
+      onNav={handleNav}
       banner={
         readOnly && (
-          <div className="flex items-center justify-between bg-amp-500/15 px-4 py-2 text-xs font-medium text-amp-600 md:px-8">
+          <div className="flex items-center justify-between bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs font-medium text-amber-700 md:px-8">
             <span>Viewing as Builder Admin — Read only</span>
-            <button onClick={() => navigate(-1)} className="underline underline-offset-2 hover:text-amp-500">
+            <button onClick={() => navigate(-1)} className="underline underline-offset-2 hover:text-amber-600 cursor-pointer">
               Back to portfolio
             </button>
           </div>
         )
       }
     >
-      <div className="mb-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Society Admin</p>
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-bold text-grid-900">{societyName || "Loading…"}</h1>
+      {/* Hide standard header inside sub-tabs unless in dashboard drilldown */}
+      {(flatId || floorId || blockId) && (
+        <div className="mb-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Society Admin</p>
+          <div className="flex items-center justify-between">
+            <h1 className="font-display text-2xl font-bold text-slate-900">{societyName || "Loading…"}</h1>
+          </div>
+          <div className="mt-2">
+            <Breadcrumb items={crumbs} />
+          </div>
         </div>
-        <div className="mt-2">
-          <Breadcrumb items={crumbs} />
-        </div>
-      </div>
+      )}
 
       {flatId ? (
-        <FlatDashboardView
-          flatId={flatId}
-        />
+        <FlatDashboardView flatId={flatId} />
       ) : floorId ? (
-        <FloorFlatList
-          floorId={floorId}
-          onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)}
-        />
+        <FloorFlatList floorId={floorId} onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)} />
       ) : blockId ? (
-        <BlockFloorList
-          blockId={blockId}
-          onSelectFloor={(id, floorNumber) => selectFloor(id, floorNumber)}
-        />
+        <BlockFloorList blockId={blockId} onSelectFloor={(id, floorNumber) => selectFloor(id, floorNumber)} />
       ) : (
-        <SocietyOverviewSection
-          societyId={societyId ?? ""}
-          onSelectBlock={(id, name) => selectBlock(id, name)}
-          onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)}
-          onOverviewLoaded={(o) => { setOverview(o); }}
-          onSocietyNameLoaded={setSocietyName}
-        />
+        /* Render Sidebar Views */
+        <>
+          {activeKey === "dashboard" && (
+            <DashboardTab
+              societyId={societyId ?? ""}
+              onSelectBlock={selectBlock}
+              onSelectFlat={selectFlat}
+              anomalies={anomalies}
+              setAnomalies={setAnomalies}
+              flats={flats}
+            />
+          )}
+
+          {activeKey === "analytics" && (
+            <AnalyticsTab societyId={societyId ?? ""} />
+          )}
+
+          {activeKey === "alerts" && (
+            <AlertsTab anomalies={anomalies} setAnomalies={setAnomalies} />
+          )}
+
+          {activeKey === "residents" && (
+            <ResidentsTab flats={flats} onSelectFlat={selectFlat} />
+          )}
+
+          {activeKey === "billing" && (
+            <BillingTab flats={flats} />
+          )}
+
+          {activeKey === "settings" && (
+            <SettingsTab />
+          )}
+        </>
       )}
     </DashboardLayout>
   );
 }
 
-
-
-interface SocietyOverviewSectionProps {
-  societyId: string;
-  onSelectBlock: (id: string, name: string) => void;
-  onSelectFlat: (id: string, flatNumber: string) => void;
-  onOverviewLoaded: (o: SocietyOverview) => void;
-  onSocietyNameLoaded: (name: string) => void;
-}
-
-function SocietyOverviewSection({ societyId, onSelectBlock, onSelectFlat, onOverviewLoaded, onSocietyNameLoaded }: SocietyOverviewSectionProps) {
-  const [overview, setOverview] = useState<SocietyOverview | null>(null);
-  const [blocks, setBlocks] = useState<SocietyBlockRow[] | null>(null);
-  const [commonAreas, setCommonAreas] = useState<SocietyCommonAreaRow[] | null>(null);
-  const [heatmap, setHeatmap] = useState<HeatmapGrid | null>(null);
-  const [flats, setFlats] = useState<SocietyFlatRow[] | null>(null);
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"flatNumber" | "mtdKwh">("flatNumber");
-
-  useEffect(() => {
-    api.getSocietyOverview(societyId).then((overview) => {
-      setOverview(overview);
-      onOverviewLoaded(overview);
-      if (overview.name) {
-        onSocietyNameLoaded(overview.name);
-      }
-    });
-    api.getSocietyBlocks(societyId).then((blocks) => {
-      setBlocks(blocks);
-      // Use the first block's response to infer society name is loaded
-      if (blocks.length > 0) {
-        // Society name will come from overview; we can also fetch it separately if needed
-      }
-    });
-    api.getSocietyCommonAreas(societyId).then(setCommonAreas);
-    api.getSocietyHeatmap(societyId).then(setHeatmap);
-  }, [societyId]);
-
-  // Set society name from overview when available
-  useEffect(() => {
-    if (overview) {
-      // The overview doesn't have the society name, so we'll keep the name from blocks/flats
-      // For now we need to add it to the overview or fetch separately
-    }
-  }, [overview]);
-
-  useEffect(() => {
-    api.getSocietyFlatsList(societyId, { search, sortBy }).then(setFlats);
-  }, [societyId, search, sortBy]);
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Live consumption" value={overview ? `${overview.liveKw.toFixed(2)} kW` : "—"} icon={<Zap size={16} />} loading={!overview} accent />
-        <StatCard label="Flats" value={overview ? `${overview.occupiedFlats}/${overview.totalFlats}` : "—"} sub="occupied / total" icon={<Users size={16} />} loading={!overview} />
-        <StatCard label="Devices online" value={overview ? overview.devicesOnline : "—"} sub={overview ? `${overview.devicesOffline} offline` : ""} icon={<PlugZap size={16} />} loading={!overview} />
-        <StatCard label="Month-to-date" value={overview ? `${overview.mtdKwh.toFixed(2)} kWh` : "—"} sub={overview ? `₹${overview.mtdCost.toLocaleString("en-IN")}` : ""} icon={<Building2 size={16} />} loading={!overview} />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Block-wise consumption</CardTitle>
-            <CardDescription>Click a block to drill into floors and flats</CardDescription>
-          </div>
-        </CardHeader>
-        <div className="grid grid-cols-1 gap-3 px-5 pb-5 sm:grid-cols-2 lg:grid-cols-3">
-          {(blocks ?? Array.from({ length: 3 })).map((b: SocietyBlockRow | undefined, i) => (
-            <button
-              key={b?.id ?? i}
-              onClick={() => b && onSelectBlock(String(b.id), b.name)}
-              disabled={!b}
-              className="flex flex-col gap-2 rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-amp-500 hover:bg-amp-500/5 disabled:animate-pulse disabled:bg-slate-50"
-            >
-              {b && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <span className="font-display text-sm font-semibold text-grid-900">{b.name}</span>
-                    {b.aboveAverage && <Badge variant="high">Above avg</Badge>}
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>{b.flatCount} flats</span>
-                    <span className="font-mono-data font-semibold text-grid-900">{b.liveKw.toFixed(2)} kW live</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>Today: {b.todayKwh.toFixed(2)} kWh</span>
-                    <span>MTD: {b.mtdKwh.toFixed(2)} kWh</span>
-                  </div>
-                </>
-              )}
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Common areas</CardTitle>
-            <CardDescription>Lifts, pumps, lighting &amp; recreational assets</CardDescription>
-          </div>
-        </CardHeader>
-        <div className="grid grid-cols-2 gap-3 px-5 pb-5 sm:grid-cols-3 lg:grid-cols-4">
-          {(commonAreas ?? []).map((ca) => (
-            <div key={ca.id} className="rounded-xl border border-slate-200 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{ca.category}</p>
-              <p className="font-display text-sm font-semibold text-grid-900">{ca.name}</p>
-              <div className="mt-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <StatusDot status={ca.type} />
-                  On
-                </span>
-                <span className="font-mono-data text-xs font-semibold text-grid-900">{ca.currentKw?.toFixed(1)} kW</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Heatmap grid={heatmap} loading={!heatmap} />
-
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Flats</CardTitle>
-            <CardDescription>Search, sort and jump to any flat's dashboard</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search flat or resident" className="w-56 pl-9" />
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setSortBy(sortBy === "mtdKwh" ? "flatNumber" : "mtdKwh")}>
-              Sort: {sortBy === "mtdKwh" ? "Usage" : "Flat #"}
-            </Button>
-          </div>
-        </CardHeader>
-        <div className="px-5 pb-5 pt-3">
-          <Table>
-            <Thead>
-              <tr>
-                <Th>Flat</Th>
-                <Th>Block</Th>
-                <Th>Floor</Th>
-                <Th>Resident/Flat-Type</Th>
-                <Th>Meter</Th>
-                <Th>Month kWh</Th>
-                <Th></Th>
-              </tr>
-            </Thead>
-            <tbody>
-              {(flats ?? []).map((f) => (
-                <Tr key={f.id} onClick={() => onSelectFlat(String(f.id), f.flatNumber)} className="cursor-pointer">
-                  <Td className="font-medium text-grid-900">{f.flatNumber}</Td>
-                  <Td>{f.blockName}</Td>
-                  <Td>{f.floorNumber}</Td>
-                  <Td>{f.residentName ?? <span className="text-slate-400">{f.bhkType}</span>}</Td>
-                  <Td>
-                    <span className="flex items-center gap-1.5">
-                      <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : "Offline"}
-                    </span>
-                  </Td>
-                  <Td className="font-mono-data">{f.mtdKwh}</Td>
-                  <Td>
-                    <ChevronRight size={15} className="text-slate-300" />
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
-        </div>
-      </Card>
-    </div>
-  );
-}
+/* ──────────────────────── Drill-down Lists ──────────────────────── */
 
 function BlockFloorList({ blockId, onSelectFloor }: { blockId: string; onSelectFloor: (id: string, floorNumber: number) => void }) {
   const [floors, setFloors] = useState<BlockFloorRow[] | null>(null);
@@ -320,13 +196,13 @@ function BlockFloorList({ blockId, onSelectFloor }: { blockId: string; onSelectF
             key={f?.id ?? i}
             onClick={() => f && onSelectFloor(String(f.id), f.floorNumber)}
             disabled={!f}
-            className="flex flex-col gap-1.5 rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-amp-500 hover:bg-amp-500/5 disabled:animate-pulse disabled:bg-slate-50"
+            className="flex flex-col gap-1.5 rounded-xl border border-slate-200 p-4 text-left transition-all hover:border-teal-400 hover:bg-teal-50/30 hover:shadow-sm disabled:animate-pulse disabled:bg-slate-50 cursor-pointer"
           >
             {f && (
               <>
-                <span className="font-display text-sm font-semibold text-grid-900">Floor {f.floorNumber}</span>
+                <span className="font-display text-sm font-semibold text-slate-900">Floor {f.floorNumber}</span>
                 <span className="text-xs text-slate-500">{f.flatCount} flats</span>
-                <span className="font-mono-data text-xs font-semibold text-grid-900">{f.mtdKwh} kWh MTD</span>
+                <span className="font-mono-data text-xs font-semibold text-slate-900">{f.mtdKwh} kWh MTD</span>
               </>
             )}
           </button>
@@ -366,16 +242,18 @@ function FloorFlatList({ floorId, onSelectFlat }: { floorId: string; onSelectFla
           <tbody>
             {(flats ?? []).map((f) => (
               <Tr key={f.id} onClick={() => onSelectFlat(String(f.id), f.flatNumber)} className="cursor-pointer">
-                <Td className="font-medium text-grid-900">{f.flatNumber}</Td>
+                <Td className="font-medium text-slate-900">{f.flatNumber}</Td>
                 <Td>{f.bhkType}</Td>
                 <Td>{f.residentName ?? <span className="text-slate-400">Vacant</span>}</Td>
                 <Td>
                   <span className="flex items-center gap-1.5">
-                    <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : "Offline"}
+                    {/* <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : "Offline"} */}
                   </span>
                 </Td>
                 <Td className="font-mono-data">{f.mtdKwh}</Td>
-                <Td><ChevronRight size={15} className="text-slate-300" /></Td>
+                <Td>
+                  <ChevronRight size={15} className="text-slate-300" />
+                </Td>
               </Tr>
             ))}
           </tbody>

@@ -1,15 +1,33 @@
-import type { ReactNode } from "react";
-import { Zap, LogOut, LayoutGrid, Cpu, Building2 } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Zap, LogOut, LayoutGrid, Cpu, Building2, Bell, ChevronLeft, ChevronRight, BarChart3, AlertTriangle, Users, CreditCard, Settings, Home, FileText, Menu, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
+// This cn method is used to add flexibility in the css like when we have to make the website reponsive then we have
+// to select between the two css with respect to the width as we are use boolean to check for the colaps nav then
+// this is helpfull
 import type { Role } from "../../lib/types";
+import { Avatar, SearchBar, SwitchViewToggle } from "../ui/primitives";
 
 const ROLE_LABEL: Record<Role, string> = {
-  RESIDENT: "Flat Owner",
+  RESIDENT: "Resident",
   SOCIETY_ADMIN: "Society Admin",
   BUILDER_ADMIN: "Builder Admin",
   SUPER_ADMIN: "Super Admin",
+};
+
+const ROLE_SECTION_LABEL: Record<Role, string> = {
+  RESIDENT: "RESIDENT",
+  SOCIETY_ADMIN: "SOCIETY ADMIN",
+  BUILDER_ADMIN: "BUILDER",
+  SUPER_ADMIN: "ADMIN",
+};
+
+const SWITCH_VIEW_OPTIONS: Record<Role, string> = {
+  RESIDENT: "Resident",
+  SOCIETY_ADMIN: "Admin",
+  BUILDER_ADMIN: "Builder",
+  SUPER_ADMIN: "Admin",
 };
 
 export interface NavItem {
@@ -29,80 +47,321 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleSwitchView = (option: string) => {
+    if (option === "Resident") {
+      navigate(`/flat/${user?.flatId || "flat_101"}`);
+    } else if (option === "Admin") {
+      navigate(`/society/${user?.societyId || "soc_1"}`);
+    } else if (option === "Builder") {
+      navigate(`/builder/${user?.builderId || "bld_1"}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f4f5f8]">
       <div className="flex">
-        {/* Sidebar */}
-        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-grid-900 px-4 py-6 md:flex">
-          <div className="flex items-center gap-2 px-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amp-500">
-              <Zap size={16} className="text-grid-950" strokeWidth={2.5} />
+        {/* ─── Sidebar (dark charcoal) ─── */}
+        <aside
+          className={cn(
+            "sticky top-0 hidden h-screen shrink-0 flex-col bg-grid-900 md:flex transition-all duration-300 ease-in-out overflow-hidden z-20 border-r border-white/5",
+            collapsed ? "w-[68px]" : "w-60"
+          )}
+        >
+          <div className={cn("px-4 py-5", collapsed && "px-3")}>
+            {/* Brand */}
+            <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500 shrink-0">
+                <Zap size={18} className="text-white" strokeWidth={2.5} />
+              </div>
+              {!collapsed && (
+                <span className="font-display text-lg font-bold text-white sidebar-fade-in">Enera</span>
+              )}
             </div>
-            <span className="font-display text-lg font-semibold text-white">Amperly</span>
-          </div>
-          <p className="mt-1 px-2 text-[11px] uppercase tracking-widest text-slate-500">Energy Ops</p>
 
-          <nav className="mt-8 flex flex-1 flex-col gap-1">
+            {/* Section label */}
+            {!collapsed && (
+              <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500 sidebar-fade-in">
+                {user ? ROLE_SECTION_LABEL[user.role] : ""}
+              </p>
+            )}
+          </div>
+
+          {/* Nav items */}
+          <nav className={cn("mt-1 flex flex-1 flex-col gap-0.5 px-3 overflow-y-auto", collapsed && "px-2")}>
             {nav.map((item) => (
               <button
                 key={item.key}
                 onClick={() => onNav?.(item.key)}
+                title={collapsed ? item.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-white",
-                  activeKey === item.key && "bg-white/10 text-white"
+                  "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer select-none",
+                  collapsed && "justify-center px-0",
+                  activeKey === item.key
+                    ? "bg-teal-500/12 text-teal-400 font-semibold"
+                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
                 )}
               >
-                {item.icon}
-                {item.label}
+                <span className={cn(
+                  "shrink-0 transition-colors",
+                  activeKey === item.key && "text-teal-400"
+                )}>
+                  {item.icon}
+                </span>
+                {!collapsed && <span className="sidebar-fade-in truncate">{item.label}</span>}
               </button>
             ))}
           </nav>
 
-          <div className="mt-auto rounded-xl bg-grid-800 p-3">
-            <p className="text-xs font-medium text-white">{user?.name}</p>
-            <p className="text-[11px] text-slate-400">{user && ROLE_LABEL[user.role]}</p>
-            <button
-              onClick={() => {
-                logout();
-                navigate("/login");
-              }}
-              className="mt-3 flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-amp-400"
-            >
-              <LogOut size={13} /> Sign out
-            </button>
+          {/* Bottom section */}
+          <div className={cn("mt-auto px-3 pb-4 flex flex-col gap-3.5", collapsed && "px-2 pb-3")}>
+            {/* Switch View */}
+            {!collapsed && (
+              <div className="sidebar-fade-in">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+                  Switch View
+                </p>
+                <SwitchViewToggle
+                  options={["Resident", "Admin", "Builder"]}
+                  active={user ? SWITCH_VIEW_OPTIONS[user.role] : "Admin"}
+                  onChange={handleSwitchView}
+                />
+              </div>
+            )}
+
+            {/* User card */}
+            <div className={cn(
+              "rounded-xl bg-grid-800/80 border border-white/5 p-3 transition-colors hover:bg-grid-800",
+              collapsed && "p-2 flex items-center justify-center"
+            )}>
+              {collapsed ? (
+                <Avatar name={user?.name ?? "U"} size="sm" />
+              ) : (
+                <div className="flex items-center gap-2.5 sidebar-fade-in min-w-0">
+                  <Avatar name={user?.name ?? "U"} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-white truncate">{user?.name ?? "User"}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{user?.email ?? ""}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Collapse / Logout */}
+            <div className={cn(
+              "flex items-center pt-1 border-t border-white/5",
+              collapsed ? "justify-center" : "justify-between"
+            )}>
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors cursor-pointer py-1 px-1.5 rounded-lg hover:bg-white/5"
+                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {collapsed ? (
+                  <ChevronRight size={15} />
+                ) : (
+                  <>
+                    <ChevronLeft size={15} />
+                    <span className="sidebar-fade-in">Collapse</span>
+                  </>
+                )}
+              </button>
+              {!collapsed && (
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate("/login");
+                  }}
+                  className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 hover:text-rose-400 transition-colors cursor-pointer py-1 px-1.5 rounded-lg hover:bg-white/5 sidebar-fade-in"
+                >
+                  <LogOut size={13} /> Logout
+                </button>
+              )}
+            </div>
           </div>
         </aside>
 
-        {/* Main */}
-        <main className="min-h-screen flex-1">
-          {/* mobile topbar */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amp-500">
-                <Zap size={14} className="text-grid-950" />
+        {/* Mobile drawer backdrop */}
+        {mobileOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs md:hidden animate-fade-in"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+
+        {/* Mobile drawer sidebar */}
+        <div
+          className={cn(
+            "fixed inset-y-0 left-0 z-50 w-72 bg-grid-900 flex flex-col transition-transform duration-300 ease-in-out md:hidden shadow-2xl",
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500">
+                <Zap size={18} className="text-white" strokeWidth={2.5} />
               </div>
-              <span className="font-display text-base font-semibold text-grid-900">Amperly</span>
+              <span className="font-display text-lg font-bold text-white">Enera</span>
             </div>
             <button
-              onClick={() => {
-                logout();
-                navigate("/login");
-              }}
-              className="text-xs font-medium text-slate-500"
+              onClick={() => setMobileOpen(false)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
-              Sign out
+              <X size={20} />
             </button>
+          </div>
+
+          <div className="px-4 pt-3 pb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+              {user ? ROLE_SECTION_LABEL[user.role] : ""}
+            </p>
+          </div>
+
+          {/* Mobile Nav list */}
+          <nav className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1">
+            {nav.map((item) => (
+              <button
+                key={item.key}
+                onClick={() => {
+                  onNav?.(item.key);
+                  setMobileOpen(false);
+                }}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all duration-200 cursor-pointer w-full text-left",
+                  activeKey === item.key
+                    ? "bg-teal-500/15 text-teal-400 font-semibold"
+                    : "text-slate-300 hover:bg-white/5 hover:text-white"
+                )}
+              >
+                <span className={cn(activeKey === item.key && "text-teal-400")}>{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          {/* Mobile drawer bottom */}
+          <div className="p-4 border-t border-white/5 flex flex-col gap-3.5 bg-grid-950/50">
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+                Switch View
+              </p>
+              <SwitchViewToggle
+                options={["Resident", "Admin", "Builder"]}
+                active={user ? SWITCH_VIEW_OPTIONS[user.role] : "Admin"}
+                onChange={(opt) => {
+                  handleSwitchView(opt);
+                  setMobileOpen(false);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-white/5">
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar name={user?.name ?? "U"} size="sm" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-white truncate">{user?.name}</p>
+                  <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  logout();
+                  navigate("/login");
+                }}
+                className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
+                title="Log Out"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Main content ─── */}
+        <main className="min-h-screen flex-1 min-w-0">
+          {/* Top bar (desktop) */}
+          <div className="sticky top-0 z-10 hidden items-center justify-between border-b border-slate-200/80 bg-white/95 backdrop-blur-sm px-6 py-2.5 md:flex">
+            <div className="w-[360px] max-w-full">
+              <SearchBar placeholder="Search flats, residents, or devices..." />
+            </div>
+            <div className="flex items-center gap-4">
+              {/* Role badge */}
+              <div className="flex items-center gap-1.5 rounded-full bg-grid-900 px-3 py-1.5 text-xs font-medium text-slate-200">
+                <span className="text-teal-400">✦</span>
+                {user ? ROLE_LABEL[user.role] : ""}
+              </div>
+              {/* Notification bell */}
+              <button className="relative p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+                <Bell size={18} className="text-slate-500" />
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-teal-500 ring-2 ring-white" />
+              </button>
+              {/* Avatar */}
+              <Avatar name={user?.name ?? "U"} />
+            </div>
+          </div>
+
+          {/* Mobile topbar */}
+          <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setMobileOpen(true)}
+                className="p-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
+                aria-label="Open Navigation Menu"
+              >
+                <Menu size={20} />
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500">
+                  <Zap size={15} className="text-white" />
+                </div>
+                <span className="font-display text-base font-bold text-grid-900">Enera</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                {user ? ROLE_LABEL[user.role] : ""}
+              </span>
+              <button className="relative p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer">
+                <Bell size={17} />
+                <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-teal-500" />
+              </button>
+            </div>
           </div>
 
           {banner}
 
-          <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">{children}</div>
+          <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8">{children}</div>
         </main>
       </div>
     </div>
   );
 }
+
+/* ─── Nav icon presets ─── */
+
+export const NAV_ITEMS_RESIDENT: NavItem[] = [
+  { key: "dashboard", label: "My Dashboard", icon: <Home size={16} /> },
+  { key: "bills", label: "My Bills", icon: <FileText size={16} /> },
+  { key: "alerts", label: "Alerts", icon: <AlertTriangle size={16} /> },
+  { key: "settings", label: "Settings", icon: <Settings size={16} /> },
+];
+
+export const NAV_ITEMS_SOCIETY: NavItem[] = [
+  { key: "dashboard", label: "Dashboard", icon: <LayoutGrid size={16} /> },
+  { key: "analytics", label: "Analytics", icon: <BarChart3 size={16} /> },
+  { key: "alerts", label: "Alerts", icon: <AlertTriangle size={16} /> },
+  { key: "devices", label: "Devices", icon: <Cpu size={16} /> },
+  { key: "residents", label: "Residents", icon: <Users size={16} /> },
+  { key: "billing", label: "Billing", icon: <CreditCard size={16} /> },
+  { key: "settings", label: "Settings", icon: <Settings size={16} /> },
+];
+
+export const NAV_ITEMS_BUILDER: NavItem[] = [
+  { key: "portfolio", label: "Portfolio", icon: <Building2 size={16} /> },
+  { key: "analytics", label: "Analytics", icon: <BarChart3 size={16} /> },
+];
 
 export const NAV_ICON: Record<string, ReactNode> = {
   grid: <LayoutGrid size={16} />,

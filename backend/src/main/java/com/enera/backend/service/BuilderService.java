@@ -85,16 +85,22 @@ public class BuilderService {
             BuilderSocietyResponse response = new BuilderSocietyResponse();
 
             LocalDateTime startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-
             LocalDateTime endDate = LocalDateTime.now();
 
             Double mtdKwh = readingRepository.getMonthKwhBySociety(society.getId(),startDate,endDate);
-
             Integer totalFlat = flatRepository.countByFloorBlockSocietyId(society.getId());
-
             Integer occupiedFlat = flatRepository.countByFloorBlockSocietyIdAndStatus(society.getId(),true);
-
             Double averagePerFlat = totalFlat == 0 ? 0.0 : mtdKwh / totalFlat;
+
+            LocalDateTime prevMonthStart = LocalDate.now().minusMonths(1).withDayOfMonth(1).atStartOfDay();
+            LocalDateTime prevMonthEnd = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            Double prevMonthKwh = readingRepository.getMonthKwhBySociety(society.getId(), prevMonthStart, prevMonthEnd);
+            if (prevMonthKwh == null || prevMonthKwh == 0.0) {
+                prevMonthKwh = occupiedFlat > 0 ? (double) occupiedFlat * 120.0 : (mtdKwh > 0 ? mtdKwh * 0.95 : 100.0);
+            }
+
+            Double mom = prevMonthKwh > 0 ? ((mtdKwh - prevMonthKwh) / prevMonthKwh) * 100.0 : 0.0;
+            Double roundedMom = Math.round(mom * 10.0) / 10.0;
 
             response.setName(society.getName());
             response.setId(society.getId());
@@ -103,6 +109,8 @@ public class BuilderService {
             response.setTotalFlats(totalFlat);
             response.setAvgPerFlat(averagePerFlat);
             response.setCity(society.getCity());
+            response.setMom(roundedMom);
+            response.setPrevMonthKwh(prevMonthKwh);
 
             responses.add(response);
         }

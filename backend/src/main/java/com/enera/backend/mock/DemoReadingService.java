@@ -1,17 +1,20 @@
 package com.enera.backend.mock;
 
+import com.enera.backend.dto.society.SocietyBlockResponse;
+import com.enera.backend.dto.society.SocietyFlatResponse;
+import com.enera.backend.dto.society.SocietyOverviewResponse;
 import com.enera.backend.websocket.EnergyWebSocketHandler;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+
 
 @Slf4j
 @Service
@@ -19,7 +22,6 @@ import java.util.Random;
 public class DemoReadingService {
 
     private final EnergyWebSocketHandler webSocketHandler;
-    private final ObjectMapper objectMapper;
     private final Random random = new Random();
 
     private final List<DemoDevice> allDevices = new ArrayList<>();
@@ -31,11 +33,11 @@ public class DemoReadingService {
 
         long deviceIdCounter = 1L;
         long deviceSerialCounter = 900001L;
-        long flatIdCounter = 1001L;
+        long flatIdCounter = 1L;
 
         String[] soc1CommonAreas = {
                 "Clubhouse & Main Gym", "Main Lift 1", "Main Lift 2", "Service Lift",
-                "Borewell Pump 1", "Overhead Tank Pump", "Swimming Pool Filtration",
+                "BoreWell Pump 1", "Overhead Tank Pump", "Swimming Pool Filtration",
                 "EV Fast Charging Hub", "Corridor & Perimeter Lighting", "Security Gate & Hub"
         };
 
@@ -132,10 +134,9 @@ public class DemoReadingService {
     }
 
     public void generateAndBroadcastReading() {
-        if (activeDevices.isEmpty()) {
+        if (!webSocketHandler.hasActiveSessions() || activeDevices.isEmpty()) {
             return;
         }
-
         // Pick 1 or 2 active devices randomly per tick to simulate continuous real-time telemetry
         int count = 1 + random.nextInt(2);
         for (int i = 0; i < count; i++) {
@@ -159,16 +160,16 @@ public class DemoReadingService {
             reading.setCommonAreaName(device.getCommonAreaName());
             reading.setKw(kw);
             reading.setKwh(kwh);
-            reading.setTimestamp(LocalDateTime.now());
+            reading.setTimestamp(Instant.now().toString());
             reading.setDemo(true);
 
             try {
-                String json = objectMapper.writeValueAsString(reading);
+                String json = reading.toJson();
                 webSocketHandler.sendToAll(json);
-                log.debug("Demo reading broadcast: Device {} ({}) - {} kW",
+                log.info("Demo reading broadcast: Device {} ({}) - {} kW",
                         device.getDeviceId(), device.getMappedTo(), kw);
             } catch (Exception e) {
-                log.error("Failed to serialize or broadcast demo reading: {}", e.getMessage());
+                log.error("Failed to serialize or broadcast demo reading: {}", e.getMessage(), e);
             }
         }
     }
@@ -179,5 +180,117 @@ public class DemoReadingService {
 
     public List<DemoDevice> getActiveDevices() {
         return Collections.unmodifiableList(activeDevices);
+    }
+
+    public com.enera.backend.dto.society.SocietyOverviewResponse getSocietyOverview(Long societyId) {
+        long targetSocId = (societyId != null) ? societyId : 1L;
+        List<DemoDevice> socDevices = allDevices.stream()
+                .filter(d -> d.getSocietyId() != null && d.getSocietyId().equals(targetSocId))
+                .toList();
+
+        long flatCount = socDevices.stream().filter(
+                d -> "FLAT_METER".equals(d.getDeviceType())
+                ).count();
+        long activeCount = socDevices.stream().filter(
+                d -> Boolean.TRUE.equals(d.getIsActive())
+                ).count();
+        double totalLiveKw = socDevices.stream()
+                .filter(d -> Boolean.TRUE.equals(d.getIsActive()) && d.getBaseKw() != null)
+                .mapToDouble(DemoDevice::getBaseKw)
+                .sum();
+
+        SocietyOverviewResponse resp = new SocietyOverviewResponse();
+
+        resp.setName(targetSocId == 1L ? "Sunrise Heights (Demo)" : "Skyline Towers (Demo)");
+        resp.setLiveKw(Math.round(totalLiveKw * 10.0) / 10.0);
+        resp.setTotalFlats((int) flatCount);
+        resp.setOccupiedFlats((int) (flatCount * 0.9));
+        resp.setDevicesOnline((int) activeCount);
+        resp.setDevicesOffline((int) (socDevices.size() - activeCount));
+        resp.setMtdKwh(targetSocId == 1L ? 5420.0 : 4180.0);
+        resp.setMtdCost(targetSocId == 1L ? 43360.0 : 33440.0);
+        return resp;
+    }
+
+    public List<com.enera.backend.dto.society.SocietyBlockResponse> getSocietyBlocks(Long societyId) {
+        long targetSocId = (societyId != null) ? societyId : 1L;
+        String[] blockNames = (targetSocId == 1L) ? new String[]{"A", "B", "C", "D"} : new String[]{"A", "B", "C"};
+        List<com.enera.backend.dto.society.SocietyBlockResponse> list = new ArrayList<>();
+
+        for (int i = 0; i < blockNames.length; i++) {
+            String bName = blockNames[i];
+            List<DemoDevice> bDevices = allDevices.stream()
+                    .filter(d -> d.getSocietyId() != null && d.getSocietyId().equals(targetSocId) && d.getFlatNumber() != null && d.getFlatNumber().startsWith(bName + "-"))
+                    .toList();
+
+            double liveKw = bDevices.stream()
+                    .filter(d -> Boolean.TRUE.equals(d.getIsActive()) && d.getBaseKw() != null)
+                    .mapToDouble(DemoDevice::getBaseKw)
+                    .sum();
+
+            SocietyBlockResponse b = new SocietyBlockResponse();
+
+            b.setId((targetSocId * 10) + (i + 1));
+            b.setName("Block " + bName);
+            b.setLiveKw(Math.round(liveKw * 10.0) / 10.0);
+            b.setFlatCount((long) bDevices.size());
+            b.setTodayKwh(Math.round(liveKw * 14.2 * 10.0) / 10.0);
+            b.setMtdKwh(Math.round(liveKw * 320.0 * 10.0) / 10.0);
+            b.setAboveAverage(i % 2 == 1);
+            list.add(b);
+        }
+        return list;
+    }
+
+    public List<com.enera.backend.dto.society.SocietyCommonAreaResponse> getSocietyCommonAreas(Long societyId) {
+        long targetSocId = (societyId != null) ? societyId : 1L;
+        return allDevices.stream()
+                .filter(d -> d.getSocietyId() != null && d.getSocietyId().equals(targetSocId) && "COMMON_AREA_METER".equals(d.getDeviceType()))
+                .map(d -> {
+                    com.enera.backend.dto.society.SocietyCommonAreaResponse ca = new com.enera.backend.dto.society.SocietyCommonAreaResponse();
+                    ca.setId(d.getCommonAreaId());
+                    ca.setName(d.getCommonAreaName());
+                    String name = d.getCommonAreaName() != null ? d.getCommonAreaName() : "";
+                    ca.setCategory(name.contains("Lift") ? "Vertical Transport" :
+                            name.contains("Pump") ? "Water Management" :
+                            name.contains("Lighting") ? "Lighting" : "Amenities");
+                    ca.setFloorOrLocation("Ground / Central");
+                    ca.setType("Metered");
+                    ca.setCurrentKw(d.getBaseKw() != null ? d.getBaseKw() : 0.0);
+                    return ca;
+                })
+                .toList();
+    }
+
+    public List<com.enera.backend.dto.society.SocietyFlatResponse> getSocietyFlats(Long societyId) {
+        long targetSocId = (societyId != null) ? societyId : 1L;
+        return allDevices.stream()
+                .filter(d -> d.getSocietyId() != null && d.getSocietyId().equals(targetSocId) && "FLAT_METER".equals(d.getDeviceType()))
+                .map(d -> {
+                    boolean active = Boolean.TRUE.equals(d.getIsActive());
+                    String fNum = d.getFlatNumber() != null ? d.getFlatNumber() : "A-101";
+                    double base = d.getBaseKw() != null ? d.getBaseKw() : 1.0;
+
+                    SocietyFlatResponse f = new SocietyFlatResponse();
+
+                    f.setId(d.getFlatId());
+                    f.setFlatNumber(fNum);
+                    f.setBhkType(fNum.endsWith("1") || fNum.endsWith("5") ? "3 BHK" : "2 BHK");
+                    f.setOccupied(active);
+                    f.setResidentName(active ? "Resident " + fNum : null);
+                    f.setBlockName("Block " + fNum.substring(0, 1));
+
+                    long floor = 1L;
+
+                    try {
+                        floor = Long.parseLong(fNum.substring(2, 3));
+                    } catch (Exception ignored) {}
+
+                    f.setFloorNumber(floor);
+                    f.setMeterStatus(active ? "live" : "offline");
+                    f.setMtdKwh(active ? Math.round(base * 240.0 * 10.0) / 10.0 : 0.0);
+                    return f;
+                })
+                .toList();
     }
 }
