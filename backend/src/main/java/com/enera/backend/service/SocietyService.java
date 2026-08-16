@@ -286,4 +286,64 @@ public class SocietyService {
 
         return response;
     }
+
+    public List<DailyTrendResponse> getDailyTrend(Long societyId,int date){
+        Society society = societyRepository.findById(societyId).
+                orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+
+        List<Object[]> rows = readingRepository.getDailyTrendBySociety(societyId,date);
+
+        List<DailyTrendResponse> responses = new ArrayList<>();
+
+        for(Object[] row : rows){
+            String dateStr = (String) row[0];
+            double totalKwh = ((Number) row[1]).doubleValue();
+            double commonAreaKwh = ((Number) row[2]).doubleValue();
+
+            responses.add(DailyTrendResponse.builder()
+                    .date(dateStr)
+                    .totalKwh(Math.round(totalKwh*10.0)/10.0)
+                    .commonAreaKwh(Math.round(commonAreaKwh*10.0)/10.0)
+                    .build());
+        }
+
+        return responses;
+    }
+
+    public List<HourlyBreakDownResponse> getHourlyBreakDown(Long societyId,LocalDate date){
+        Society society = societyRepository.findById(societyId).
+                orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+
+        if (date == null) {
+            date = LocalDate.now();
+        }
+
+
+        List<HourlyBreakDownResponse> response = new ArrayList<>();
+
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+
+        List<Object[]> rows = readingRepository.getHourlyBreakdownByDate(
+                        societyId,start,end
+        );
+
+
+        for (Object[] row : rows) {
+            int hourNum = ((Number) row[0]).intValue();
+            String hour = hourNum + ":00";
+
+            double totalFlatKwh = ((Number) row[1]).doubleValue();
+            double commonKwh = ((Number) row[2]).doubleValue();
+
+            double baseKwh = Math.round(totalFlatKwh * 0.30 * 10.0) / 10.0;
+            double societyKwh = Math.round(totalFlatKwh * 0.50 * 10.0) / 10.0;
+            double peekKwh = Math.round(totalFlatKwh * 0.20 * 10.0) / 10.0;
+            double commonAreaKwh = Math.round(commonKwh * 10.0) / 10.0;
+
+            response.add(new HourlyBreakDownResponse(hour, baseKwh, societyKwh, commonAreaKwh, peekKwh));
+        }
+
+        return response;
+    }
 }

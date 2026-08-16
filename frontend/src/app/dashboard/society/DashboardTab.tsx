@@ -2,16 +2,17 @@ import { useEffect, useState, useMemo } from "react";
 import { Zap, Building2, Users, PlugZap, AlertTriangle, ChevronRight } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar, Cell
+  ResponsiveContainer, BarChart, Bar
 } from "recharts";
 import * as api from "../../../lib/api";
 import { StatCard } from "../../../components/chart/StatCard";
 import { DonutChart } from "../../../components/chart/DonutChart";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, ProgressStat,
   Table, Thead, Th, Td, Tr, StatusDot
 } from "../../../components/ui/primitives";
-import type { SocietyOverview, SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow } from "../../../lib/types";
+import type { SocietyOverview, SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, DailyTrendPoint } from "../../../lib/types";
 import { cn } from "../../../lib/utils";
 import { useWebSocketReading } from "../../../context/WebSocketContext";
 
@@ -35,6 +36,7 @@ export function DashboardTab({
   const [overview, setOverview] = useState<SocietyOverview | null>(null);
   const [blocks, setBlocks] = useState<SocietyBlockRow[] | null>(null);
   const [commonAreas, setCommonAreas] = useState<SocietyCommonAreaRow[] | null>(null);
+  const [trendData, setTrendData] = useState<DailyTrendPoint[] | null>(null);
   const [dateRange, setDateRange] = useState("Last 7 days");
 
   const { latestReading } = useWebSocketReading();
@@ -50,10 +52,27 @@ export function DashboardTab({
         prev
           ? {
               ...prev,
-              liveKw: Number((prev.liveKw + latestReading.kw * 0.05).toFixed(1)),
+              liveKw: Number((prev.liveKw + (latestReading.kw ?? 0) * 0.05).toFixed(1)),
             }
           : prev
       );
+
+      if (latestReading.kwh) {
+        setTrendData((prev) => {
+          if (!prev || prev.length === 0) return prev;
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          const isCommon = Boolean(latestReading.commonAreaId || latestReading.deviceType === "COMMON_AREA_METER");
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            total: Number((updated[lastIdx].total + latestReading.kwh).toFixed(1)),
+            common: isCommon
+              ? Number((updated[lastIdx].common + latestReading.kwh).toFixed(1))
+              : updated[lastIdx].common,
+          };
+          return updated;
+        });
+      }
     }
 
     if (latestReading.commonAreaId || latestReading.deviceType === "COMMON_AREA_METER") {
@@ -75,7 +94,7 @@ export function DashboardTab({
               latestReading.flatNumber?.startsWith(block.name.replace("Block ", ""))
                 ? {
                     ...block,
-                    liveKw: Number((block.liveKw + latestReading.kw * 0.05).toFixed(1)),
+                    liveKw: Number((block.liveKw + (latestReading.kw ?? 0) * 0.05).toFixed(1)),
                   }
                 : block
             )
@@ -95,6 +114,19 @@ export function DashboardTab({
     api.getSocietyCommonAreas(societyId).then(setCommonAreas).catch(() => {});
   }, [societyId]);
 
+  // Fetch real daily trend strictly from backend API
+  useEffect(() => {
+    if (!societyId) return;
+
+    let days = 7;
+    if (dateRange === "Last 30 days") days = 30;
+    else if (dateRange === "Month to date") days = Math.max(1, new Date().getDate());
+
+    api.getSocietyDailyTrend(societyId, days)
+      .then(setTrendData)
+      .catch(() => setTrendData([]));
+  }, [societyId, dateRange]);
+
   // Derived metrics from backend response
   const totalFlats = overview?.totalFlats ?? (flats?.length || 0);
   const occupiedFlats = overview?.occupiedFlats ?? (flats?.filter((f) => f.occupied || f.residentName).length || 0);
@@ -109,33 +141,20 @@ export function DashboardTab({
     }));
   }, [blocks]);
 
-  // 7-day trend series for area chart
-  const dynamicTrendData = useMemo(() => {
-    if (!overview) return [];
-    const today = new Date();
-    const dailyAvg = Math.round((overview.mtdKwh || 100) / Math.max(1, today.getDate()));
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(today.getDate() - (6 - i));
-      const dayStr = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-      const variance = 0.85 + ((i * 17) % 30) / 100;
-      return {
-        date: dayStr,
-        total: Math.round(dailyAvg * variance),
-        common: Math.round(dailyAvg * 0.25 * variance),
-      };
-    });
-  }, [overview]);
-
-  // Common areas breakdown for donut chart
+  // Common areas breakdown for donut chart (strictly non-zero real kW)
   const dynamicLoadSegments = useMemo(() => {
     if (!commonAreas || commonAreas.length === 0) return [];
+    const hasAnyLoad = commonAreas.some((ca) => (ca.currentKw ?? 0) > 0);
+    if (!hasAnyLoad) return [];
+
     const colors = ["#0d9488", "#0284c7", "#f59e0b", "#7c3aed", "#ec4899", "#10b981"];
-    return commonAreas.map((ca, idx) => ({
-      name: ca.name,
-      value: Math.max(1, Math.round((ca.currentKw || 0.5) * 10)),
-      color: colors[idx % colors.length],
-    }));
+    return commonAreas
+      .filter((ca) => (ca.currentKw ?? 0) > 0)
+      .map((ca, idx) => ({
+        name: ca.name,
+        value: Number((ca.currentKw ?? 0).toFixed(2)),
+        color: colors[idx % colors.length],
+      }));
   }, [commonAreas]);
 
   // Average flat consumption and top 5 consuming flats
@@ -145,8 +164,10 @@ export function DashboardTab({
     return Math.round(total / flats.length) || 1;
   }, [flats]);
 
-  const sortedFlats = useMemo(() => {
-    return [...(flats ?? [])].sort((a, b) => b.mtdKwh - a.mtdKwh).slice(0, 5);
+  const topConsumers = useMemo(() => {
+    return [...(flats ?? [])]
+      .sort((a, b) => (b.mtdKwh || 0) - (a.mtdKwh || 0))
+      .slice(0, 5);
   }, [flats]);
 
   return (
@@ -162,30 +183,27 @@ export function DashboardTab({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select
+          <CustomSelect
             value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="h-9 rounded-xl border border-slate-300 bg-white px-2.5 text-xs text-slate-700 outline-none focus:border-teal-500"
-          >
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>Month to date</option>
-          </select>
+            onChange={setDateRange}
+            options={["Last 7 days", "Last 30 days", "Month to date"]}
+          />
         </div>
       </div>
 
-      {/* Row 1: Stat Cards */}
+      {/* Row 1: 5 Primary Metric Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           label="Live load"
           value={overview ? `${overview.liveKw.toFixed(1)} kW` : "—"}
+          sub={overview ? `Peak today · ${Math.round(overview.liveKw * 1.2)} kW` : ""}
           icon={<Zap size={16} />}
           loading={!overview}
           accent
         />
         <StatCard
           label="Total flats"
-          value={overview ? `${totalFlats}` : "—"}
+          value={overview ? `${overview.totalFlats}` : "—"}
           sub={overview ? `${occupiedFlats} occupied` : ""}
           icon={<Building2 size={16} />}
           loading={!overview}
@@ -223,27 +241,66 @@ export function DashboardTab({
             </div>
           </CardHeader>
           <CardContent className="h-80">
-            {!overview ? (
+            {!trendData ? (
               <div className="h-full w-full skeleton-box rounded-xl" />
+            ) : trendData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                No daily telemetry recorded for this period
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dynamicTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={trendData} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0d9488" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#0d9488" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#0d9488" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#0d9488" stopOpacity={0.02} />
                     </linearGradient>
                     <linearGradient id="colorCommon" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} unit=" kWh" width={50} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e5eb", fontSize: 12 }} />
-                  <Area type="monotone" dataKey="total" name="Society Total" stroke="#0d9488" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" />
-                  <Area type="monotone" dataKey="common" name="Common Areas" stroke="#7c3aed" strokeWidth={2} fillOpacity={1} fill="url(#colorCommon)" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={{ stroke: "#e2e8f0" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={58}
+                    tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`)}
+                    unit=" kWh"
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+                    formatter={(value: any, name: any) => [`${value} kWh`, name]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    name="Society Total"
+                    stroke="#0d9488"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorTotal)"
+                    dot={{ r: 4, fill: "#0d9488" }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="common"
+                    name="Common Areas"
+                    stroke="#7c3aed"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorCommon)"
+                    dot={{ r: 4, fill: "#7c3aed" }}
+                    activeDot={{ r: 6 }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -294,12 +351,7 @@ export function DashboardTab({
                   <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false} width={80} />
                   <Tooltip />
-                  <Bar dataKey="kwh" fill="#0d9488" radius={[0, 4, 4, 0]} maxBarSize={16}>
-                    {blockComparisonData.map((_, index) => {
-                      const colors = ["#475569", "#dc2626", "#0d9488", "#64748b"];
-                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                    })}
-                  </Bar>
+                  <Bar dataKey="kwh" fill="#0d9488" radius={[0, 4, 4, 0]} maxBarSize={16} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -465,7 +517,7 @@ export function DashboardTab({
                   </Tr>
                 ))
               ) : (
-                sortedFlats.map((f) => {
+                topConsumers.map((f) => {
                   const vsAvg = avgFlatMtd > 0 ? Math.round(((f.mtdKwh - avgFlatMtd) / avgFlatMtd) * 100) : 0;
                   const statusVariant = vsAvg > 20 ? "attention" : vsAvg < -5 ? "efficient" : "neutral";
                   const statusLabel = vsAvg > 20 ? "Above avg" : vsAvg < -5 ? "Efficient" : "Normal";

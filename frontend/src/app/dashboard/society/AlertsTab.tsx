@@ -14,11 +14,12 @@ export function AlertsTab({ anomalies, setAnomalies }: AlertsTabProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <TabPills tabs={["active", "resolved", "all"]} active={alertType} onChange={(type) => setAlertType(type)} />
         <Button
           variant="outline"
           size="sm"
+          className="self-start sm:self-auto"
           onClick={() => {
             setAnomalies(anomalies.map((a) => ({ ...a, resolved: true })));
             alert("All active alerts acknowledged.");

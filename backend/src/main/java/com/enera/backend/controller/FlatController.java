@@ -18,7 +18,7 @@ public class FlatController {
     }
 
     @GetMapping("/{id}/live")
-    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatLiveResponse> getFlatLive(@PathVariable Long id){
         return ResponseEntity.ok(
                 flatService.getFlatLive(id)
@@ -26,7 +26,7 @@ public class FlatController {
     }
 
     @GetMapping("{id}/summary")
-    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatSummaryResponse> getFlatSummary(@PathVariable Long id, @RequestParam String month){
         return ResponseEntity.ok(
                 flatService.getFlatSummary(id,month)
@@ -34,7 +34,7 @@ public class FlatController {
     }
 
     @GetMapping("{id}/trend")
-    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatTrendResponse> getFlatTrend(@PathVariable Long id){
         return ResponseEntity.ok(
                 flatService.getFlatTrend(id)
@@ -42,7 +42,7 @@ public class FlatController {
     }
 
     @GetMapping("{id}/hourly-profile")
-    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatHourlyProfileResponse> getFlatHourlyProfile(@PathVariable Long id){
         return ResponseEntity.ok(
                 flatService.getFlatHourlyProfile(id)
@@ -50,7 +50,7 @@ public class FlatController {
     }
 
     @GetMapping("{id}/details")
-    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatDetailResponse> getFlatDetail(@PathVariable Long id){
         return ResponseEntity.ok(
             flatService.getFlatDetail(id)

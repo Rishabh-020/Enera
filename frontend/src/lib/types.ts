@@ -172,6 +172,26 @@ export interface HourlyPoint {
   kwh: number;
 }
 
+export interface HourlyDataPoint {
+  hour: string;
+  base: number;
+  society: number;
+  common: number;
+  peak: number;
+  baseKwh?: number;
+  societyKwh?: number;
+  commonAreaKwh?: number;
+  peekKwh?: number;
+}
+
+export interface DailyTrendPoint {
+  date: string;
+  total: number;
+  common: number;
+  totalKwh?: number;
+  commonAreaKwh?: number;
+}
+
 export interface FlatHourlyProfile {
   profile: HourlyPoint[];
   peakHours: number[];

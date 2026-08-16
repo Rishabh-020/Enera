@@ -9,17 +9,10 @@ interface DonutSegment {
   color: string;
 }
 
-const DEFAULT_SEGMENTS: DonutSegment[] = [
-  { name: "Morning (6–12)", value: 28, color: "#f59e0b" },
-  { name: "Afternoon (12–18)", value: 22, color: "#0d9488" },
-  { name: "Evening (18–24)", value: 35, color: "#dc2626" },
-  { name: "Night (0–6)", value: 15, color: "#7c3aed" },
-];
-
 export function DonutChart({
-  title = "When you use power",
-  description = "Time-of-day distribution",
-  segments = DEFAULT_SEGMENTS,
+  title = "Load distribution",
+  description = "By common area facility",
+  segments = [],
   loading = false,
 }: {
   title?: string;
@@ -31,9 +24,25 @@ export function DonutChart({
 
   if (loading) return <Card className="h-72 animate-pulse bg-slate-50" />;
 
-  const data = segments?.length ? segments : DEFAULT_SEGMENTS;
+  const data = segments ?? [];
   const total = data.reduce((s, d) => s + (d.value || 0), 0);
   const activeItem = active !== null ? data[active] : null;
+
+  if (data.length === 0) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <div>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+        </CardHeader>
+        <div className="flex h-64 items-center justify-center text-xs text-slate-400">
+          No active common area load recorded
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full">

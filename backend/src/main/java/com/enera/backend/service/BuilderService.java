@@ -2,9 +2,11 @@ package com.enera.backend.service;
 
 import com.enera.backend.dto.builder.BuilderOverviewResponse;
 import com.enera.backend.dto.builder.BuilderSocietyResponse;
+import com.enera.backend.dto.society.HourlyBreakDownResponse;
 import com.enera.backend.entity.Builder;
 import com.enera.backend.entity.Society;
 import com.enera.backend.exception.BuilderNotFoundException;
+import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.*;
 import org.hibernate.property.access.spi.BuiltInPropertyAccessStrategies;
@@ -116,5 +118,41 @@ public class BuilderService {
         }
 
         return responses;
+    }
+    public List<HourlyBreakDownResponse> getHourlyBreakDown(Long builderId, LocalDate date){
+        Builder builder = builderRepository.findById(builderId).
+                orElseThrow(() -> new BuilderNotFoundException("Society not found"));
+
+        if (date == null) {
+            date = LocalDate.now();
+        }
+
+
+        List<HourlyBreakDownResponse> response = new ArrayList<>();
+
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+
+        List<Object[]> rows = readingRepository.getHourlyBreakdownByBuilder(
+                builderId,start,end
+        );
+
+
+        for (Object[] row : rows) {
+            int hourNum = ((Number) row[0]).intValue();
+            String hour = hourNum + ":00";
+
+            double totalFlatKwh = ((Number) row[1]).doubleValue();
+            double commonKwh = ((Number) row[2]).doubleValue();
+
+            double baseKwh = Math.round(totalFlatKwh * 0.30 * 10.0) / 10.0;
+            double societyKwh = Math.round(totalFlatKwh * 0.50 * 10.0) / 10.0;
+            double peekKwh = Math.round(totalFlatKwh * 0.20 * 10.0) / 10.0;
+            double commonAreaKwh = Math.round(commonKwh * 10.0) / 10.0;
+
+            response.add(new HourlyBreakDownResponse(hour, baseKwh, societyKwh, commonAreaKwh, peekKwh));
+        }
+
+        return response;
     }
 }

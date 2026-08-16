@@ -1,7 +1,8 @@
 import type {
   BlockFloorRow, BuilderOverview, BuilderSocietyRow, Device, DeviceRow, FlatHourlyProfile, FlatLive,
   FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, RegisterDeviceInput, Session,
-  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint, FlatDetail, MeterStatus
+  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint, FlatDetail, MeterStatus,
+  DailyTrendPoint, HourlyDataPoint
 } from "./types";
 import api from '../api/api'
 
@@ -106,6 +107,31 @@ export async function getSocietyHeatmap(societyId: string): Promise<HeatmapGrid>
   return response.data;
 }
 
+export async function getSocietyHourlyBreakdown(societyId: string, date?: string): Promise<HourlyDataPoint[]> {
+  const url = isDemoSession() ? `/demo/society/${societyId}/hourly-breakdown` : `/society/${societyId}/hourly-breakdown`;
+  const params = date ? { date } : {};
+  const response = await api.get(url, { params });
+  return (response.data ?? []).map((d: any) => ({
+    hour: d.hour,
+    base: d.base ?? d.baseKwh ?? 0,
+    society: d.society ?? d.societyKwh ?? 0,
+    common: d.common ?? d.commonAreaKwh ?? 0,
+    peak: d.peak ?? d.peekKwh ?? 0,
+  }));
+}
+
+export async function getSocietyDailyTrend(societyId: string, days: number = 7): Promise<DailyTrendPoint[]> {
+  const url = isDemoSession() ? `/demo/society/${societyId}/daily-trend` : `/society/${societyId}/daily-trend`;
+  const response = await api.get(url, { params: { days } });
+  return (response.data ?? []).map((d: any) => ({
+    date: d.date,
+    total: d.total ?? d.totalKwh ?? 0,
+    totalKwh: d.totalKwh ?? d.total ?? 0,
+    common: d.common ?? d.commonAreaKwh ?? 0,
+    commonAreaKwh: d.commonAreaKwh ?? d.common ?? 0,
+  }));
+}
+
 export async function getSocietyFlatsList(societyId: string, { search = "", sortBy = "flatNumber" }:
   { search?: string; sortBy?: "flatNumber" | "mtdKwh" } = {}): Promise<SocietyFlatRow[]> {
   const url = isDemoSession() ? `/demo/society/${societyId}/flats` : `/society/${societyId}/flats`;
@@ -122,6 +148,18 @@ export async function getBuilderOverview(builderId: string): Promise<BuilderOver
 export async function getBuilderSocieties(builderId: string): Promise<BuilderSocietyRow[]> {
   const response = await api.get(`/builder/${builderId}/societies`);
   return response.data;
+}
+
+export async function getBuilderHourlyBreakdown(builderId: string, date?: string): Promise<HourlyDataPoint[]> {
+  const params = date ? { date } : {};
+  const response = await api.get(`/builder/${builderId}/hourly-breakdown`, { params });
+  return (response.data ?? []).map((d: any) => ({
+    hour: d.hour,
+    base: d.base ?? d.baseKwh ?? 0,
+    society: d.society ?? d.societyKwh ?? 0,
+    common: d.common ?? d.commonAreaKwh ?? 0,
+    peak: d.peak ?? d.peekKwh ?? 0,
+  }));
 }
 
 // ------------------------------------------------------ Device Manager ----

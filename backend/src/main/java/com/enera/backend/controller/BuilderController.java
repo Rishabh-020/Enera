@@ -2,15 +2,16 @@ package com.enera.backend.controller;
 
 import com.enera.backend.dto.builder.BuilderOverviewResponse;
 import com.enera.backend.dto.builder.BuilderSocietyResponse;
+import com.enera.backend.dto.society.HourlyBreakDownResponse;
 import com.enera.backend.service.BuilderService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.ResourceBundle;
 
 
 @RestController
@@ -38,4 +39,13 @@ public class BuilderController {
                 builderService.getBuilderSocieties(id)
         );
     }
+    @GetMapping("/{id}/hourly-breakdown")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
+    public ResponseEntity<List<HourlyBreakDownResponse>> getHourlyTrend(@PathVariable Long id,
+                                                                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date){
+        return ResponseEntity.ok(
+                builderService.getHourlyBreakDown(id,date)
+        );
+    }
+
 }
