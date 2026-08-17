@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
-import { Zap, Building2, Users, PlugZap, AlertTriangle, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Zap, Building2, Users, PlugZap, AlertTriangle, ChevronRight, Layers, Cpu, ShieldCheck, ArrowRight } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar
+  ResponsiveContainer
 } from "recharts";
 import * as api from "../../../lib/api";
 import { StatCard } from "../../../components/chart/StatCard";
@@ -33,6 +34,7 @@ export function DashboardTab({
   setAnomalies,
   flats,
 }: DashboardTabProps) {
+  const navigate = useNavigate();
   const [overview, setOverview] = useState<SocietyOverview | null>(null);
   const [blocks, setBlocks] = useState<SocietyBlockRow[] | null>(null);
   const [commonAreas, setCommonAreas] = useState<SocietyCommonAreaRow[] | null>(null);
@@ -136,7 +138,13 @@ export function DashboardTab({
   // Block comparison for bar chart
   const blockComparisonData = useMemo(() => {
     return (blocks ?? []).map((b) => ({
+      id: b.id,
       name: b.name,
+      flatCount: b.flatCount || 0,
+      liveKw: b.liveKw,
+      todayKwh: b.todayKwh,
+      mtdKwh: b.mtdKwh,
+      aboveAverage: b.aboveAverage,
       kwh: b.flatCount > 0 ? Math.round(b.mtdKwh / b.flatCount) : 0,
     }));
   }, [blocks]);
@@ -330,30 +338,120 @@ export function DashboardTab({
         )}
       </div>
 
-      {/* Row 3: Block Comparison + Anomalies Detected */}
+      {/* Row 3: Block Comparison (Redesigned) + Anomalies Detected */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Block comparison</CardTitle>
-              <CardDescription>Per-flat average kWh this month</CardDescription>
+        <Card className="flex flex-col justify-between">
+          <CardHeader className="pb-3 border-b border-slate-100/80">
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Layers size={18} className="text-teal-600" />
+                  <CardTitle>Block Comparison</CardTitle>
+                </div>
+                <CardDescription className="mt-0.5">Per-flat average consumption vs society baseline</CardDescription>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                Avg: {avgFlatMtd} kWh/flat
+              </span>
             </div>
           </CardHeader>
-          <CardContent className="h-64">
+
+          <CardContent className="pt-4 flex flex-col gap-2.5">
             {!blocks ? (
-              <div className="h-full w-full skeleton-box rounded-xl" />
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-14 skeleton-box rounded-xl" />
+              ))
             ) : blockComparisonData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-xs text-slate-400">No block telemetry available</div>
+              <div className="flex h-44 items-center justify-center text-xs text-slate-400">
+                No block telemetry provisioned
+              </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={blockComparisonData} layout="vertical" margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
-                  <CartesianGrid vertical horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false} width={80} />
-                  <Tooltip />
-                  <Bar dataKey="kwh" fill="#0d9488" radius={[0, 4, 4, 0]} maxBarSize={16} />
-                </BarChart>
-              </ResponsiveContainer>
+              (() => {
+                const maxKwh = Math.max(...blockComparisonData.map((b) => b.kwh), 1);
+                return blockComparisonData.map((b, idx) => {
+                  const pct = Math.min(100, Math.round((b.kwh / maxKwh) * 100));
+                  const isTop = idx === 0 && b.kwh > 0;
+                  const isAbove = avgFlatMtd > 0 && b.kwh > avgFlatMtd;
+
+                  return (
+                    <div
+                      key={b.name}
+                      onClick={() => b.id && onSelectBlock(String(b.id), b.name)}
+                      className={cn(
+                        "group p-3 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col gap-2",
+                        b.kwh > 0
+                          ? "bg-white border-slate-200 hover:border-teal-400 hover:shadow-md hover:shadow-teal-500/5"
+                          : "bg-slate-50/60 border-slate-200/70 hover:bg-slate-50 hover:border-slate-300"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={cn(
+                              "h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-transform duration-200 group-hover:scale-105",
+                              b.kwh > 0
+                                ? isTop
+                                  ? "bg-teal-500 text-white shadow-xs"
+                                  : "bg-slate-100 text-slate-700 border border-slate-200"
+                                : "bg-slate-100 text-slate-400"
+                            )}
+                          >
+                            {b.name.replace("Block ", "") || "B"}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-xs text-slate-800 group-hover:text-teal-700 transition-colors">
+                              {b.name}
+                            </span>
+                            <span className="text-[11px] text-slate-400 ml-2">
+                              {b.flatCount} Flats · {b.liveKw != null ? `${b.liveKw} kW live` : "Standby"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {b.kwh > 0 ? (
+                            <>
+                              <span className="font-mono-data text-xs font-bold text-slate-900">
+                                {b.kwh} <span className="text-[10px] font-normal text-slate-500">kWh/flat</span>
+                              </span>
+                              <span
+                                className={cn(
+                                  "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                                  isAbove
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                )}
+                              >
+                                {isAbove ? "Above avg" : "Optimal"}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                              Standby · 0 kWh
+                            </span>
+                          )}
+                          <ChevronRight size={13} className="text-slate-400 group-hover:text-teal-600 transition-transform group-hover:translate-x-0.5" />
+                        </div>
+                      </div>
+
+                      {/* Progress Fill Bar */}
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            b.kwh > 0
+                              ? isTop
+                                ? "bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400"
+                                : "bg-gradient-to-r from-sky-500 via-teal-400 to-emerald-300"
+                              : "bg-transparent"
+                          )}
+                          style={{ width: b.kwh > 0 ? `${Math.max(6, pct)}%` : "0%" }}
+                        />
+                      </div>
+                    </div>
+                  );
+                });
+              })()
             )}
           </CardContent>
         </Card>
@@ -438,32 +536,111 @@ export function DashboardTab({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Onboarding & meters</CardTitle>
-              <CardDescription>Society device rollout status</CardDescription>
+        {/* Onboarding & Deployment Readiness (Redesigned) */}
+        <Card className="flex flex-col justify-between">
+          <CardHeader className="pb-3 border-b border-slate-100/80">
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Cpu size={18} className="text-indigo-600" />
+                  <CardTitle>Onboarding & Meters</CardTitle>
+                </div>
+                <CardDescription className="mt-0.5">Society device rollout status</CardDescription>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                {totalFlats > 0 ? Math.round(((devicesOnline + registeredResidents) / (totalFlats * 2 || 1)) * 100) : 0}% Ready
+              </span>
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4 justify-center">
-            <ProgressStat
-              label="Total flats"
-              value={totalFlats > 0 ? `${totalFlats}/${totalFlats} (100%)` : "—"}
-              pct={100}
-              color="#0d9488"
-            />
-            <ProgressStat
-              label="Meters live"
-              value={totalFlats > 0 ? `${devicesOnline}/${totalFlats} (${Math.round((devicesOnline / totalFlats) * 100)}%)` : "—"}
-              pct={totalFlats > 0 ? Math.round((devicesOnline / totalFlats) * 100) : 0}
-              color="#0d9488"
-            />
-            <ProgressStat
-              label="Residents registered"
-              value={totalFlats > 0 ? `${registeredResidents}/${totalFlats} (${Math.round((registeredResidents / totalFlats) * 100)}%)` : "—"}
-              pct={totalFlats > 0 ? Math.round((registeredResidents / totalFlats) * 100) : 0}
-              color="#0d9488"
-            />
+
+          <CardContent className="pt-4 flex flex-col gap-3">
+            {/* Metric 1: Smart Meters Active */}
+            <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center font-bold">
+                    <Zap size={14} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-xs text-slate-800 block leading-tight">Meters Live</span>
+                    <span className="text-[10px] text-slate-400">{devicesOnline} of {totalFlats} flats</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono-data text-xs font-bold text-slate-900">
+                    {totalFlats > 0 ? Math.round((devicesOnline / totalFlats) * 100) : 0}%
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">{totalFlats - devicesOnline} pending</span>
+                </div>
+              </div>
+              <div className="h-2 w-full bg-slate-200/70 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-500"
+                  style={{ width: `${totalFlats > 0 ? Math.round((devicesOnline / totalFlats) * 100) : 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Metric 2: Resident App Accounts */}
+            <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
+                    <Users size={14} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-xs text-slate-800 block leading-tight">Residents Registered</span>
+                    <span className="text-[10px] text-slate-400">{registeredResidents} of {totalFlats} registered</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono-data text-xs font-bold text-slate-900">
+                    {totalFlats > 0 ? Math.round((registeredResidents / totalFlats) * 100) : 0}%
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">{totalFlats - registeredResidents} pending</span>
+                </div>
+              </div>
+              <div className="h-2 w-full bg-slate-200/70 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-400 rounded-full transition-all duration-500"
+                  style={{ width: `${totalFlats > 0 ? Math.round((registeredResidents / totalFlats) * 100) : 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Metric 3: Common Area Assets */}
+            <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                    <ShieldCheck size={14} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-xs text-slate-800 block leading-tight">Common Area Meters</span>
+                    <span className="text-[10px] text-slate-400">{commonAreas?.length || 0} assets live</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono-data text-xs font-bold text-emerald-600">100%</span>
+                  <span className="text-[10px] text-emerald-600 block font-semibold">Active</span>
+                </div>
+              </div>
+              <div className="h-2 w-full bg-slate-200/70 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </div>
+
+            {/* Quick Action Button */}
+            <button
+              onClick={() => navigate(`/society/${societyId}/devices`)}
+              className="mt-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs hover:shadow"
+            >
+              <Cpu size={14} /> Manage Devices & Meters <ArrowRight size={13} />
+            </button>
           </CardContent>
         </Card>
       </div>

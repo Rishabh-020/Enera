@@ -2,6 +2,7 @@ package com.enera.backend.service;
 
 import com.enera.backend.dto.builder.BuilderOverviewResponse;
 import com.enera.backend.dto.builder.BuilderSocietyResponse;
+import com.enera.backend.dto.builder.CreateBuilderRequest;
 import com.enera.backend.dto.society.HourlyBreakDownResponse;
 import com.enera.backend.entity.Builder;
 import com.enera.backend.entity.Society;
@@ -119,6 +120,7 @@ public class BuilderService {
 
         return responses;
     }
+
     public List<HourlyBreakDownResponse> getHourlyBreakDown(Long builderId, LocalDate date){
         Builder builder = builderRepository.findById(builderId).
                 orElseThrow(() -> new BuilderNotFoundException("Society not found"));
@@ -154,5 +156,12 @@ public class BuilderService {
         }
 
         return response;
+    }
+
+    public Builder createBuilder(CreateBuilderRequest request) {
+        Builder builder = new Builder();
+        builder.setName(request.getName());
+        builder.setEmail(request.getEmail());
+        return builderRepository.save(builder);
     }
 }

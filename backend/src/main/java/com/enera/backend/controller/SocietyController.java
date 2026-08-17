@@ -101,9 +101,17 @@ public class SocietyController {
 
     @GetMapping("/{id}/anomalies")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
-    public ResponseEntity<SocietyAnomaliesResponse> getAnomalies(@PathVariable Long id){
+    public ResponseEntity<List<SocietyAnomaliesResponse>> getAnomalies(@PathVariable Long id){
         return ResponseEntity.ok(
                 societyService.getAnomalies(id)
+        );
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<SocietyResponse> createSociety(@RequestBody CreateSocietyRequest request) {
+        return ResponseEntity.ok(
+                societyService.createSociety(request)
         );
     }
 }

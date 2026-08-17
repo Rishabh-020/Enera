@@ -2,7 +2,9 @@ package com.enera.backend.controller;
 
 import com.enera.backend.dto.builder.BuilderOverviewResponse;
 import com.enera.backend.dto.builder.BuilderSocietyResponse;
+import com.enera.backend.dto.builder.CreateBuilderRequest;
 import com.enera.backend.dto.society.HourlyBreakDownResponse;
+import com.enera.backend.entity.Builder;
 import com.enera.backend.service.BuilderService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -11,8 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.ResourceBundle;
-
 
 @RestController
 @RequestMapping("/builder")
@@ -22,10 +22,10 @@ public class BuilderController {
     BuilderController(BuilderService builderService){
         this.builderService = builderService;
     }
+
     @GetMapping("/{id}/overview")
     @PreAuthorize("hasAuthority('BUILDER_ADMIN')")
     public ResponseEntity<BuilderOverviewResponse> getBuilderOverview(@PathVariable Long id){
-
         return ResponseEntity.ok(
                 builderService.getBuilderOverview(id)
         );
@@ -34,11 +34,11 @@ public class BuilderController {
     @GetMapping("/{id}/societies")
     @PreAuthorize("hasAuthority('BUILDER_ADMIN')")
     public ResponseEntity<List<BuilderSocietyResponse>> getBuilderSocieties(@PathVariable Long id){
-
         return ResponseEntity.ok(
                 builderService.getBuilderSocieties(id)
         );
     }
+
     @GetMapping("/{id}/hourly-breakdown")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<HourlyBreakDownResponse>> getHourlyTrend(@PathVariable Long id,
@@ -48,4 +48,11 @@ public class BuilderController {
         );
     }
 
+    @PostMapping
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<Builder> createBuilder(@RequestBody CreateBuilderRequest request) {
+        return ResponseEntity.ok(
+                builderService.createBuilder(request)
+        );
+    }
 }

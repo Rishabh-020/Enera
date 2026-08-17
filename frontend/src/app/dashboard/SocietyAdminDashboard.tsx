@@ -53,6 +53,11 @@ export default function SocietyAdminDashboard() {
         if (o.name) setSocietyName(o.name);
       });
       api.getSocietyFlatsList(societyId).then(setFlats);
+      api.getSocietyAnomalies(societyId).then((data) => {
+        if (data && data.length > 0) {
+          setAnomalies(data);
+        }
+      }).catch(() => { });
     }
   }, [societyId]);
 

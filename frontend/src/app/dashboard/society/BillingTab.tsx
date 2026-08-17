@@ -6,6 +6,8 @@ import type { SocietyFlatRow } from "../../../lib/types";
 
 export function BillingTab({ flats }: { flats: SocietyFlatRow[] | null }) {
   const [selectedMonth, setSelectedMonth] = useState("August 2026");
+  const [remindedFlats, setRemindedFlats] = useState<Record<string, boolean>>({});
+  const [downloadingFlat, setDownloadingFlat] = useState<string | null>(null);
 
   const billingData = (flats ?? []).map((f, idx) => {
     const kwh = f.mtdKwh ?? 0;
@@ -27,6 +29,17 @@ export function BillingTab({ flats }: { flats: SocietyFlatRow[] | null }) {
   const totalBillAmount = billingData.reduce((sum, item) => sum + parseFloat(item.amount.replace(/,/g, "")), 0);
   const totalPaid = billingData.filter((item) => item.status === "Paid").reduce((sum, item) => sum + parseFloat(item.amount.replace(/,/g, "")), 0);
   const unpaidCount = billingData.filter((item) => item.status !== "Paid").length;
+
+  const handleDownload = (flatNumber: string) => {
+    setDownloadingFlat(flatNumber);
+    setTimeout(() => {
+      setDownloadingFlat(null);
+    }, 1200);
+  };
+
+  const handleRemind = (id: string | number) => {
+    setRemindedFlats((prev) => ({ ...prev, [String(id)]: true }));
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -92,14 +105,26 @@ export function BillingTab({ flats }: { flats: SocietyFlatRow[] | null }) {
                       <Badge variant={b.status === "Paid" ? "live" : "high"}>{b.status}</Badge>
                     </Td>
                     <Td>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => alert("Downloading PDF Invoice for " + b.flatNumber)}>
-                          <Download size={12} /> PDF
+                      <div className="flex gap-2 items-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownload(b.flatNumber)}
+                          disabled={downloadingFlat === b.flatNumber}
+                        >
+                          <Download size={12} className={downloadingFlat === b.flatNumber ? "animate-bounce text-teal-600" : ""} />
+                          {downloadingFlat === b.flatNumber ? "Saving..." : "PDF"}
                         </Button>
                         {b.status !== "Paid" && (
-                          <Button size="sm" variant="amber" onClick={() => alert("Reminder sent to resident of " + b.flatNumber)}>
-                            <Send size={12} /> Remind
-                          </Button>
+                          remindedFlats[String(b.id)] ? (
+                            <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-1 rounded-lg">
+                              Sent ✓
+                            </span>
+                          ) : (
+                            <Button size="sm" variant="amber" onClick={() => handleRemind(b.id)}>
+                              <Send size={12} /> Remind
+                            </Button>
+                          )
                         )}
                       </div>
                     </Td>

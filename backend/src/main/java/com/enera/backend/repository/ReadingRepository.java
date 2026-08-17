@@ -306,4 +306,58 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
             @Param("endDate") LocalDateTime endDate
     );
 
+    @Query(value = """
+    SELECT 
+        r.id AS reading_id,
+        f.flat_number,
+        b.block_name,
+        r.kw AS current_kw,
+        COALESCE(fb.avg_kw, 1.5) AS expected_kw,
+        r.timestamp
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    JOIN floors fl ON f.floor_id = fl.id
+    JOIN blocks b ON fl.block_id = b.id
+    LEFT JOIN (
+        -- Calculate 28-day baseline average per flat
+        SELECT d2.mapped_flat_id AS flat_id, AVG(r2.kw) AS avg_kw
+        FROM readings r2
+        JOIN devices d2 ON r2.device_id = d2.id
+        WHERE d2.society_id = :societyId
+          AND r2.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
+        GROUP BY d2.mapped_flat_id
+    ) fb ON fb.flat_id = f.id
+    WHERE d.society_id = :societyId
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+      AND r.kw >= 2.0
+      AND r.kw >= (2.5 * COALESCE(fb.avg_kw, 1.5))
+    ORDER BY r.timestamp DESC
+    LIMIT 20
+    """, nativeQuery = true)
+    List<Object[]> findAnomaliesBySociety(@Param("societyId") Long societyId);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kw), 0.0)
+    FROM readings r
+    WHERE r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
+    """, nativeQuery = true)
+    Double getPlatformLiveKw();
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kwh), 0.0)
+    FROM readings r
+    WHERE r.timestamp >= :startDate AND r.timestamp <= :endDate
+    """, nativeQuery = true)
+    Double getPlatformMonthKwh(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kw), 0.0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN societies s ON d.society_id = s.id
+    WHERE s.builder_id = :builderId
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
+    """, nativeQuery = true)
+    Double getLiveKwByBuilderId(@Param("builderId") Long builderId);
 }

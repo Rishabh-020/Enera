@@ -1,14 +1,13 @@
 package com.enera.backend.service;
 
 import com.enera.backend.dto.block.BlockFloorResponse;
+import com.enera.backend.dto.block.CreateBlockRequest;
 import com.enera.backend.entity.Block;
 import com.enera.backend.entity.Floor;
+import com.enera.backend.entity.Society;
 import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
-import com.enera.backend.repository.BlockRepository;
-import com.enera.backend.repository.FlatRepository;
-import com.enera.backend.repository.FloorRepository;
-import com.enera.backend.repository.ReadingRepository;
+import com.enera.backend.repository.*;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,15 +19,18 @@ public class BlockService {
     private final BlockRepository blockRepository;
     private final FloorRepository floorRepository;
     private final ReadingRepository readingRepository;
+    private final SocietyRepository societyRepository;
 
     BlockService(FlatRepository flatRepository,
                  BlockRepository blockRepository,
                  FloorRepository floorRepository,
-                 ReadingRepository readingRepository){
+                 ReadingRepository readingRepository,
+                 SocietyRepository societyRepository){
         this.flatRepository = flatRepository;
         this.blockRepository = blockRepository;
         this.floorRepository = floorRepository;
         this.readingRepository = readingRepository;
+        this.societyRepository = societyRepository;
     }
 
     public List<BlockFloorResponse> getBlockFloors(Long blockId){
@@ -56,5 +58,15 @@ public class BlockService {
         }
 
         return responses;
+    }
+
+    public Block createBlock(CreateBlockRequest request) {
+        Society society = societyRepository.findById(request.getSocietyId())
+                .orElseThrow(() -> new SocietyNotFoundException("Society not found with id: " + request.getSocietyId()));
+
+        Block block = new Block();
+        block.setBlockName(request.getBlockName());
+        block.setSociety(society);
+        return blockRepository.save(block);
     }
 }

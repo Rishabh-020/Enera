@@ -53,6 +53,17 @@ export default function BuilderAnalytics() {
     return api.getSocietyHourlyBreakdown(String(targetSociety.id), date);
   };
 
+  const handleLoadAnomalies = async (filterName?: string) => {
+    if (!societies || societies.length === 0) return [];
+    if (!filterName || filterName === "All societies") {
+      const firstSoc = societies[0];
+      return firstSoc ? api.getSocietyAnomalies(String(firstSoc.id)) : [];
+    }
+    const targetSociety = societies.find((s) => s.name === filterName);
+    if (!targetSociety) return [];
+    return api.getSocietyAnomalies(String(targetSociety.id));
+  };
+
   return (
     <DashboardLayout
       nav={NAV_ITEMS_BUILDER}
@@ -67,6 +78,7 @@ export default function BuilderAnalytics() {
         filters={filterOptions}
         loadHeatmap={handleLoadHeatmap}
         loadHourlyBreakdown={handleLoadHourlyBreakdown}
+        loadAnomalies={handleLoadAnomalies}
       />
     </DashboardLayout>
   );

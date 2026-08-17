@@ -60,14 +60,17 @@ export function ResidentsTab({ flats: initialFlats, onSelectFlat }: ResidentsTab
     { value: "3BHK", label: "3 BHK" },
   ];
 
-  const filtered = (flats ?? []).filter((f) => {
-    const matchesSearch =
-      f.flatNumber.toLowerCase().includes(search.toLowerCase()) ||
-      (f.residentName || "").toLowerCase().includes(search.toLowerCase());
-    const matchesBlock = blockFilter === "All" || f.blockName === blockFilter;
-    const matchesBhk = bhkFilter === "All" || f.bhkType === bhkFilter;
-    return matchesSearch && matchesBlock && matchesBhk;
-  });
+  const filtered = useMemo(() => {
+    return (flats ?? []).filter((f) => {
+      const matchesSearch =
+        !search ||
+        f.flatNumber.toLowerCase().includes(search.toLowerCase()) ||
+        (f.residentName || "").toLowerCase().includes(search.toLowerCase());
+      const matchesBlock = blockFilter === "All" || f.blockName === blockFilter;
+      const matchesBhk = bhkFilter === "All" || f.bhkType === bhkFilter;
+      return matchesSearch && matchesBlock && matchesBhk;
+    });
+  }, [flats, search, blockFilter, bhkFilter]);
 
   return (
     <Card>
