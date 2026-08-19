@@ -9,21 +9,31 @@ api.interceptors.request.use((config) => {
   const raw = sessionStorage.getItem("energy_session");
 
   if (raw) {
-    const session = JSON.parse(raw);
-
-    config.headers.Authorization = `Bearer ${session.token}`
+    try {
+      const session = JSON.parse(raw);
+      if (session?.token && typeof session.token === "string" && session.token.includes(".")) {
+        config.headers.Authorization = `Bearer ${session.token}`;
+      }
+    } catch { }
   }
-
   return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      sessionStorage.removeItem("energy_session");
+    const raw = sessionStorage.getItem("energy_session");
+    if (raw) {
+      try {
+        const session = JSON.parse(raw);
+        if (error.response?.status === 401 && session?.token && session.token.includes(".")) {
+          sessionStorage.removeItem("energy_session");
+        }
+      } catch { }
     }
     return Promise.reject(error);
   }
 )
+
 export default api
+

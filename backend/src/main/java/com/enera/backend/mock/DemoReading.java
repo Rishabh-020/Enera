@@ -2,7 +2,6 @@ package com.enera.backend.mock;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -27,7 +26,9 @@ public class DemoReading {
 
     private double kwh;
 
-    private LocalDateTime timestamp;
+    private String timestamp;
 
     private boolean isDemo;
 }
+
+

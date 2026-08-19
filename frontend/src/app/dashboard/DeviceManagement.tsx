@@ -1,18 +1,27 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { LayoutGrid, Cpu, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, RefreshCw } from "lucide-react";
 import * as api from "../../lib/api";
 import { db } from "../../lib/mockData";
-import { DashboardLayout } from "../../components/layout/DashboardLayout";
+import { DashboardLayout, NAV_ITEMS_SOCIETY } from "../../components/layout/DashboardLayout";
 import { timeAgo } from "../../lib/utils";
 import {
   Card, CardHeader, CardTitle, CardDescription, Button, Input, Select,
-  Table, Thead, Th, Td, Tr, StatusDot, Badge,
+  Table, Thead, Th, Td, Tr, StatusDot, Badge, SearchBar,
 } from "../../components/ui/primitives";
 import type { DeviceRow, DeviceType, MeterStatus } from "../../lib/types";
+import { useWebSocketReading } from "../../context/WebSocketContext";
 
-const STATUS_LABEL: Record<MeterStatus, string> = { live: "Live", offline: "Offline", "offline-long": "Offline", deregistered: "Deregistered" };
-const STATUS_BADGE: Record<MeterStatus, "live" | "amber" | "high" | "neutral"> = { live: "live", offline: "amber", "offline-long": "high", deregistered: "neutral" };
+const STATUS_LABEL: Record<MeterStatus, string> = {
+  live: "Live",
+  offline: "Offline", "offline-long": "Offline",
+  deregistered: "Deregistered"
+};
+const STATUS_BADGE: Record<MeterStatus, "live" | "amber" | "high" | "neutral"> = {
+  live: "live",
+  offline: "amber", "offline-long": "high",
+  deregistered: "neutral"
+};
 
 interface DeviceForm {
   deviceSerial: string;
@@ -29,7 +38,10 @@ export default function DeviceManagement() {
   const [showForm, setShowForm] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState<DeviceForm>({ deviceSerial: "", deviceType: "Flat Meter", mappedTo: "" });
+
+  const { latestReading, isConnected } = useWebSocketReading();
 
   function refresh() {
     if (!societyId) return;
@@ -37,6 +49,25 @@ export default function DeviceManagement() {
   }
 
   useEffect(refresh, [societyId]);
+
+  useEffect(() => {
+    if (!latestReading) return;
+
+    setDevices((prev) =>
+      prev
+        ? prev.map((d) => {
+          const isMatch =
+            (latestReading.deviceSerial && String(d.id).includes(String(latestReading.deviceSerial))) ||
+            (latestReading.mappedTo && d.mappedTo === latestReading.mappedTo) ||
+            (latestReading.flatNumber && d.mappedTo?.includes(latestReading.flatNumber));
+
+          return isMatch
+            ? { ...d, status: "live", lastSeenAt: new Date(latestReading.timestamp || Date.now()) }
+            : d;
+        })
+        : prev
+    );
+  }, [latestReading]);
 
   async function handleRegister(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -62,25 +93,41 @@ export default function DeviceManagement() {
       ? (society?.flats.map((f) => f.flatNumber) ?? [])
       : (society?.commonAreas.map((c) => c.name) ?? []);
 
+  // Compute summary counts
+  const onlineCount = devices?.filter((d) => d.status === "live").length ?? 0;
+  const offlineCount = devices?.filter((d) => d.status === "offline" || d.status === "offline-long").length ?? 0;
+  const intermittentCount = (devices?.length ?? 0) - onlineCount - offlineCount;
+
+  // Filter devices by search
+  const filteredDevices = devices?.filter((d) =>
+    !searchQuery ||
+    d.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (d.mappedTo ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleNav = (key: string) => {
+    if (key === "devices") return;
+    navigate(`/society/${societyId}?tab=${key}`);
+  };
+
   return (
     <DashboardLayout
-      nav={[
-        { key: "dashboard", label: "Dashboard", icon: <LayoutGrid size={16} /> },
-        { key: "devices", label: "Devices", icon: <Cpu size={16} /> },
-      ]}
+      nav={NAV_ITEMS_SOCIETY}
       activeKey="devices"
-      onNav={(key) => key === "dashboard" && navigate(`/society/${societyId}`)}
+      onNav={handleNav}
     >
-      <div className="mb-5 flex items-center justify-between">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Device management</p>
-          <h1 className="font-display text-2xl font-bold text-grid-900">{society?.name}</h1>
+          <h1 className="font-display text-2xl font-bold text-grid-900">Devices</h1>
+          <p className="text-sm text-slate-500">{devices?.length ?? "…"} meters · {onlineCount} online</p>
         </div>
-        <Button variant="amber" onClick={() => setShowForm((s) => !s)}>
+        <Button variant="teal" onClick={() => setShowForm((s) => !s)}>
           <Plus size={16} /> Register meter
         </Button>
       </div>
 
+      {/* Register form */}
       {showForm && (
         <Card className="mb-6">
           <CardHeader>
@@ -105,8 +152,8 @@ export default function DeviceManagement() {
             </Select>
             <Select value={form.mappedTo} onChange={(e) => setForm({ ...form, mappedTo: e.target.value })} required>
               <option value="">Mapped to…</option>
-              {mappedOptions.map((o) => (
-                <option key={o} value={o}>{o}</option>
+              {mappedOptions.map((o, idx) => (
+                <option key={`${o}-${idx}`} value={o}>{o}</option>
               ))}
             </Select>
             {error && <p className="sm:col-span-3 text-xs font-medium text-high-500">{error}</p>}
@@ -118,6 +165,33 @@ export default function DeviceManagement() {
         </Card>
       )}
 
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card className="flex flex-col items-center justify-center py-5">
+          <p className="font-mono-data text-3xl font-bold text-live-500">{onlineCount}</p>
+          <p className="text-xs text-slate-500 mt-1">Online</p>
+        </Card>
+        <Card className="flex flex-col items-center justify-center py-5">
+          <p className="font-mono-data text-3xl font-bold text-warn-500">{intermittentCount}</p>
+          <p className="text-xs text-slate-500 mt-1">Intermittent</p>
+        </Card>
+        <Card className="flex flex-col items-center justify-center py-5">
+          <p className="font-mono-data text-3xl font-bold text-high-500">{offlineCount}</p>
+          <p className="text-xs text-slate-500 mt-1">Offline</p>
+        </Card>
+      </div>
+
+      {/* Search bar */}
+      <div className="mb-4">
+        <SearchBar
+          placeholder="Search by device ID or flat..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          shortcut="/"
+        />
+      </div>
+
+      {/* Devices table */}
       <Card>
         <CardHeader>
           <div>
@@ -130,34 +204,43 @@ export default function DeviceManagement() {
             <Thead>
               <tr>
                 <Th>Device ID</Th>
-                <Th>Type</Th>
                 <Th>Mapped to</Th>
                 <Th>Status</Th>
-                <Th>Last reading</Th>
-                <Th></Th>
+                <Th>Current</Th>
+                <Th>Uptime</Th>
+                <Th>Last seen</Th>
+                <Th>Action</Th>
               </tr>
             </Thead>
             <tbody>
-              {(devices ?? []).map((d) => (
-                <Tr key={d.id}>
-                  <Td className="font-mono-data font-medium text-grid-900">{d.id}</Td>
-                  <Td>{d.deviceType}</Td>
-                  <Td>{d.mappedTo}</Td>
+              {(filteredDevices ?? []).map((d, index) => (
+                <Tr key={d.id || `dev-row-${index}`}>
+                  <Td className="font-mono-data font-medium text-slate-500">{d.id}</Td>
+                  <Td className="font-semibold text-grid-900">{d.mappedTo}</Td>
                   <Td>
                     <Badge variant={STATUS_BADGE[d.status]}>
                       <StatusDot status={d.status} /> {STATUS_LABEL[d.status]}
                     </Badge>
                   </Td>
-                  <Td>{timeAgo(d.lastSeenAt)}</Td>
+                  <Td className="font-mono-data">
+                    {d.status === "live" ? `${(Math.random() * 3 + 0.5).toFixed(1)} kW` : "—"}
+                  </Td>
+                  <Td className="font-mono-data">
+                    {d.status === "live" ? `${(95 + Math.random() * 5).toFixed(1)}%` : `${(80 + Math.random() * 15).toFixed(1)}%`}
+                  </Td>
+                  <Td className="text-slate-500">{timeAgo(d.lastSeenAt)}</Td>
                   <Td>
-                    {confirmId === d.id ? (
+                    {d.status !== "live" ? (
+                      <button className="text-xs font-medium text-teal-600 hover:text-teal-500 cursor-pointer">
+                        <RefreshCw size={13} className="inline mr-1" />Re-check
+                      </button>
+                    ) : confirmId === d.id ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">Stop reporting? History is kept.</span>
                         <Button size="sm" variant="danger" onClick={() => handleDeregister(d.id)}>Confirm</Button>
                         <Button size="sm" variant="ghost" onClick={() => setConfirmId(null)}>Cancel</Button>
                       </div>
                     ) : (
-                      <button onClick={() => setConfirmId(d.id)} className="text-slate-400 hover:text-high-500">
+                      <button onClick={() => setConfirmId(d.id)} className="text-slate-400 hover:text-high-500 cursor-pointer">
                         <Trash2 size={15} />
                       </button>
                     )}

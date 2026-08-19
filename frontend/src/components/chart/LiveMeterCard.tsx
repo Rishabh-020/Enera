@@ -4,7 +4,7 @@ import { timeAgo } from "../../lib/utils";
 import type { FlatLive } from "../../lib/types";
 
 const LEVEL_META = {
-  normal: { color: "#16a34a", badge: "normal" as const, label: "Normal" },
+  normal: { color: "#0d9488", badge: "normal" as const, label: "Normal" },
   amber: { color: "#f59e0b", badge: "amber" as const, label: "Above average" },
   high: { color: "#dc2626", badge: "high" as const, label: "High usage" },
 };
@@ -18,7 +18,7 @@ export function LiveMeterCard({ data, loading }: LiveMeterCardProps) {
   if (loading || !data) {
     return (
       <Card className="flex h-64 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-grid-800" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-teal-500" />
       </Card>
     );
   }
@@ -38,7 +38,6 @@ export function LiveMeterCard({ data, loading }: LiveMeterCardProps) {
   }
 
   const meta = LEVEL_META[data.level ?? "normal"];
-  // gauge: map 0-6kW to 0-270deg arc via conic-gradient
   const kw = data.kw ?? 0;
   const pct = Math.min(1, kw / 6);
 
@@ -46,14 +45,16 @@ export function LiveMeterCard({ data, loading }: LiveMeterCardProps) {
     <Card className="overflow-hidden">
       <div className="flex flex-col items-center gap-5 px-6 py-8">
         <div className="relative flex h-40 w-40 items-center justify-center">
+          {/* Gauge ring */}
           <div
             className="absolute inset-0 rounded-full animate-glow"
             style={{
-              background: `conic-gradient(${meta.color} ${pct * 360}deg, #eef0f4 0deg)`,
+              background: `conic-gradient(${meta.color} ${pct * 360}deg, #f1f5f9 0deg)`,
               WebkitMaskImage: "radial-gradient(closest-side, transparent 76%, black 77%)",
               maskImage: "radial-gradient(closest-side, transparent 76%, black 77%)",
             }}
           />
+          {/* Center content */}
           <div className="flex flex-col items-center">
             <Zap size={16} style={{ color: meta.color }} className="mb-1" />
             <span className="font-mono-data text-3xl font-bold text-grid-900">{kw.toFixed(2)}</span>

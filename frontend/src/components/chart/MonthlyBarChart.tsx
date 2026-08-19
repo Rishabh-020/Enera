@@ -9,6 +9,17 @@ interface MonthlyBarChartProps {
   loading: boolean;
 }
 
+// Multi-color palette matching VoltWise: teal base, amber mid, red high
+function barColor(kwh: number, max: number, isWeekend: boolean, isSelected: boolean): string {
+  if (isSelected) return "#0d9488";
+  if (isWeekend) return "#c9d0dd";
+  const ratio = kwh / max;
+  if (ratio > 0.85) return "#dc2626";
+  if (ratio > 0.6) return "#7c3aed";
+  if (ratio > 0.35) return "#f59e0b";
+  return "#0d9488";
+}
+
 export function MonthlyBarChart({ summary, loading }: MonthlyBarChartProps) {
   const [selected, setSelected] = useState<DaySeriesPoint | null>(null);
 
@@ -28,8 +39,8 @@ export function MonthlyBarChart({ summary, loading }: MonthlyBarChartProps) {
     <Card>
       <CardHeader>
         <div>
-          <CardTitle>Monthly consumption</CardTitle>
-          <CardDescription>Day-by-day usage for the current billing month</CardDescription>
+          <CardTitle>This month so far</CardTitle>
+          <CardDescription>Day-by-day consumption · {new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</CardDescription>
         </div>
         <div className="text-right">
           <p className="font-mono-data text-lg font-bold text-grid-900">{summary.totalKwh} kWh</p>
@@ -52,28 +63,20 @@ export function MonthlyBarChart({ summary, loading }: MonthlyBarChartProps) {
             onClick={(e: any) => e?.activePayload && setSelected(e.activePayload[0].payload)}
             margin={{ top: 8, right: 12, left: -18, bottom: 0 }}
           >
-            <CartesianGrid vertical={false} stroke="#eef0f4" />
+            <CartesianGrid vertical={false} stroke="#f1f5f9" />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} interval={2} />
             <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={34} />
             <Tooltip
-              cursor={{ fill: "#f4f5f8" }}
+              cursor={{ fill: "#f8fafc" }}
               formatter={(v: any) => [`${v} kWh`, "Usage"]}
               labelFormatter={(l: any) => `Day ${l}`}
-              contentStyle={{ borderRadius: 12, border: "1px solid #e2e5eb", fontSize: 12 }}
+              contentStyle={{ borderRadius: 12, border: "1px solid #e2e5eb", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
             />
             <Bar dataKey="kwh" radius={[5, 5, 0, 0]} maxBarSize={22}>
               {data.map((d, i) => (
                 <Cell
                   key={i}
-                  fill={
-                    d.kwh === maxKwh
-                      ? "#dc2626"
-                      : d.isWeekend
-                      ? "#c9d0dd"
-                      : selected?.day === d.day
-                      ? "#d98a0f"
-                      : "#f5a623"
-                  }
+                  fill={barColor(d.kwh, maxKwh, d.isWeekend, selected?.day === d.day)}
                 />
               ))}
             </Bar>
