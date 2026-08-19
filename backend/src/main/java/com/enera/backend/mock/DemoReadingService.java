@@ -1,6 +1,7 @@
 package com.enera.backend.mock;
 
 import com.enera.backend.dto.society.SocietyBlockResponse;
+import com.enera.backend.dto.society.SocietyCommonAreaResponse;
 import com.enera.backend.dto.society.SocietyFlatResponse;
 import com.enera.backend.dto.society.SocietyOverviewResponse;
 import com.enera.backend.websocket.EnergyWebSocketHandler;
@@ -8,6 +9,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -164,7 +166,8 @@ public class DemoReadingService {
             reading.setDemo(true);
 
             try {
-                String json = reading.toJson();
+                ObjectMapper objectMapper = new ObjectMapper();
+                String json = objectMapper.writeValueAsString(reading);
                 webSocketHandler.sendToAll(json);
                 log.info("Demo reading broadcast: Device {} ({}) - {} kW",
                         device.getDeviceId(), device.getMappedTo(), kw);
@@ -182,18 +185,18 @@ public class DemoReadingService {
         return Collections.unmodifiableList(activeDevices);
     }
 
-    public com.enera.backend.dto.society.SocietyOverviewResponse getSocietyOverview(Long societyId) {
+    public SocietyOverviewResponse getSocietyOverview(Long societyId) {
         long targetSocId = (societyId != null) ? societyId : 1L;
         List<DemoDevice> socDevices = allDevices.stream()
                 .filter(d -> d.getSocietyId() != null && d.getSocietyId().equals(targetSocId))
                 .toList();
 
-        long flatCount = socDevices.stream().filter(
-                d -> "FLAT_METER".equals(d.getDeviceType())
-                ).count();
-        long activeCount = socDevices.stream().filter(
-                d -> Boolean.TRUE.equals(d.getIsActive())
-                ).count();
+        long flatCount = socDevices.stream()
+                .filter(d -> "FLAT_METER".equals(d.getDeviceType()))
+                .count();
+        long activeCount = socDevices.stream()
+                .filter(d -> Boolean.TRUE.equals(d.getIsActive()))
+                .count();
         double totalLiveKw = socDevices.stream()
                 .filter(d -> Boolean.TRUE.equals(d.getIsActive()) && d.getBaseKw() != null)
                 .mapToDouble(DemoDevice::getBaseKw)
@@ -212,10 +215,10 @@ public class DemoReadingService {
         return resp;
     }
 
-    public List<com.enera.backend.dto.society.SocietyBlockResponse> getSocietyBlocks(Long societyId) {
+    public List<SocietyBlockResponse> getSocietyBlocks(Long societyId) {
         long targetSocId = (societyId != null) ? societyId : 1L;
         String[] blockNames = (targetSocId == 1L) ? new String[]{"A", "B", "C", "D"} : new String[]{"A", "B", "C"};
-        List<com.enera.backend.dto.society.SocietyBlockResponse> list = new ArrayList<>();
+        List<SocietyBlockResponse> list = new ArrayList<>();
 
         for (int i = 0; i < blockNames.length; i++) {
             String bName = blockNames[i];
@@ -242,7 +245,7 @@ public class DemoReadingService {
         return list;
     }
 
-    public List<com.enera.backend.dto.society.SocietyCommonAreaResponse> getSocietyCommonAreas(Long societyId) {
+    public List<SocietyCommonAreaResponse> getSocietyCommonAreas(Long societyId) {
         long targetSocId = (societyId != null) ? societyId : 1L;
         return allDevices.stream()
                 .filter(d -> d.getSocietyId() != null && d.getSocietyId().equals(targetSocId) && "COMMON_AREA_METER".equals(d.getDeviceType()))
@@ -262,7 +265,7 @@ public class DemoReadingService {
                 .toList();
     }
 
-    public List<com.enera.backend.dto.society.SocietyFlatResponse> getSocietyFlats(Long societyId) {
+    public List<SocietyFlatResponse> getSocietyFlats(Long societyId) {
         long targetSocId = (societyId != null) ? societyId : 1L;
         return allDevices.stream()
                 .filter(d -> d.getSocietyId() != null && d.getSocietyId().equals(targetSocId) && "FLAT_METER".equals(d.getDeviceType()))
