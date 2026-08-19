@@ -3,7 +3,10 @@ package com.enera.backend.controller;
 import com.enera.backend.dto.device.RegisterDeviceRequest;
 import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
+import com.enera.backend.dto.user.CreateUserRequest;
+import com.enera.backend.entity.Role;
 import com.enera.backend.service.SocietyService;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -107,11 +110,14 @@ public class SocietyController {
         );
     }
 
-    @PostMapping
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<SocietyResponse> createSociety(@RequestBody CreateSocietyRequest request) {
+    @PostMapping("/{id}/resident")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<RegisterResidentResponse> registerResident(@PathVariable Long id,
+                                                                    @Valid @RequestBody CreateUserRequest request){
+        request.setSocietyId(id);
+        request.setRole(Role.RESIDENT);
         return ResponseEntity.ok(
-                societyService.createSociety(request)
+                societyService.registerResident(request)
         );
     }
 }

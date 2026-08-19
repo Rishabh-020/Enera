@@ -31,6 +31,15 @@ export async function login(email: string, password: string): Promise<Session> {
   };
 }
 
+export async function changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<{ message: string }> {
+  const response = await api.patch("/user/change-password", {
+    currentPassword,
+    newPassword,
+    confirmPassword,
+  });
+  return response.data;
+}
+
 // ------------------------------------------------------- Flat ----
 export async function getFlatLive(flatId: string): Promise<FlatLive> {
   const response = await api.get(`/flat/${flatId}/live`);

@@ -1,11 +1,15 @@
 package com.enera.backend.controller;
 
+import com.enera.backend.dto.block.CreateBlockRequest;
 import com.enera.backend.dto.builder.BuilderOverviewResponse;
 import com.enera.backend.dto.builder.BuilderSocietyResponse;
-import com.enera.backend.dto.builder.CreateBuilderRequest;
+import com.enera.backend.dto.society.CreateSocietyRequest;
 import com.enera.backend.dto.society.HourlyBreakDownResponse;
-import com.enera.backend.entity.Builder;
+import com.enera.backend.dto.society.SocietyResponse;
+import com.enera.backend.entity.Block;
+import com.enera.backend.service.BlockService;
 import com.enera.backend.service.BuilderService;
+import com.enera.backend.service.SocietyService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,9 +22,15 @@ import java.util.List;
 @RequestMapping("/builder")
 public class BuilderController {
     private final BuilderService builderService;
+    private final SocietyService societyService;
+    private final BlockService blockService;
 
-    BuilderController(BuilderService builderService){
+    BuilderController(BuilderService builderService,
+                      SocietyService societyService,
+                      BlockService blockService) {
         this.builderService = builderService;
+        this.societyService = societyService;
+        this.blockService = blockService;
     }
 
     @GetMapping("/{id}/overview")
@@ -49,10 +59,19 @@ public class BuilderController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<Builder> createBuilder(@RequestBody CreateBuilderRequest request) {
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
+    public ResponseEntity<Block> createBlock(@RequestBody CreateBlockRequest request) {
         return ResponseEntity.ok(
-                builderService.createBuilder(request)
+                blockService.createBlock(request)
+        );
+    }
+
+    @PostMapping("/{id}/society")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<SocietyResponse> createSociety(@PathVariable Long id,@RequestBody CreateSocietyRequest request) {
+        request.setBuilderId(id);
+        return ResponseEntity.ok(
+                societyService.createSociety(request)
         );
     }
 }

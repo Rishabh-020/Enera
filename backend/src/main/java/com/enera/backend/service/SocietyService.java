@@ -3,12 +3,16 @@ package com.enera.backend.service;
 import com.enera.backend.dto.device.RegisterDeviceRequest;
 import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
+import com.enera.backend.dto.user.CreateUserRequest;
 import com.enera.backend.entity.*;
 import com.enera.backend.exception.DuplicateDeviceException;
+import com.enera.backend.exception.DuplicateEmailException;
 import com.enera.backend.exception.FlatNotFoundException;
 import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.repository.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -25,6 +29,7 @@ public class SocietyService {
     private final CommonAreaRepository commonAreaRepository;
     private final UserRepository userRepository;
     private final BuilderRepository builderRepository;
+    private final PasswordEncoder passwordEncoder;
 
     SocietyService(SocietyRepository societyRepository,
                    ReadingRepository readingRepository,
@@ -33,7 +38,8 @@ public class SocietyService {
                    BlockRepository blockRepository,
                    CommonAreaRepository commonAreaRepository,
                    UserRepository userRepository,
-                   BuilderRepository builderRepository){
+                   BuilderRepository builderRepository,
+                   PasswordEncoder passwordEncoder){
         this.societyRepository = societyRepository;
         this.readingRepository = readingRepository;
         this.flatRepository = flatRepository;
@@ -42,6 +48,7 @@ public class SocietyService {
         this.commonAreaRepository = commonAreaRepository;
         this.userRepository = userRepository;
         this.builderRepository = builderRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public SocietyOverviewResponse getSocietyOverview(Long societyId){
@@ -423,5 +430,38 @@ public class SocietyService {
         response.setCreatedAt(saved.getCreatedAt());
 
         return response;
+    }
+
+    @Transactional
+    public RegisterResidentResponse registerResident(CreateUserRequest request) {
+        Society society = societyRepository.findById(request.getSocietyId())
+                .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+
+        Flat flat = flatRepository.findById(request.getFlatId())
+                .orElseThrow(() -> new FlatNotFoundException("Flat not found"));
+
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new DuplicateEmailException("User with email " + request.getEmail() + " already exists");
+        }
+
+        User resident = new User();
+        resident.setName(request.getName());
+        resident.setEmail(request.getEmail());
+        resident.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        resident.setRole(Role.RESIDENT);
+        resident.setSociety(society);
+        resident.setFlat(flat);
+        resident.setBuilder(society.getBuilder());
+
+        User saved = userRepository.save(resident);
+
+        return RegisterResidentResponse.builder()
+                .id(saved.getId())
+                .name(saved.getName())
+                .email(saved.getEmail())
+                .role(saved.getRole().name())
+                .flatId(flat.getId())
+                .societyId(society.getId())
+                .build();
     }
 }

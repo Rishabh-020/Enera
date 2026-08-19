@@ -5,13 +5,17 @@ import com.enera.backend.dto.builder.BuilderSocietyResponse;
 import com.enera.backend.dto.builder.CreateBuilderRequest;
 import com.enera.backend.dto.society.HourlyBreakDownResponse;
 import com.enera.backend.entity.Builder;
+import com.enera.backend.entity.Role;
 import com.enera.backend.entity.Society;
+import com.enera.backend.entity.User;
 import com.enera.backend.exception.BuilderNotFoundException;
 import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.*;
 import org.hibernate.property.access.spi.BuiltInPropertyAccessStrategies;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,6 +30,8 @@ public class BuilderService {
     private final ReadingRepository readingRepository;
     private final DeviceRepository deviceRepository;
     private final FlatRepository flatRepository;
+    public final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private static final double BASE_KW_PERCENTAGE = 0.30;
     private static final double SOCIETY_KW_PERCENTAGE = 0.50;
     private static final double PEEK_KW_PERCENTAGE = 0.20;
@@ -37,13 +43,17 @@ public class BuilderService {
                    BlockRepository blockRepository,
                    ReadingRepository readingRepository,
                    DeviceRepository deviceRepository,
-                   FlatRepository flatRepository){
+                   FlatRepository flatRepository,
+                   UserRepository userRepository,
+                   PasswordEncoder passwordEncoder){
         this.builderRepository = builderRepository;
         this.societyRepository = societyRepository;
         this.blockRepository = blockRepository;
         this.readingRepository = readingRepository;
         this.deviceRepository = deviceRepository;
         this.flatRepository = flatRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public BuilderOverviewResponse getBuilderOverview(Long builderId){
@@ -163,10 +173,21 @@ public class BuilderService {
         return response;
     }
 
+    @Transactional
     public Builder createBuilder(CreateBuilderRequest request) {
         Builder builder = new Builder();
         builder.setName(request.getName());
         builder.setEmail(request.getEmail());
-        return builderRepository.save(builder);
+        Builder saveBuilder = builderRepository.save(builder);
+
+        User admin = new User();
+        admin.setName(request.getName());
+        admin.setEmail(request.getEmail());
+        admin.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        admin.setBuilder(saveBuilder);
+        admin.setRole(Role.BUILDER_ADMIN);
+        userRepository.save(admin);
+
+        return saveBuilder;
     }
 }
