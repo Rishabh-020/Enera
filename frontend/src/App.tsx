@@ -9,28 +9,20 @@ import SocietyAdminDashboard from "./app/dashboard/SocietyAdminDashboard";
 import DeviceManagement from "./app/dashboard/DeviceManagement";
 import BuilderAdminDashboard from "./app/dashboard/BuilderAdminDashboard";
 import BuilderAnalytics from "./app/dashboard/BuilderAnalytics";
+import SuperAdminDashboard from "./app/dashboard/SuperAdminDashboard";
 
 function Root() {
   const { user } = useAuth();
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
 
-  if (user.role === "RESIDENT") {
-    return <Navigate to={`/flat/${user.flatId}`} replace />;
-  }
+  const routes: Record<string, string> = {
+    RESIDENT: `/flat/${user.flatId || "1"}`,
+    SOCIETY_ADMIN: `/society/${user.societyId || "1"}`,
+    BUILDER_ADMIN: `/builder/${user.builderId || "1"}`,
+    SUPER_ADMIN: `/superAdmin/${user.id || "1"}`,
+  };
 
-  if (user.role === "SOCIETY_ADMIN") {
-    return <Navigate to={`/society/${user.societyId}`} replace />;
-  }
-
-  if (user.role === "BUILDER_ADMIN") {
-    return <Navigate to={`/builder/${user.builderId}`} replace />;
-  }
-
-  if (user.role === "SUPER_ADMIN") {
-    return <Navigate to={`/superAdmin/${user.id}`} replace />;
-  }
+  return <Navigate to={routes[user.role] || "/login"} replace />;
 }
 
 export default function App() {
@@ -91,11 +83,19 @@ export default function App() {
             />
 
             <Route
+              path="/superAdmin/:id"
+              element={
+                <RequireRole roles={["SUPER_ADMIN"]}>
+                  <SuperAdminDashboard />
+                </RequireRole>
+              }
+            />
+
+            <Route
               path="/superAdmin"
               element={
                 <RequireRole roles={["SUPER_ADMIN"]}>
-                  {/* <SuperAdminDashboard /> */}
-                  <p>Super Admin Dashboard</p>
+                  <SuperAdminDashboard />
                 </RequireRole>
               }
             />

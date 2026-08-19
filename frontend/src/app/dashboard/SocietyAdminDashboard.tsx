@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, ArrowLeft, Eye } from "lucide-react";
 import * as api from "../../lib/api";
 import { DashboardLayout, NAV_ITEMS_SOCIETY } from "../../components/layout/DashboardLayout";
 import { FlatDashboardView } from "../../components/FlatDashboardView";
 import { Card, CardHeader, CardTitle, CardDescription, Breadcrumb, Table, Thead, Th, Td, Tr, type BreadcrumbItem } from "../../components/ui/primitives";
 import type { BlockFloorRow, FloorFlatRow, SocietyFlatRow } from "../../lib/types";
 
-// Import sub-views
 import { DashboardTab } from "./society/DashboardTab";
 import { AnalyticsTab } from "./society/AnalyticsTab";
 import { AlertsTab } from "./society/AlertsTab";
@@ -54,6 +53,11 @@ export default function SocietyAdminDashboard() {
         if (o.name) setSocietyName(o.name);
       });
       api.getSocietyFlatsList(societyId).then(setFlats);
+      api.getSocietyAnomalies(societyId).then((data) => {
+        if (data && data.length > 0) {
+          setAnomalies(data);
+        }
+      }).catch(() => { });
     }
   }, [societyId]);
 
@@ -106,10 +110,18 @@ export default function SocietyAdminDashboard() {
       onNav={handleNav}
       banner={
         readOnly && (
-          <div className="flex items-center justify-between bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs font-medium text-amber-700 md:px-8">
-            <span>Viewing as Builder Admin — Read only</span>
-            <button onClick={() => navigate(-1)} className="underline underline-offset-2 hover:text-amber-600 cursor-pointer">
-              Back to portfolio
+          <div className="flex items-center justify-between border-b border-amber-200/80 bg-gradient-to-r from-amber-500/10 via-amber-100/50 to-amber-50/80 px-4 py-2.5 text-xs font-medium text-amber-900 md:px-8 backdrop-blur-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-5 items-center rounded-md bg-amber-500/15 border border-amber-300/80 px-2 text-[10px] font-bold text-amber-800 uppercase tracking-wide">
+                Read-Only
+              </span>
+              <span>Viewing as <strong>Builder Admin</strong></span>
+            </div>
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-900 shadow-2xs transition-all duration-150 hover:bg-amber-100 hover:border-amber-400 hover:shadow-xs cursor-pointer"
+            >
+              ← Back to portfolio
             </button>
           </div>
         )

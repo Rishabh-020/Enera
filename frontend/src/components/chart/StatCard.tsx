@@ -5,13 +5,14 @@ import { cn } from "../../lib/utils";
 interface StatCardProps {
   label: string;
   value: ReactNode;
+  unit?: ReactNode;
   sub?: ReactNode;
   icon?: ReactNode;
   accent?: boolean;
   loading?: boolean;
 }
 
-export function StatCard({ label, value, sub, icon, accent = false, loading }: StatCardProps) {
+export function StatCard({ label, value, unit, sub, icon, accent = false, loading }: StatCardProps) {
   return (
     <Card className={cn(
       "px-5 py-4 card-hover-lift",
@@ -31,10 +32,13 @@ export function StatCard({ label, value, sub, icon, accent = false, loading }: S
       {loading ? (
         <div className="mt-2 h-7 w-24 animate-pulse rounded-lg bg-slate-100" />
       ) : (
-        <p className={cn(
-          "font-mono-data mt-1.5 text-2xl font-bold",
-          accent ? "text-teal-600" : "text-grid-900"
-        )}>{value}</p>
+        <div className="mt-1.5 flex items-baseline gap-1.5">
+          <p className={cn(
+            "font-mono-data text-2xl font-bold",
+            accent ? "text-teal-600" : "text-grid-900"
+          )}>{value}</p>
+          {unit && <span className="text-xs font-medium text-slate-400">{unit}</span>}
+        </div>
       )}
       {sub && <p className={cn("mt-1 text-xs", accent ? "text-teal-600/70" : "text-slate-500")}>{sub}</p>}
     </Card>

@@ -224,15 +224,15 @@ interface TabPillsProps {
 
 export function TabPills({ tabs, active, onChange }: TabPillsProps) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1">
+    <div className="inline-flex max-w-full overflow-x-auto items-center gap-1 rounded-xl bg-slate-100 p-1 no-scrollbar scroll-smooth">
       {tabs.map((tab) => (
         <button
           key={tab}
           onClick={() => onChange(tab)}
           className={cn(
-            "rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 cursor-pointer",
+            "shrink-0 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer whitespace-nowrap",
             active === tab
-              ? "bg-white text-slate-900 shadow-sm"
+              ? "bg-white text-slate-900 shadow-sm font-semibold"
               : "text-slate-500 hover:text-slate-700"
           )}
         >
@@ -253,15 +253,15 @@ interface FilterChipsProps {
 
 export function FilterChips({ chips, active, onChange }: FilterChipsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
       {chips.map((chip) => (
         <button
           key={chip}
           onClick={() => onChange(chip)}
           className={cn(
-            "rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 border cursor-pointer",
+            "rounded-full px-3 sm:px-3.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold transition-all duration-200 border cursor-pointer whitespace-nowrap",
             active === chip
-              ? "bg-teal-500/10 text-teal-600 border-teal-300"
+              ? "bg-teal-500/10 text-teal-600 border-teal-300 shadow-2xs"
               : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
           )}
         >

@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 
@@ -25,9 +26,10 @@ public class GlobalExceptionHandler {
     // For 500 Server error
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex) {
+        ex.printStackTrace();
         return buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                "Something went wrong"
+                ex.getMessage() != null ? ex.getMessage() : "Something went wrong"
         );
     }
 
@@ -43,10 +45,11 @@ public class GlobalExceptionHandler {
 
     // For 403 forbidden access
     @ExceptionHandler({
-            CustomAccessDeniedException.class
+            CustomAccessDeniedException.class,
+            AccessDeniedException.class
     })
-    public ResponseEntity<ErrorResponse> handleAccess(CustomAccessDeniedException ex){
-        return buildErrorResponse(HttpStatus.FORBIDDEN,ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleAccess(Exception ex){
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
 

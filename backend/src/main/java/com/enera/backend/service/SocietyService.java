@@ -9,8 +9,10 @@ import com.enera.backend.exception.FlatNotFoundException;
 import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.repository.*;
 import org.springframework.stereotype.Service;
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.sql.Timestamp;
 import java.util.*;
 
 @Service
@@ -22,6 +24,7 @@ public class SocietyService {
     private final BlockRepository blockRepository;
     private final CommonAreaRepository commonAreaRepository;
     private final UserRepository userRepository;
+    private final BuilderRepository builderRepository;
 
     SocietyService(SocietyRepository societyRepository,
                    ReadingRepository readingRepository,
@@ -29,7 +32,8 @@ public class SocietyService {
                    DeviceRepository deviceRepository,
                    BlockRepository blockRepository,
                    CommonAreaRepository commonAreaRepository,
-                   UserRepository userRepository){
+                   UserRepository userRepository,
+                   BuilderRepository builderRepository){
         this.societyRepository = societyRepository;
         this.readingRepository = readingRepository;
         this.flatRepository = flatRepository;
@@ -37,6 +41,7 @@ public class SocietyService {
         this.blockRepository = blockRepository;
         this.commonAreaRepository = commonAreaRepository;
         this.userRepository = userRepository;
+        this.builderRepository = builderRepository;
     }
 
     public SocietyOverviewResponse getSocietyOverview(Long societyId){
@@ -283,6 +288,139 @@ public class SocietyService {
         response.setDeviceSerial(savedDevice.getDeviceSerial());
         response.setDeviceType(savedDevice.getDeviceType());
         response.setMappedTo(mappedTo);
+
+        return response;
+    }
+
+    public List<DailyTrendResponse> getDailyTrend(Long societyId,int date){
+        Society society = societyRepository.findById(societyId).
+                orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+
+        List<Object[]> rows = readingRepository.getDailyTrendBySociety(societyId,date);
+
+        List<DailyTrendResponse> responses = new ArrayList<>();
+
+        for(Object[] row : rows){
+            String dateStr = (String) row[0];
+            double totalKwh = ((Number) row[1]).doubleValue();
+            double commonAreaKwh = ((Number) row[2]).doubleValue();
+
+            responses.add(DailyTrendResponse.builder()
+                    .date(dateStr)
+                    .totalKwh(Math.round(totalKwh*10.0)/10.0)
+                    .commonAreaKwh(Math.round(commonAreaKwh*10.0)/10.0)
+                    .build());
+        }
+
+        return responses;
+    }
+
+    public List<HourlyBreakDownResponse> getHourlyBreakDown(Long societyId,LocalDate date){
+        Society society = societyRepository.findById(societyId).
+                orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+
+        if (date == null) {
+            date = LocalDate.now();
+        }
+
+
+        List<HourlyBreakDownResponse> response = new ArrayList<>();
+
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+
+        List<Object[]> rows = readingRepository.getHourlyBreakdownByDate(
+                        societyId,start,end
+        );
+
+
+        for (Object[] row : rows) {
+            int hourNum = ((Number) row[0]).intValue();
+            String hour = hourNum + ":00";
+
+            double totalFlatKwh = ((Number) row[1]).doubleValue();
+            double commonKwh = ((Number) row[2]).doubleValue();
+
+            double baseKwh = Math.round(totalFlatKwh * 0.30 * 10.0) / 10.0;
+            double societyKwh = Math.round(totalFlatKwh * 0.50 * 10.0) / 10.0;
+            double peekKwh = Math.round(totalFlatKwh * 0.20 * 10.0) / 10.0;
+            double commonAreaKwh = Math.round(commonKwh * 10.0) / 10.0;
+
+            response.add(new HourlyBreakDownResponse(hour, baseKwh, societyKwh, commonAreaKwh, peekKwh));
+        }
+
+        return response;
+    }
+
+    public List<SocietyAnomaliesResponse> getAnomalies(Long societyId) {
+        Society society = societyRepository.findById(societyId)
+                .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+
+        List<Object[]> readings = readingRepository.findAnomaliesBySociety(societyId);
+        List<SocietyAnomaliesResponse> responses = new ArrayList<>();
+
+        for (Object[] reading : readings) {
+            Long id = ((Number) reading[0]).longValue();
+            String flatNumber = (String) reading[1];
+            String blockName = (String) reading[2];
+            double currentKw = ((Number) reading[3]).doubleValue();
+            double expectedKw = Math.round(((Number) reading[4]).doubleValue() * 10.0) / 10.0;
+
+            Object tsObj = reading[5];
+            String detectedAtStr;
+            if (tsObj instanceof java.sql.Timestamp) {
+                detectedAtStr = ((java.sql.Timestamp) tsObj).toLocalDateTime().toString();
+            } else if (tsObj instanceof LocalDateTime) {
+                detectedAtStr = ((LocalDateTime) tsObj).toString();
+            } else if (tsObj != null) {
+                detectedAtStr = tsObj.toString();
+            } else {
+                detectedAtStr = LocalDateTime.now().toString();
+            }
+
+            double ratio = expectedKw > 0 ? Math.round((currentKw / expectedKw) * 10.0) / 10.0 : 2.5;
+
+            SocietyAnomaliesResponse response = new SocietyAnomaliesResponse();
+            response.setId(id);
+            response.setFlat("Flat " + flatNumber);
+            response.setFlatId("Flat " + flatNumber);
+            response.setFlatNumber(flatNumber);
+            response.setBlockName(blockName);
+            response.setCurrentKw(currentKw);
+            response.setExpectedKw(expectedKw);
+            response.setMultiplier(ratio + "x usual");
+            response.setDesc("Drawing " + currentKw + " kW — expected " + expectedKw + " kW");
+            response.setDescription("Drawing " + currentKw + " kW — expected " + expectedKw + " kW");
+            response.setDetectedAt(detectedAtStr);
+            response.setResolved(false);
+
+            responses.add(response);
+        }
+
+        return responses;
+    }
+
+    public SocietyResponse createSociety(CreateSocietyRequest request) {
+        Builder builder = builderRepository.findById(request.getBuilderId())
+                .orElseThrow(() -> new RuntimeException("Builder not found with id: " + request.getBuilderId()));
+
+        Society society = new Society();
+        society.setName(request.getName());
+        society.setBuilder(builder);
+        society.setAddress(request.getAddress());
+        society.setCity(request.getCity());
+        society.setTotalBlocks(request.getTotalBlocks());
+
+        Society saved = societyRepository.save(society);
+
+        SocietyResponse response = new SocietyResponse();
+        response.setId(saved.getId());
+        response.setName(saved.getName());
+        response.setBuilderId(builder.getId());
+        response.setAddress(saved.getAddress());
+        response.setCity(saved.getCity());
+        response.setTotalBlocks(saved.getTotalBlocks());
+        response.setCreatedAt(saved.getCreatedAt());
 
         return response;
     }

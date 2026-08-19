@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Building2, Users, Zap, ArrowUpDown, Plus, Download, Leaf } from "lucide-react";
 import * as api from "../../lib/api";
@@ -10,13 +10,12 @@ import type { BuilderOverview, BuilderSocietyRow } from "../../lib/types";
 import { useWebSocketReading } from "../../context/WebSocketContext";
 
 export default function BuilderAdminDashboard() {
-  // const {latestReading,isConnected} = useEnergyWebSocket();
   const { builderId } = useParams<{ builderId: string }>();
   const navigate = useNavigate();
   const [overview, setOverview] = useState<BuilderOverview | null>(null);
   const [societies, setSocieties] = useState<BuilderSocietyRow[] | null>(null);
   const [sortField, setSortField] = useState<"name" | "mtdKwh" | "avgPerFlat" | "mom">("mtdKwh");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
   const { latestReading, isConnected } = useWebSocketReading();
 
@@ -70,7 +69,6 @@ export default function BuilderAdminDashboard() {
     if (!builderId) return;
 
     api.getBuilderOverview(builderId).then(setOverview);
-
     api.getBuilderSocieties(builderId).then(setSocieties);
   }, [builderId]);
 
@@ -83,8 +81,9 @@ export default function BuilderAdminDashboard() {
     }
   };
 
-  const sorted = societies
-    ? [...societies].sort((a, b) => {
+  const sorted = useMemo(() => {
+    if (!societies) return null;
+    return [...societies].sort((a, b) => {
       let diff = 0;
       if (sortField === "name") {
         diff = a.name.localeCompare(b.name);
@@ -96,15 +95,17 @@ export default function BuilderAdminDashboard() {
         diff = a.mtdKwh - b.mtdKwh;
       }
       return sortDir === "desc" ? -diff : diff;
-    })
-    : null;
+    });
+  }, [societies, sortField, sortDir]);
 
   // Generate benchmark data from societies
-  const benchmarkData = (societies ?? []).map((s) => ({
-    name: s.name,
-    efficient: Math.round(s.mtdKwh * 0.7),
-    total: s.mtdKwh,
-  }));
+  const benchmarkData = useMemo(() => {
+    return (societies ?? []).map((s) => ({
+      name: s.name,
+      efficient: Math.round(s.mtdKwh * 0.7),
+      total: s.mtdKwh,
+    }));
+  }, [societies]);
 
   const handleNav = (key: string) => {
     if (key === "analytics") navigate(`/builder/${builderId}/analytics`);

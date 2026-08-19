@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Button } from "../../../components/ui/primitives";
 
 export function SettingsTab() {
@@ -6,6 +7,12 @@ export function SettingsTab() {
   const [anomalyRatio, setAnomalyRatio] = useState("2.5");
   const [enableEmail, setEnableEmail] = useState(true);
   const [enableSMS, setEnableSMS] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
 
   return (
     <Card className="max-w-2xl mx-auto">
@@ -16,6 +23,13 @@ export function SettingsTab() {
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
+        {saved && (
+          <div className="flex items-center gap-2 p-3 bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold rounded-xl animate-fade-in">
+            <Check size={16} className="text-teal-600" />
+            Settings saved successfully.
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-slate-800">Peak Demand Threshold (kW)</label>
           <p className="text-xs text-slate-400">Trigger system warning when active society consumption exceeds this value</p>
@@ -32,16 +46,16 @@ export function SettingsTab() {
           <label className="text-sm font-semibold text-slate-800">Alert Notifications</label>
           <p className="text-xs text-slate-400">Configure where system warnings and critical spikes are dispatched</p>
           <div className="flex flex-col gap-3 mt-3">
-            <label className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+            <label className="flex items-center gap-2.5 text-xs text-slate-700 font-medium cursor-pointer">
               <input
                 type="checkbox"
                 checked={enableEmail}
                 onChange={(e) => setEnableEmail(e.target.checked)}
                 className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
               />
-              Email Alerts (suresh@voltwise.app / admin)
+              Email Alerts (admin@enera.com)
             </label>
-            <label className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+            <label className="flex items-center gap-2.5 text-xs text-slate-700 font-medium cursor-pointer">
               <input
                 type="checkbox"
                 checked={enableSMS}
@@ -53,8 +67,8 @@ export function SettingsTab() {
           </div>
         </div>
 
-        <div className="border-t pt-4 flex gap-2">
-          <Button variant="teal" onClick={() => alert("Settings saved successfully!")}>
+        <div className="border-t pt-4 flex gap-2 items-center">
+          <Button variant="teal" onClick={handleSave}>
             Save Settings
           </Button>
           <Button

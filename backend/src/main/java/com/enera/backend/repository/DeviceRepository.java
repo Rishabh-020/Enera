@@ -28,7 +28,14 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
 
     List<Device> findBySocietyId(Long societyId);
 
-    Optional<Device> findByFlatId(Long flatId);
+    @Query(value = """
+        SELECT d.*
+        FROM devices d
+        WHERE d.mapped_flat_id = :flatId
+        ORDER BY d.last_seen_at DESC NULLS LAST, d.id DESC
+        LIMIT 1
+        """, nativeQuery = true)
+    Optional<Device> findByFlatId(@Param("flatId") Long flatId);
 
     Integer countBySocietyBuilderIdAndStatus(Long builderId,Boolean online);
 

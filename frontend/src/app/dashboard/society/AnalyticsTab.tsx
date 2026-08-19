@@ -29,7 +29,9 @@ export function AnalyticsTab({ societyId }: { societyId: string }) {
       </div>
       <AnalyticsView
         filters={filterOptions}
-        loadHeatmap={() => api.getSocietyHeatmap(societyId)}
+        loadHeatmap={(filter) => api.getSocietyHeatmap(societyId, filter)}
+        loadHourlyBreakdown={(filter, date) => api.getSocietyHourlyBreakdown(societyId, filter, date)}
+        loadAnomalies={(filter) => api.getSocietyAnomalies(societyId, filter)}
       />
     </div>
   );

@@ -45,18 +45,28 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }: DashboardLayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, isDemoMode, loginDemo } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleSwitchView = (option: string) => {
-    if (option === "Resident") {
-      navigate(`/flat/${user?.flatId || "flat_101"}`);
-    } else if (option === "Admin") {
-      navigate(`/society/${user?.societyId || "soc_1"}`);
-    } else if (option === "Builder") {
-      navigate(`/builder/${user?.builderId || "bld_1"}`);
+    const routes: Record<string, string> = {
+      Resident: `/flat/${user?.flatId || "1"}`,
+      Admin: `/society/${user?.societyId || "1"}`,
+      Builder: `/builder/${user?.builderId || "1"}`,
+    };
+
+    if (routes[option]) {
+      if (isDemoMode) {
+        const demoProfiles: Record<string, any> = {
+          Resident: { id: 1, name: "Resident View (Demo)", email: "owner001@enera.com", role: "RESIDENT", flatId: "1", societyId: "1", builderId: "1" },
+          Admin: { id: 1, name: "Society Admin (Demo)", email: "society1@enera.com", role: "SOCIETY_ADMIN", flatId: null, societyId: "1", builderId: "1" },
+          Builder: { id: 1, name: "Builder Admin (Demo)", email: "builder1@enera.com", role: "BUILDER_ADMIN", flatId: null, societyId: "1", builderId: "1" },
+        };
+        if (demoProfiles[option]) loginDemo(demoProfiles[option]);
+      }
+      navigate(routes[option]);
     }
   };
 
@@ -117,11 +127,11 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
 
           {/* Bottom section */}
           <div className={cn("mt-auto px-3 pb-4 flex flex-col gap-3.5", collapsed && "px-2 pb-3")}>
-            {/* Switch View */}
-            {!collapsed && (
+            {/* Switch View (only visible in Demo Mode) */}
+            {isDemoMode && !collapsed && (
               <div className="sidebar-fade-in">
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                  Switch View
+                  Switch View (Demo)
                 </p>
                 <SwitchViewToggle
                   options={["Resident", "Admin", "Builder"]}
@@ -243,19 +253,21 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
 
           {/* Mobile drawer bottom */}
           <div className="p-4 border-t border-white/5 flex flex-col gap-3.5 bg-grid-950/50">
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                Switch View
-              </p>
-              <SwitchViewToggle
-                options={["Resident", "Admin", "Builder"]}
-                active={user ? SWITCH_VIEW_OPTIONS[user.role] : "Admin"}
-                onChange={(opt) => {
-                  handleSwitchView(opt);
-                  setMobileOpen(false);
-                }}
-              />
-            </div>
+            {isDemoMode && (
+              <div>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+                  Switch View (Demo)
+                </p>
+                <SwitchViewToggle
+                  options={["Resident", "Admin", "Builder"]}
+                  active={user ? SWITCH_VIEW_OPTIONS[user.role] : "Admin"}
+                  onChange={(opt) => {
+                    handleSwitchView(opt);
+                    setMobileOpen(false);
+                  }}
+                />
+              </div>
+            )}
 
             <div className="flex items-center justify-between pt-2 border-t border-white/5">
               <div className="flex items-center gap-3 min-w-0">
@@ -361,6 +373,13 @@ export const NAV_ITEMS_SOCIETY: NavItem[] = [
 export const NAV_ITEMS_BUILDER: NavItem[] = [
   { key: "portfolio", label: "Portfolio", icon: <Building2 size={16} /> },
   { key: "analytics", label: "Analytics", icon: <BarChart3 size={16} /> },
+];
+
+export const NAV_ITEMS_SUPER_ADMIN: NavItem[] = [
+  { key: "overview", label: "Overview", icon: <LayoutGrid size={16} /> },
+  { key: "builders", label: "Builders", icon: <Building2 size={16} /> },
+  { key: "societies", label: "Societies", icon: <Home size={16} /> },
+  { key: "topology", label: "Topology & Blocks", icon: <Cpu size={16} /> },
 ];
 
 export const NAV_ICON: Record<string, ReactNode> = {

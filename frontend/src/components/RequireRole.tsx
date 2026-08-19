@@ -19,10 +19,14 @@ interface RequireRoleProps {
 }
 
 export function RequireRole({ roles, children }: RequireRoleProps): ReactElement {
-  const { user } = useAuth();
+  const { user, isDemoMode } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (isDemoMode) {
+    return children;
   }
 
   if (!roles.includes(user.role)) {
