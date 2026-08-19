@@ -24,6 +24,8 @@ public class FloorService {
     private final ReadingRepository readingRepository;
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private static final String online = "Live";
+    private static final String offline = "Offline";
 
     FloorService(FloorRepository floorRepository,
                  ReadingRepository readingRepository,
@@ -61,7 +63,7 @@ public class FloorService {
             response.setFlatNumber(flat.getFlatNumber());
             response.setBhkType(flat.getBhkType());
             response.setResidentName(resident != null ? resident.getName() : null);
-            response.setMeterStatus(Boolean.TRUE.equals(deviceOnline) ? "live" : "offline");
+            response.setMeterStatus(Boolean.TRUE.equals(deviceOnline) ? online : offline);
             response.setMtdKwh(mtdKwh);
 
             responses.add(response);

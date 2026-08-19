@@ -26,6 +26,11 @@ public class BuilderService {
     private final ReadingRepository readingRepository;
     private final DeviceRepository deviceRepository;
     private final FlatRepository flatRepository;
+    private static final double BASE_KW_PERCENTAGE = 0.30;
+    private static final double SOCIETY_KW_PERCENTAGE = 0.50;
+    private static final double PEEK_KW_PERCENTAGE = 0.20;
+    private static final double ROUND_FACTOR = 0.10;
+    private static final int COST_PER_UNIT = 8;
 
     BuilderService(BuilderRepository builderRepository,
                    SocietyRepository societyRepository,
@@ -71,7 +76,7 @@ public class BuilderService {
         response.setTotalBlocks(totalBlocks);
         response.setDevicesOnline(onlineDeviceCount);
         response.setMtdKwh(mtdKwh);
-        response.setMtdCost(mtdKwh * 8);
+        response.setMtdCost(mtdKwh * COST_PER_UNIT);
 
         return response;
     }
@@ -103,7 +108,7 @@ public class BuilderService {
             }
 
             Double mom = prevMonthKwh > 0 ? ((mtdKwh - prevMonthKwh) / prevMonthKwh) * 100.0 : 0.0;
-            Double roundedMom = Math.round(mom * 10.0) / 10.0;
+            Double roundedMom = Math.round(mom * ROUND_FACTOR) / ROUND_FACTOR;
 
             response.setName(society.getName());
             response.setId(society.getId());
@@ -147,10 +152,10 @@ public class BuilderService {
             double totalFlatKwh = ((Number) row[1]).doubleValue();
             double commonKwh = ((Number) row[2]).doubleValue();
 
-            double baseKwh = Math.round(totalFlatKwh * 0.30 * 10.0) / 10.0;
-            double societyKwh = Math.round(totalFlatKwh * 0.50 * 10.0) / 10.0;
-            double peekKwh = Math.round(totalFlatKwh * 0.20 * 10.0) / 10.0;
-            double commonAreaKwh = Math.round(commonKwh * 10.0) / 10.0;
+            double baseKwh = Math.round(totalFlatKwh * BASE_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
+            double societyKwh = Math.round(totalFlatKwh * SOCIETY_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
+            double peekKwh = Math.round(totalFlatKwh * PEEK_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
+            double commonAreaKwh = Math.round(commonKwh * ROUND_FACTOR) / ROUND_FACTOR;
 
             response.add(new HourlyBreakDownResponse(hour, baseKwh, societyKwh, commonAreaKwh, peekKwh));
         }

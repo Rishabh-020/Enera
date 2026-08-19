@@ -29,6 +29,8 @@ public class FlatService {
     private final UserRepository userRepository;
     private static final double LOW_KW_THRESHOLD = 2.0;
     private static final double MID_KW_THRESHOLD = 4.0;
+    private static final double NEG_KW = 0.0;
+    private static final int COST_PER_UNIT = 8;
 
     FlatService(FlatRepository flatRepository,
                 ReadingRepository readingRepository,
@@ -59,7 +61,7 @@ public class FlatService {
         }
 
         Reading reading = readingOpt.get();
-        Double kw = reading.getKw() != null ? reading.getKw() : 0.0;
+        double kw = reading.getKw() != null ? reading.getKw() : 0.0;
 
         if (kw < LOW_KW_THRESHOLD) {
             response.setLevel("normal");
@@ -70,7 +72,7 @@ public class FlatService {
         }
 
         Double usualKw = readingRepository.findAverageKwByFlatId(flatId);
-        if (usualKw == null || usualKw <= 0.0) {
+        if (usualKw == null || usualKw <= NEG_KW) {
             usualKw = kw > 0 ? kw : 1.5;
         }
 
@@ -147,8 +149,8 @@ public class FlatService {
 
         response.setPeakDay(peakDay);
         response.setTotalKwh(totalKwh);
-        response.setEstCost(totalKwh * 8);
-        response.setProjectedCost(projectedTotal * 8);
+        response.setEstCost(totalKwh * COST_PER_UNIT);
+        response.setProjectedCost(projectedTotal * COST_PER_UNIT);
         response.setProjectedTotal(projectedTotal);
         response.setSeries(seriesResponses);
 
@@ -236,7 +238,7 @@ public class FlatService {
             previousWeekTotal += reading.getKwh();
         }
 
-        Double pctChange = 0.0;
+        double pctChange = 0.0;
 
         if (previousWeekTotal != 0) {
             pctChange = ((currentWeekTotal - previousWeekTotal) / previousWeekTotal) * 100;

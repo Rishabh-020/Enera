@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Service
 public class SuperAdminService {
@@ -19,6 +20,7 @@ public class SuperAdminService {
     private final FlatRepository flatRepository;
     private final DeviceRepository deviceRepository;
     private final ReadingRepository readingRepository;
+    private static final double ROUND_FACTOR = 10.0;
 
     public SuperAdminService(BuilderRepository builderRepository,
                              SocietyRepository societyRepository,
@@ -59,8 +61,8 @@ public class SuperAdminService {
                 .totalBlocks(totalBlocks)
                 .totalFlats(totalFlats)
                 .totalMeters(totalMeters)
-                .liveGridKw(Math.round(liveGridKw * 10.0) / 10.0)
-                .mtdKwh(Math.round(totalMtdKwh * 10.0) / 10.0)
+                .liveGridKw(Math.round(liveGridKw * ROUND_FACTOR) / ROUND_FACTOR)
+                .mtdKwh(Math.round(totalMtdKwh * ROUND_FACTOR) / ROUND_FACTOR)
                 .build();
     }
 
@@ -88,8 +90,8 @@ public class SuperAdminService {
                     .email(b.getEmail())
                     .totalSocieties(societyCount)
                     .totalFlats(flatCount)
-                    .liveKw(Math.round(liveKw * 10.0) / 10.0)
-                    .mtdKwh(Math.round(mtdKwh * 10.0) / 10.0)
+                    .liveKw(Math.round(liveKw * ROUND_FACTOR) / ROUND_FACTOR)
+                    .mtdKwh(Math.round(mtdKwh * ROUND_FACTOR) / ROUND_FACTOR)
                     .build());
         }
 
