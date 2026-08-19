@@ -11,9 +11,6 @@ import { Zap, BarChart3, TrendingUp, Award } from "lucide-react";
 import { formatCost } from "../lib/utils";
 import type { FlatHourlyProfile, FlatLive, FlatSummary, FlatTrend, FlatDetail } from "../lib/types";
 import { useWebSocketReading } from "../context/WebSocketContext";
-import { lastSeenMinutesAgo } from "../lib/readingEngine";
-
-const POLL_MS = 24 * 60 * 60 * 1000; // per spec: poll every 24h in V0
 
 export function FlatDashboardView({ flatId }: { flatId: string }) {
   const { latestReading, isConnected } = useWebSocketReading();
@@ -46,13 +43,9 @@ export function FlatDashboardView({ flatId }: { flatId: string }) {
   useEffect(() => {
     let cancelled = false;
     setLiveLoading(true);
-    setSummary(null);
-    setTrend(null);
-    setHourly(null);
-    setFlatDetails(null);
 
     async function load() {
-      const [live, summary, trend, hourlyProfile, detail] = await Promise.all([
+      const [liveData, summaryData, trendData, hourlyProfile, detail] = await Promise.all([
         api.getFlatLive(flatId),
         api.getFlatSummary(flatId),
         api.getFlatTrend(flatId),
@@ -60,23 +53,17 @@ export function FlatDashboardView({ flatId }: { flatId: string }) {
         api.getFlatDetail(flatId)
       ]);
       if (cancelled) return;
-      setLive(live);
+      setLive(liveData);
       setLiveLoading(false);
-      setSummary(summary);
-      setTrend(trend);
+      setSummary(summaryData);
+      setTrend(trendData);
       setHourly(hourlyProfile);
-      setFlatDetails(detail)
+      setFlatDetails(detail);
     }
     load();
 
-    const interval = setInterval(async () => {
-      const l = await api.getFlatLive(flatId);
-      if (!cancelled) setLive(l);
-    }, POLL_MS);
-
     return () => {
       cancelled = true;
-      clearInterval(interval);
     };
   }, [flatId]);
 

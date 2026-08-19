@@ -50,14 +50,21 @@ export default function Login() {
     setLoading(true);
     try {
       const user = await login(email, password);
-      if (user.role !== role) {
-        setError(`That account is registered as a different role. Try the ${ROLES.find((r) => r.key === user.role)?.label} tab.`);
+
+      if (user.role !== role && user.role !== "SUPER_ADMIN") {
+        const matched = ROLES.find((r) => r.key === user.role);
+        setError(matched ? `That account is registered as a ${matched.label}. Try the ${matched.label} tab.` : "Role mismatch for this account.");
         setLoading(false);
         return;
       }
-      if (user.role === "RESIDENT") navigate(`/flat/${user.flatId}`);
-      else if (user.role === "SOCIETY_ADMIN") navigate(`/society/${user.societyId}`);
-      else navigate(`/builder/${user.builderId}`);
+
+      const roleRoutes: Record<string, string> = {
+        RESIDENT: `/flat/${user.flatId}`,
+        SOCIETY_ADMIN: `/society/${user.societyId}`,
+        BUILDER_ADMIN: `/builder/${user.builderId}`,
+        SUPER_ADMIN: `/superAdmin/${user.id}`,
+      };
+      navigate(roleRoutes[user.role] || "/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {

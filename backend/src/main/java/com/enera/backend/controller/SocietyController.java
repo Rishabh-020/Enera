@@ -4,6 +4,7 @@ import com.enera.backend.dto.device.RegisterDeviceRequest;
 import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
 import com.enera.backend.service.SocietyService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,6 +12,7 @@ import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -77,6 +79,39 @@ public class SocietyController {
         return ResponseEntity.ok(
                 societyService.registerDevice(id,request)
         );
+    }
 
+    @GetMapping("/{id}/daily-trend")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<List<DailyTrendResponse>> getDailyTrend(@PathVariable Long id,
+                                                                  @RequestParam(defaultValue = "7") int days){
+        return ResponseEntity.ok(
+                societyService.getDailyTrend(id,days)
+        );
+    }
+
+    @GetMapping("/{id}/hourly-breakdown")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
+    public ResponseEntity<List<HourlyBreakDownResponse>> getHourlyTrend(@PathVariable Long id,
+@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date){
+        return ResponseEntity.ok(
+            societyService.getHourlyBreakDown(id,date)
+        );
+    }
+
+    @GetMapping("/{id}/anomalies")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
+    public ResponseEntity<List<SocietyAnomaliesResponse>> getAnomalies(@PathVariable Long id){
+        return ResponseEntity.ok(
+                societyService.getAnomalies(id)
+        );
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<SocietyResponse> createSociety(@RequestBody CreateSocietyRequest request) {
+        return ResponseEntity.ok(
+                societyService.createSociety(request)
+        );
     }
 }

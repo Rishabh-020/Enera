@@ -2,14 +2,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Plus, Trash2, RefreshCw } from "lucide-react";
 import * as api from "../../lib/api";
-import { db } from "../../lib/mockData";
 import { DashboardLayout, NAV_ITEMS_SOCIETY } from "../../components/layout/DashboardLayout";
 import { timeAgo } from "../../lib/utils";
 import {
   Card, CardHeader, CardTitle, CardDescription, Button, Input, Select,
   Table, Thead, Th, Td, Tr, StatusDot, Badge, SearchBar,
 } from "../../components/ui/primitives";
-import type { DeviceRow, DeviceType, MeterStatus } from "../../lib/types";
+import type { DeviceRow, DeviceType, MeterStatus, SocietyFlatRow, SocietyCommonAreaRow } from "../../lib/types";
 import { useWebSocketReading } from "../../context/WebSocketContext";
 
 const STATUS_LABEL: Record<MeterStatus, string> = {
@@ -32,9 +31,10 @@ interface DeviceForm {
 export default function DeviceManagement() {
   const { societyId } = useParams<{ societyId: string }>();
   const navigate = useNavigate();
-  const society = db.societyById.get(societyId ?? "");
 
   const [devices, setDevices] = useState<DeviceRow[] | null>(null);
+  const [flats, setFlats] = useState<SocietyFlatRow[]>([]);
+  const [commonAreas, setCommonAreas] = useState<SocietyCommonAreaRow[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -49,6 +49,13 @@ export default function DeviceManagement() {
   }
 
   useEffect(refresh, [societyId]);
+
+  useEffect(() => {
+    if (societyId) {
+      api.getSocietyFlatsList(societyId).then(setFlats).catch(() => {});
+      api.getSocietyCommonAreas(societyId).then(setCommonAreas).catch(() => {});
+    }
+  }, [societyId]);
 
   useEffect(() => {
     if (!latestReading) return;
@@ -73,7 +80,18 @@ export default function DeviceManagement() {
     e.preventDefault();
     setError("");
     try {
-      await api.registerDevice({ ...form, societyId: societyId! });
+      let flatId: number | null = null;
+      let commonAreaId: number | null = null;
+
+      if (form.deviceType === "Flat Meter") {
+        const found = flats.find((f) => f.flatNumber === form.mappedTo);
+        if (found) flatId = found.id;
+      } else {
+        const found = commonAreas.find((c) => c.name === form.mappedTo || c.category === form.mappedTo);
+        if (found) commonAreaId = Number(found.id);
+      }
+
+      await api.registerDevice({ ...form, societyId: societyId!, flatId, commonAreaId });
       setShowForm(false);
       setForm({ deviceSerial: "", deviceType: "Flat Meter", mappedTo: "" });
       refresh();
@@ -90,8 +108,8 @@ export default function DeviceManagement() {
 
   const mappedOptions =
     form.deviceType === "Flat Meter"
-      ? (society?.flats.map((f) => f.flatNumber) ?? [])
-      : (society?.commonAreas.map((c) => c.name) ?? []);
+      ? flats.map((f) => f.flatNumber)
+      : commonAreas.map((c) => c.name || c.category);
 
   // Compute summary counts
   const onlineCount = devices?.filter((d) => d.status === "live").length ?? 0;

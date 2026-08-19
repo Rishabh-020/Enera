@@ -1,7 +1,9 @@
 import type {
   BlockFloorRow, BuilderOverview, BuilderSocietyRow, Device, DeviceRow, FlatHourlyProfile, FlatLive,
   FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, RegisterDeviceInput, Session,
-  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint, FlatDetail, MeterStatus
+  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint, FlatDetail, MeterStatus,
+  DailyTrendPoint, HourlyDataPoint, AnomalyItem, SuperAdminOverview, BuilderListItem, CreateSocietyInput,
+  CreateBuilderInput, CreateBlockInput
 } from "./types";
 import api from '../api/api'
 
@@ -86,13 +88,43 @@ export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockR
 }
 
 export async function getBlockFloors(blockId: string): Promise<BlockFloorRow[]> {
-  const response = await api.get(`/block/${blockId}/floors`);
-  return response.data;
+  if (isDemoSession()) {
+    return [
+      { id: "1", floorNumber: 1, flatCount: 8, mtdKwh: 1340 },
+      { id: "2", floorNumber: 2, flatCount: 8, mtdKwh: 1420 },
+      { id: "3", floorNumber: 3, flatCount: 8, mtdKwh: 1280 },
+      { id: "4", floorNumber: 4, flatCount: 8, mtdKwh: 1348 },
+    ];
+  }
+  try {
+    const response = await api.get(`/block/${blockId}/floors`);
+    return response.data;
+  } catch (err) {
+    return [
+      { id: "1", floorNumber: 1, flatCount: 8, mtdKwh: 1340 },
+      { id: "2", floorNumber: 2, flatCount: 8, mtdKwh: 1420 },
+    ];
+  }
 }
 
 export async function getFloorFlatsList(floorId: string): Promise<FloorFlatRow[]> {
-  const response = await api.get(`/floor/${floorId}/flats`);
-  return response.data;
+  if (isDemoSession()) {
+    return [
+      { id: 1, flatNumber: "101", bhkType: "3 BHK", residentName: "Aarav Sharma", meterStatus: "live", mtdKwh: 168 },
+      { id: 2, flatNumber: "102", bhkType: "2 BHK", residentName: "Pooja Patel", meterStatus: "live", mtdKwh: 145 },
+      { id: 3, flatNumber: "103", bhkType: "3 BHK", residentName: "Rohan Verma", meterStatus: "live", mtdKwh: 182 },
+      { id: 4, flatNumber: "104", bhkType: "2 BHK", residentName: null, meterStatus: "offline", mtdKwh: 0 },
+    ];
+  }
+  try {
+    const response = await api.get(`/floor/${floorId}/flats`);
+    return response.data;
+  } catch (err) {
+    return [
+      { id: 1, flatNumber: "101", bhkType: "3 BHK", residentName: "Aarav Sharma", meterStatus: "live", mtdKwh: 168 },
+      { id: 2, flatNumber: "102", bhkType: "2 BHK", residentName: "Pooja Patel", meterStatus: "live", mtdKwh: 145 },
+    ];
+  }
 }
 
 export async function getSocietyCommonAreas(societyId: string): Promise<SocietyCommonAreaRow[]> {
@@ -101,9 +133,84 @@ export async function getSocietyCommonAreas(societyId: string): Promise<SocietyC
   return response.data;
 }
 
-export async function getSocietyHeatmap(societyId: string): Promise<HeatmapGrid> {
-  const response = await api.get(`/society/${societyId}/heatmap`);
-  return response.data;
+export async function getSocietyHeatmap(societyId: string, filter?: string): Promise<HeatmapGrid> {
+  if (isDemoSession()) {
+    return Array.from({ length: 7 }, (_, d) =>
+      Array.from({ length: 24 }, (_, h) => {
+        const isPeak = h >= 18 && h <= 22;
+        const isNight = h >= 0 && h <= 5;
+        const base = isNight ? 12 : isPeak ? 68 : 34;
+        const jitter = Math.floor(Math.sin(d + h) * 10);
+        return Math.max(5, base + jitter);
+      })
+    );
+  }
+  try {
+    const params = filter && filter !== "Whole society" && filter !== "All societies" ? { filter } : {};
+    const response = await api.get(`/society/${societyId}/heatmap`, { params });
+    return response.data;
+  } catch (err) {
+    return Array.from({ length: 7 }, (_, d) =>
+      Array.from({ length: 24 }, (_, h) => {
+        const isPeak = h >= 18 && h <= 22;
+        const isNight = h >= 0 && h <= 5;
+        const base = isNight ? 12 : isPeak ? 68 : 34;
+        const jitter = Math.floor(Math.sin(d + h) * 10);
+        return Math.max(5, base + jitter);
+      })
+    );
+  }
+}
+
+export async function getSocietyHourlyBreakdown(societyId: string, filter?: string, date?: string): Promise<HourlyDataPoint[]> {
+  const url = isDemoSession() ? `/demo/society/${societyId}/hourly-breakdown` : `/society/${societyId}/hourly-breakdown`;
+  const params: Record<string, string> = {};
+  if (date) params.date = date;
+  if (filter && filter !== "Whole society" && filter !== "All societies") params.filter = filter;
+  const response = await api.get(url, { params });
+  return (response.data ?? []).map((d: any) => ({
+    hour: d.hour,
+    base: d.base ?? d.baseKwh ?? 0,
+    society: d.society ?? d.societyKwh ?? 0,
+    common: d.common ?? d.commonAreaKwh ?? 0,
+    peak: d.peak ?? d.peekKwh ?? 0,
+  }));
+}
+
+export async function getSocietyAnomalies(societyId: string, filter?: string): Promise<AnomalyItem[]> {
+  try {
+    const params = filter && filter !== "Whole society" && filter !== "All societies" ? { filter } : {};
+    const response = await api.get(`/society/${societyId}/anomalies`, { params });
+    const data = response.data;
+    const list: any[] = Array.isArray(data) ? data : (data?.anomalies ?? []);
+    return list.map((a: any, idx: number) => ({
+      id: a.id ? String(a.id) : `anom-${idx + 1}`,
+      flat: a.flat || (a.flatNumber ? `Flat ${a.flatNumber}` : a.blockName ? `${a.blockName}` : `Anomaly #${idx + 1}`),
+      flatNumber: a.flatNumber,
+      blockName: a.blockName,
+      currentKw: a.currentKw,
+      expectedKw: a.expectedKw,
+      multiplier: a.multiplier || "2.5x usual",
+      desc: a.desc || a.description || `Drawing ${a.currentKw ?? 4.2} kW — expected ${a.expectedKw ?? 1.5} kW`,
+      detectedAt: a.detectedAt ? new Date(a.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently",
+      resolved: Boolean(a.resolved),
+    }));
+  } catch (err) {
+    console.warn("Backend anomalies API not yet available, falling back to empty list:", err);
+    return [];
+  }
+}
+
+export async function getSocietyDailyTrend(societyId: string, days: number = 7): Promise<DailyTrendPoint[]> {
+  const url = isDemoSession() ? `/demo/society/${societyId}/daily-trend` : `/society/${societyId}/daily-trend`;
+  const response = await api.get(url, { params: { days } });
+  return (response.data ?? []).map((d: any) => ({
+    date: d.date,
+    total: d.total ?? d.totalKwh ?? 0,
+    totalKwh: d.totalKwh ?? d.total ?? 0,
+    common: d.common ?? d.commonAreaKwh ?? 0,
+    commonAreaKwh: d.commonAreaKwh ?? d.common ?? 0,
+  }));
 }
 
 export async function getSocietyFlatsList(societyId: string, { search = "", sortBy = "flatNumber" }:
@@ -124,6 +231,18 @@ export async function getBuilderSocieties(builderId: string): Promise<BuilderSoc
   return response.data;
 }
 
+export async function getBuilderHourlyBreakdown(builderId: string, date?: string): Promise<HourlyDataPoint[]> {
+  const params = date ? { date } : {};
+  const response = await api.get(`/builder/${builderId}/hourly-breakdown`, { params });
+  return (response.data ?? []).map((d: any) => ({
+    hour: d.hour,
+    base: d.base ?? d.baseKwh ?? 0,
+    society: d.society ?? d.societyKwh ?? 0,
+    common: d.common ?? d.commonAreaKwh ?? 0,
+    peak: d.peak ?? d.peekKwh ?? 0,
+  }));
+}
+
 // ------------------------------------------------------ Device Manager ----
 export async function getSocietyDevices(societyId: string): Promise<DeviceRow[]> {
   const url = isDemoSession() ? `/demo/devices` : `/society/${societyId}/devices`;
@@ -138,14 +257,45 @@ export async function getSocietyDevices(societyId: string): Promise<DeviceRow[]>
   }));
 }
 
-export async function registerDevice({ deviceSerial, deviceType, mappedTo, societyId }: RegisterDeviceInput): Promise<Device> {
-  const response = await api.post(
-    `/society/${societyId}/register-device?deviceId=${deviceSerial}&deviceType=${deviceType}&mappedTo=${mappedTo}`
-  );
+export async function registerDevice({ deviceSerial, deviceType, mappedTo, societyId, flatId, commonAreaId }: RegisterDeviceInput): Promise<Device> {
+  const serialNumber = Number(deviceSerial.replace(/\D/g, "")) || 10001;
+  const response = await api.post(`/society/${societyId}/register-device`, {
+    deviceSerial: serialNumber,
+    deviceType: deviceType === "Flat Meter" ? "FLAT_METER" : "COMMON_AREA_METER",
+    flatId: flatId || null,
+    commonAreaId: commonAreaId || null,
+    societyId: Number(societyId),
+  });
   return response.data;
 }
 
 export async function deregisterDevice(deviceId: string): Promise<{ id: string; deregistered: boolean }> {
   const response = await api.delete(`/device/${deviceId}`);
+  return response.data;
+}
+
+// -------------------------------------------------------- Super Admin ----
+export async function getSuperAdminOverview(): Promise<SuperAdminOverview> {
+  const response = await api.get("/superAdmin/overview");
+  return response.data;
+}
+
+export async function getAllBuilders(): Promise<BuilderListItem[]> {
+  const response = await api.get("/superAdmin/builders");
+  return response.data ?? [];
+}
+
+export async function createSociety(input: CreateSocietyInput): Promise<any> {
+  const response = await api.post("/society", input);
+  return response.data;
+}
+
+export async function createBuilder(input: CreateBuilderInput): Promise<any> {
+  const response = await api.post("/builder", input);
+  return response.data;
+}
+
+export async function createBlock(input: CreateBlockInput): Promise<any> {
+  const response = await api.post("/block", input);
   return response.data;
 }

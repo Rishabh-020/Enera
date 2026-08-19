@@ -1,13 +1,12 @@
 package com.enera.backend.controller;
 
 import com.enera.backend.dto.block.BlockFloorResponse;
+import com.enera.backend.dto.block.CreateBlockRequest;
+import com.enera.backend.entity.Block;
 import com.enera.backend.service.BlockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -25,6 +24,14 @@ public class BlockController {
     public ResponseEntity<List<BlockFloorResponse>> getBlockFloors(@PathVariable Long id){
         return ResponseEntity.ok(
                 blockService.getBlockFloors(id)
+        );
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
+    public ResponseEntity<Block> createBlock(@RequestBody CreateBlockRequest request) {
+        return ResponseEntity.ok(
+                blockService.createBlock(request)
         );
     }
 }

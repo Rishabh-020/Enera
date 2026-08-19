@@ -26,6 +26,16 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
 
     Optional<Reading> findTopByDevice_Flat_IdOrderByTimestampDesc(Long flatId);
 
+    @Query(value = """
+        SELECT r.*
+        FROM readings r
+        JOIN devices d ON r.device_id = d.id
+        WHERE d.mapped_flat_id = :flatId
+        ORDER BY r.timestamp DESC
+        LIMIT 1
+        """, nativeQuery = true)
+    Optional<Reading> findLatestReadingByFlatId(@Param("flatId") Long flatId);
+
     @Query("""
     SELECT COALESCE(SUM(r.kwh), 0)
     FROM Reading r
@@ -163,52 +173,191 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     Double getMonthKwhByFloorId(
             @Param("floorId") Long floorId);
 
-    @Query("""
-    SELECT AVG(r.kw)
-    FROM Reading r
-    WHERE r.device.flat.id = :flatId
-""")
+    @Query(value = """
+        SELECT COALESCE(AVG(r.kw), 0.0)
+        FROM readings r
+        JOIN devices d ON r.device_id = d.id
+        WHERE d.mapped_flat_id = :flatId
+        """, nativeQuery = true)
     Double findAverageKwByFlatId(@Param("flatId") Long flatId);
 
-    @Query("""
-    SELECT r
-    FROM Reading r
-    WHERE r.device.flat.id = :flatId
-    AND r.timestamp >= :start
-    AND r.timestamp < :end
-    ORDER BY r.timestamp
-""")
+    @Query(value = """
+        SELECT r.*
+        FROM readings r
+        JOIN devices d ON r.device_id = d.id
+        WHERE d.mapped_flat_id = :flatId
+          AND r.timestamp >= :start
+          AND r.timestamp < :end
+        ORDER BY r.timestamp ASC
+        """, nativeQuery = true)
     List<Reading> findReadingsForFlatAndPeriod(
             @Param("flatId") Long flatId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
 
-    @Query("""
-    SELECT r
-    FROM Reading r
-    WHERE r.device.flat.id = :flatId
-    AND r.timestamp >= :start
-    AND r.timestamp < :end
-    ORDER BY r.timestamp
-""")
+    @Query(value = """
+        SELECT r.*
+        FROM readings r
+        JOIN devices d ON r.device_id = d.id
+        WHERE d.mapped_flat_id = :flatId
+          AND r.timestamp >= :start
+          AND r.timestamp < :end
+        ORDER BY r.timestamp ASC
+        """, nativeQuery = true)
     List<Reading> findReadingsForPeriod(
             @Param("flatId") Long flatId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
 
-    @Query("""
-    SELECT r
-    FROM Reading r
-    WHERE r.device.flat.id = :flatId
-      AND r.timestamp >= :start
-      AND r.timestamp < :end
-    ORDER BY r.timestamp
-""")
+    @Query(value = """
+        SELECT r.*
+        FROM readings r
+        JOIN devices d ON r.device_id = d.id
+        WHERE d.mapped_flat_id = :flatId
+          AND r.timestamp >= :start
+          AND r.timestamp < :end
+        ORDER BY r.timestamp ASC
+        """, nativeQuery = true)
     List<Reading> findReadingsHourlyForPeriod(
             @Param("flatId") Long flatId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
+
+    @Query(value = """
+    SELECT 
+        TO_CHAR(r.timestamp, 'DD Mon') AS day_str,
+        COALESCE(SUM(r.kwh), 0) AS total_kwh,
+        COALESCE(SUM(CASE WHEN d.mapped_common_area_id IS NOT NULL THEN r.kwh ELSE 0 END), 0) AS common_kwh
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    WHERE d.society_id = :societyId
+      AND r.timestamp >= CURRENT_DATE - CAST(:days || ' days' AS INTERVAL)
+    GROUP BY DATE_TRUNC('day', r.timestamp), TO_CHAR(r.timestamp, 'DD Mon')
+    ORDER BY DATE_TRUNC('day', r.timestamp) ASC
+    """, nativeQuery = true)
+    List<Object[]> getDailyTrendBySociety(
+            @Param("societyId") Long societyId,
+            @Param("days") int days
+    );
+
+    @Query(value = """
+        SELECT
+            EXTRACT(HOUR FROM r.timestamp) AS hour_num,
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN d.mapped_flat_id IS NOT NULL
+                        THEN r.kwh
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS base_kwh,
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN d.mapped_common_area_id IS NOT NULL
+                        THEN r.kwh
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS common_area_kwh,
+            COALESCE(
+                MAX(r.kw),
+                0
+            ) AS peak_kw
+        FROM readings r
+        JOIN devices d
+            ON r.device_id = d.id
+        WHERE d.society_id = :societyId
+          AND r.timestamp >= :startDate
+          AND r.timestamp < :endDate
+        GROUP BY EXTRACT(HOUR FROM r.timestamp)
+        ORDER BY hour_num ASC
+        """, nativeQuery = true)
+    List<Object[]> getHourlyBreakdownByDate(
+            @Param("societyId") Long societyId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query(value = """
+    SELECT
+        EXTRACT(HOUR FROM r.timestamp) AS hour_num,
+        COALESCE(SUM(CASE WHEN d.mapped_flat_id IS NOT NULL THEN r.kwh ELSE 0 END), 0) AS base_kwh,
+        COALESCE(SUM(CASE WHEN d.mapped_common_area_id IS NOT NULL THEN r.kwh ELSE 0 END), 0) AS common_area_kwh,
+        COALESCE(MAX(r.kw), 0) AS peak_kw
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN societies s ON d.society_id = s.id
+    WHERE s.builder_id = :builderId
+      AND r.timestamp >= :startDate
+      AND r.timestamp < :endDate
+    GROUP BY EXTRACT(HOUR FROM r.timestamp)
+    ORDER BY hour_num ASC
+    """, nativeQuery = true)
+    List<Object[]> getHourlyBreakdownByBuilder(
+            @Param("builderId") Long builderId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query(value = """
+    SELECT 
+        r.id AS reading_id,
+        f.flat_number,
+        b.block_name,
+        r.kw AS current_kw,
+        COALESCE(fb.avg_kw, 1.5) AS expected_kw,
+        r.timestamp
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    JOIN floors fl ON f.floor_id = fl.id
+    JOIN blocks b ON fl.block_id = b.id
+    LEFT JOIN (
+        -- Calculate 28-day baseline average per flat
+        SELECT d2.mapped_flat_id AS flat_id, AVG(r2.kw) AS avg_kw
+        FROM readings r2
+        JOIN devices d2 ON r2.device_id = d2.id
+        WHERE d2.society_id = :societyId
+          AND r2.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
+        GROUP BY d2.mapped_flat_id
+    ) fb ON fb.flat_id = f.id
+    WHERE d.society_id = :societyId
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+      AND r.kw >= 2.0
+      AND r.kw >= (2.5 * COALESCE(fb.avg_kw, 1.5))
+    ORDER BY r.timestamp DESC
+    LIMIT 20
+    """, nativeQuery = true)
+    List<Object[]> findAnomaliesBySociety(@Param("societyId") Long societyId);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kw), 0.0)
+    FROM readings r
+    WHERE r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
+    """, nativeQuery = true)
+    Double getPlatformLiveKw();
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kwh), 0.0)
+    FROM readings r
+    WHERE r.timestamp >= :startDate AND r.timestamp <= :endDate
+    """, nativeQuery = true)
+    Double getPlatformMonthKwh(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    @Query(value = """
+    SELECT COALESCE(SUM(r.kw), 0.0)
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN societies s ON d.society_id = s.id
+    WHERE s.builder_id = :builderId
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
+    """, nativeQuery = true)
+    Double getLiveKwByBuilderId(@Param("builderId") Long builderId);
 }

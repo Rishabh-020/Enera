@@ -47,4 +47,6 @@ public interface FlatRepository extends JpaRepository<Flat,Long> {
     Long countByFloorBlockId(@Param("blockId") Long blockId);
 
     List<Flat> findByFloorBlockSocietyId(Long societyId);
+
+    Integer countByFloorBlockSocietyBuilderId(Long builderId);
 }

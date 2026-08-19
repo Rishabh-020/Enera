@@ -1,17 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
-import { Zap, Building2, Users, PlugZap, AlertTriangle, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Zap, Building2, Users, PlugZap, AlertTriangle, ChevronRight, Layers, Cpu, ShieldCheck, ArrowRight } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar, Cell
+  ResponsiveContainer
 } from "recharts";
 import * as api from "../../../lib/api";
 import { StatCard } from "../../../components/chart/StatCard";
 import { DonutChart } from "../../../components/chart/DonutChart";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, ProgressStat,
   Table, Thead, Th, Td, Tr, StatusDot
 } from "../../../components/ui/primitives";
-import type { SocietyOverview, SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow } from "../../../lib/types";
+import type { SocietyOverview, SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, DailyTrendPoint } from "../../../lib/types";
 import { cn } from "../../../lib/utils";
 import { useWebSocketReading } from "../../../context/WebSocketContext";
 
@@ -32,9 +34,11 @@ export function DashboardTab({
   setAnomalies,
   flats,
 }: DashboardTabProps) {
+  const navigate = useNavigate();
   const [overview, setOverview] = useState<SocietyOverview | null>(null);
   const [blocks, setBlocks] = useState<SocietyBlockRow[] | null>(null);
   const [commonAreas, setCommonAreas] = useState<SocietyCommonAreaRow[] | null>(null);
+  const [trendData, setTrendData] = useState<DailyTrendPoint[] | null>(null);
   const [dateRange, setDateRange] = useState("Last 7 days");
 
   const { latestReading } = useWebSocketReading();
@@ -50,10 +54,27 @@ export function DashboardTab({
         prev
           ? {
               ...prev,
-              liveKw: Number((prev.liveKw + latestReading.kw * 0.05).toFixed(1)),
+              liveKw: Number((prev.liveKw + (latestReading.kw ?? 0) * 0.05).toFixed(1)),
             }
           : prev
       );
+
+      if (latestReading.kwh) {
+        setTrendData((prev) => {
+          if (!prev || prev.length === 0) return prev;
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          const isCommon = Boolean(latestReading.commonAreaId || latestReading.deviceType === "COMMON_AREA_METER");
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            total: Number((updated[lastIdx].total + latestReading.kwh).toFixed(1)),
+            common: isCommon
+              ? Number((updated[lastIdx].common + latestReading.kwh).toFixed(1))
+              : updated[lastIdx].common,
+          };
+          return updated;
+        });
+      }
     }
 
     if (latestReading.commonAreaId || latestReading.deviceType === "COMMON_AREA_METER") {
@@ -75,7 +96,7 @@ export function DashboardTab({
               latestReading.flatNumber?.startsWith(block.name.replace("Block ", ""))
                 ? {
                     ...block,
-                    liveKw: Number((block.liveKw + latestReading.kw * 0.05).toFixed(1)),
+                    liveKw: Number((block.liveKw + (latestReading.kw ?? 0) * 0.05).toFixed(1)),
                   }
                 : block
             )
@@ -95,6 +116,19 @@ export function DashboardTab({
     api.getSocietyCommonAreas(societyId).then(setCommonAreas).catch(() => {});
   }, [societyId]);
 
+  // Fetch real daily trend strictly from backend API
+  useEffect(() => {
+    if (!societyId) return;
+
+    let days = 7;
+    if (dateRange === "Last 30 days") days = 30;
+    else if (dateRange === "Month to date") days = Math.max(1, new Date().getDate());
+
+    api.getSocietyDailyTrend(societyId, days)
+      .then(setTrendData)
+      .catch(() => setTrendData([]));
+  }, [societyId, dateRange]);
+
   // Derived metrics from backend response
   const totalFlats = overview?.totalFlats ?? (flats?.length || 0);
   const occupiedFlats = overview?.occupiedFlats ?? (flats?.filter((f) => f.occupied || f.residentName).length || 0);
@@ -104,38 +138,31 @@ export function DashboardTab({
   // Block comparison for bar chart
   const blockComparisonData = useMemo(() => {
     return (blocks ?? []).map((b) => ({
+      id: b.id,
       name: b.name,
+      flatCount: b.flatCount || 0,
+      liveKw: b.liveKw,
+      todayKwh: b.todayKwh,
+      mtdKwh: b.mtdKwh,
+      aboveAverage: b.aboveAverage,
       kwh: b.flatCount > 0 ? Math.round(b.mtdKwh / b.flatCount) : 0,
     }));
   }, [blocks]);
 
-  // 7-day trend series for area chart
-  const dynamicTrendData = useMemo(() => {
-    if (!overview) return [];
-    const today = new Date();
-    const dailyAvg = Math.round((overview.mtdKwh || 100) / Math.max(1, today.getDate()));
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(today.getDate() - (6 - i));
-      const dayStr = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-      const variance = 0.85 + ((i * 17) % 30) / 100;
-      return {
-        date: dayStr,
-        total: Math.round(dailyAvg * variance),
-        common: Math.round(dailyAvg * 0.25 * variance),
-      };
-    });
-  }, [overview]);
-
-  // Common areas breakdown for donut chart
+  // Common areas breakdown for donut chart (strictly non-zero real kW)
   const dynamicLoadSegments = useMemo(() => {
     if (!commonAreas || commonAreas.length === 0) return [];
+    const hasAnyLoad = commonAreas.some((ca) => (ca.currentKw ?? 0) > 0);
+    if (!hasAnyLoad) return [];
+
     const colors = ["#0d9488", "#0284c7", "#f59e0b", "#7c3aed", "#ec4899", "#10b981"];
-    return commonAreas.map((ca, idx) => ({
-      name: ca.name,
-      value: Math.max(1, Math.round((ca.currentKw || 0.5) * 10)),
-      color: colors[idx % colors.length],
-    }));
+    return commonAreas
+      .filter((ca) => (ca.currentKw ?? 0) > 0)
+      .map((ca, idx) => ({
+        name: ca.name,
+        value: Number((ca.currentKw ?? 0).toFixed(2)),
+        color: colors[idx % colors.length],
+      }));
   }, [commonAreas]);
 
   // Average flat consumption and top 5 consuming flats
@@ -145,8 +172,10 @@ export function DashboardTab({
     return Math.round(total / flats.length) || 1;
   }, [flats]);
 
-  const sortedFlats = useMemo(() => {
-    return [...(flats ?? [])].sort((a, b) => b.mtdKwh - a.mtdKwh).slice(0, 5);
+  const topConsumers = useMemo(() => {
+    return [...(flats ?? [])]
+      .sort((a, b) => (b.mtdKwh || 0) - (a.mtdKwh || 0))
+      .slice(0, 5);
   }, [flats]);
 
   return (
@@ -162,30 +191,27 @@ export function DashboardTab({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select
+          <CustomSelect
             value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="h-9 rounded-xl border border-slate-300 bg-white px-2.5 text-xs text-slate-700 outline-none focus:border-teal-500"
-          >
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>Month to date</option>
-          </select>
+            onChange={setDateRange}
+            options={["Last 7 days", "Last 30 days", "Month to date"]}
+          />
         </div>
       </div>
 
-      {/* Row 1: Stat Cards */}
+      {/* Row 1: 5 Primary Metric Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           label="Live load"
           value={overview ? `${overview.liveKw.toFixed(1)} kW` : "—"}
+          sub={overview ? `Peak today · ${Math.round(overview.liveKw * 1.2)} kW` : ""}
           icon={<Zap size={16} />}
           loading={!overview}
           accent
         />
         <StatCard
           label="Total flats"
-          value={overview ? `${totalFlats}` : "—"}
+          value={overview ? `${overview.totalFlats}` : "—"}
           sub={overview ? `${occupiedFlats} occupied` : ""}
           icon={<Building2 size={16} />}
           loading={!overview}
@@ -223,27 +249,66 @@ export function DashboardTab({
             </div>
           </CardHeader>
           <CardContent className="h-80">
-            {!overview ? (
+            {!trendData ? (
               <div className="h-full w-full skeleton-box rounded-xl" />
+            ) : trendData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                No daily telemetry recorded for this period
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dynamicTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={trendData} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0d9488" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#0d9488" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#0d9488" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#0d9488" stopOpacity={0.02} />
                     </linearGradient>
                     <linearGradient id="colorCommon" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} unit=" kWh" width={50} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e5eb", fontSize: 12 }} />
-                  <Area type="monotone" dataKey="total" name="Society Total" stroke="#0d9488" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" />
-                  <Area type="monotone" dataKey="common" name="Common Areas" stroke="#7c3aed" strokeWidth={2} fillOpacity={1} fill="url(#colorCommon)" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={{ stroke: "#e2e8f0" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={58}
+                    tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`)}
+                    unit=" kWh"
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+                    formatter={(value: any, name: any) => [`${value} kWh`, name]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    name="Society Total"
+                    stroke="#0d9488"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorTotal)"
+                    dot={{ r: 4, fill: "#0d9488" }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="common"
+                    name="Common Areas"
+                    stroke="#7c3aed"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorCommon)"
+                    dot={{ r: 4, fill: "#7c3aed" }}
+                    activeDot={{ r: 6 }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -273,35 +338,120 @@ export function DashboardTab({
         )}
       </div>
 
-      {/* Row 3: Block Comparison + Anomalies Detected */}
+      {/* Row 3: Block Comparison (Redesigned) + Anomalies Detected */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Block comparison</CardTitle>
-              <CardDescription>Per-flat average kWh this month</CardDescription>
+        <Card className="flex flex-col justify-between">
+          <CardHeader className="pb-3 border-b border-slate-100/80">
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Layers size={18} className="text-teal-600" />
+                  <CardTitle>Block Comparison</CardTitle>
+                </div>
+                <CardDescription className="mt-0.5">Per-flat average consumption vs society baseline</CardDescription>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                Avg: {avgFlatMtd} kWh/flat
+              </span>
             </div>
           </CardHeader>
-          <CardContent className="h-64">
+
+          <CardContent className="pt-4 flex flex-col gap-2.5">
             {!blocks ? (
-              <div className="h-full w-full skeleton-box rounded-xl" />
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-14 skeleton-box rounded-xl" />
+              ))
             ) : blockComparisonData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-xs text-slate-400">No block telemetry available</div>
+              <div className="flex h-44 items-center justify-center text-xs text-slate-400">
+                No block telemetry provisioned
+              </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={blockComparisonData} layout="vertical" margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
-                  <CartesianGrid vertical horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false} width={80} />
-                  <Tooltip />
-                  <Bar dataKey="kwh" fill="#0d9488" radius={[0, 4, 4, 0]} maxBarSize={16}>
-                    {blockComparisonData.map((_, index) => {
-                      const colors = ["#475569", "#dc2626", "#0d9488", "#64748b"];
-                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              (() => {
+                const maxKwh = Math.max(...blockComparisonData.map((b) => b.kwh), 1);
+                return blockComparisonData.map((b, idx) => {
+                  const pct = Math.min(100, Math.round((b.kwh / maxKwh) * 100));
+                  const isTop = idx === 0 && b.kwh > 0;
+                  const isAbove = avgFlatMtd > 0 && b.kwh > avgFlatMtd;
+
+                  return (
+                    <div
+                      key={b.name}
+                      onClick={() => b.id && onSelectBlock(String(b.id), b.name)}
+                      className={cn(
+                        "group p-3 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col gap-2",
+                        b.kwh > 0
+                          ? "bg-white border-slate-200 hover:border-teal-400 hover:shadow-md hover:shadow-teal-500/5"
+                          : "bg-slate-50/60 border-slate-200/70 hover:bg-slate-50 hover:border-slate-300"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={cn(
+                              "h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-transform duration-200 group-hover:scale-105",
+                              b.kwh > 0
+                                ? isTop
+                                  ? "bg-teal-500 text-white shadow-xs"
+                                  : "bg-slate-100 text-slate-700 border border-slate-200"
+                                : "bg-slate-100 text-slate-400"
+                            )}
+                          >
+                            {b.name.replace("Block ", "") || "B"}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-xs text-slate-800 group-hover:text-teal-700 transition-colors">
+                              {b.name}
+                            </span>
+                            <span className="text-[11px] text-slate-400 ml-2">
+                              {b.flatCount} Flats · {b.liveKw != null ? `${b.liveKw} kW live` : "Standby"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {b.kwh > 0 ? (
+                            <>
+                              <span className="font-mono-data text-xs font-bold text-slate-900">
+                                {b.kwh} <span className="text-[10px] font-normal text-slate-500">kWh/flat</span>
+                              </span>
+                              <span
+                                className={cn(
+                                  "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                                  isAbove
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                )}
+                              >
+                                {isAbove ? "Above avg" : "Optimal"}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                              Standby · 0 kWh
+                            </span>
+                          )}
+                          <ChevronRight size={13} className="text-slate-400 group-hover:text-teal-600 transition-transform group-hover:translate-x-0.5" />
+                        </div>
+                      </div>
+
+                      {/* Progress Fill Bar */}
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            b.kwh > 0
+                              ? isTop
+                                ? "bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400"
+                                : "bg-gradient-to-r from-sky-500 via-teal-400 to-emerald-300"
+                              : "bg-transparent"
+                          )}
+                          style={{ width: b.kwh > 0 ? `${Math.max(6, pct)}%` : "0%" }}
+                        />
+                      </div>
+                    </div>
+                  );
+                });
+              })()
             )}
           </CardContent>
         </Card>
@@ -386,32 +536,111 @@ export function DashboardTab({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Onboarding & meters</CardTitle>
-              <CardDescription>Society device rollout status</CardDescription>
+        {/* Onboarding & Deployment Readiness (Redesigned) */}
+        <Card className="flex flex-col justify-between">
+          <CardHeader className="pb-3 border-b border-slate-100/80">
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Cpu size={18} className="text-indigo-600" />
+                  <CardTitle>Onboarding & Meters</CardTitle>
+                </div>
+                <CardDescription className="mt-0.5">Society device rollout status</CardDescription>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                {totalFlats > 0 ? Math.round(((devicesOnline + registeredResidents) / (totalFlats * 2 || 1)) * 100) : 0}% Ready
+              </span>
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4 justify-center">
-            <ProgressStat
-              label="Total flats"
-              value={totalFlats > 0 ? `${totalFlats}/${totalFlats} (100%)` : "—"}
-              pct={100}
-              color="#0d9488"
-            />
-            <ProgressStat
-              label="Meters live"
-              value={totalFlats > 0 ? `${devicesOnline}/${totalFlats} (${Math.round((devicesOnline / totalFlats) * 100)}%)` : "—"}
-              pct={totalFlats > 0 ? Math.round((devicesOnline / totalFlats) * 100) : 0}
-              color="#0d9488"
-            />
-            <ProgressStat
-              label="Residents registered"
-              value={totalFlats > 0 ? `${registeredResidents}/${totalFlats} (${Math.round((registeredResidents / totalFlats) * 100)}%)` : "—"}
-              pct={totalFlats > 0 ? Math.round((registeredResidents / totalFlats) * 100) : 0}
-              color="#0d9488"
-            />
+
+          <CardContent className="pt-4 flex flex-col gap-3">
+            {/* Metric 1: Smart Meters Active */}
+            <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center font-bold">
+                    <Zap size={14} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-xs text-slate-800 block leading-tight">Meters Live</span>
+                    <span className="text-[10px] text-slate-400">{devicesOnline} of {totalFlats} flats</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono-data text-xs font-bold text-slate-900">
+                    {totalFlats > 0 ? Math.round((devicesOnline / totalFlats) * 100) : 0}%
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">{totalFlats - devicesOnline} pending</span>
+                </div>
+              </div>
+              <div className="h-2 w-full bg-slate-200/70 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-500"
+                  style={{ width: `${totalFlats > 0 ? Math.round((devicesOnline / totalFlats) * 100) : 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Metric 2: Resident App Accounts */}
+            <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
+                    <Users size={14} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-xs text-slate-800 block leading-tight">Residents Registered</span>
+                    <span className="text-[10px] text-slate-400">{registeredResidents} of {totalFlats} registered</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono-data text-xs font-bold text-slate-900">
+                    {totalFlats > 0 ? Math.round((registeredResidents / totalFlats) * 100) : 0}%
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">{totalFlats - registeredResidents} pending</span>
+                </div>
+              </div>
+              <div className="h-2 w-full bg-slate-200/70 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-400 rounded-full transition-all duration-500"
+                  style={{ width: `${totalFlats > 0 ? Math.round((registeredResidents / totalFlats) * 100) : 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Metric 3: Common Area Assets */}
+            <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                    <ShieldCheck size={14} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-xs text-slate-800 block leading-tight">Common Area Meters</span>
+                    <span className="text-[10px] text-slate-400">{commonAreas?.length || 0} assets live</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono-data text-xs font-bold text-emerald-600">100%</span>
+                  <span className="text-[10px] text-emerald-600 block font-semibold">Active</span>
+                </div>
+              </div>
+              <div className="h-2 w-full bg-slate-200/70 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </div>
+
+            {/* Quick Action Button */}
+            <button
+              onClick={() => navigate(`/society/${societyId}/devices`)}
+              className="mt-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs hover:shadow"
+            >
+              <Cpu size={14} /> Manage Devices & Meters <ArrowRight size={13} />
+            </button>
           </CardContent>
         </Card>
       </div>
@@ -465,7 +694,7 @@ export function DashboardTab({
                   </Tr>
                 ))
               ) : (
-                sortedFlats.map((f) => {
+                topConsumers.map((f) => {
                   const vsAvg = avgFlatMtd > 0 ? Math.round(((f.mtdKwh - avgFlatMtd) / avgFlatMtd) * 100) : 0;
                   const statusVariant = vsAvg > 20 ? "attention" : vsAvg < -5 ? "efficient" : "neutral";
                   const statusLabel = vsAvg > 20 ? "Above avg" : vsAvg < -5 ? "Efficient" : "Normal";

@@ -29,6 +29,8 @@ public class FlatService {
     private final UserRepository userRepository;
     private static final double LOW_KW_THRESHOLD = 2.0;
     private static final double MID_KW_THRESHOLD = 4.0;
+    private static final double NEG_KW = 0.0;
+    private static final int COST_PER_UNIT = 8;
 
     FlatService(FlatRepository flatRepository,
                 ReadingRepository readingRepository,
@@ -39,19 +41,27 @@ public class FlatService {
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
     }
-    public FlatLiveResponse getFlatLive(Long flatId){
-        Flat flat = flatRepository.findById(flatId).
-                orElseThrow(()-> new FlatNotFoundException("Flat not found"));
+    public FlatLiveResponse getFlatLive(Long flatId) {
+        Flat flat = flatRepository.findById(flatId)
+                .orElseThrow(() -> new FlatNotFoundException("Flat not found"));
 
-        Reading reading = readingRepository.findTopByDevice_Flat_IdOrderByTimestampDesc(flatId)
-                .orElseThrow(()-> new ReadingNotFoundException("Reading not found"));
-
-        Device device = deviceRepository.findByFlatId(flatId)
-                .orElseThrow(()-> new DeviceNotFoundException("Device not found"));
+        Optional<Reading> readingOpt = readingRepository.findLatestReadingByFlatId(flatId);
+        Optional<Device> deviceOpt = deviceRepository.findByFlatId(flatId);
 
         FlatLiveResponse response = new FlatLiveResponse();
 
-        Double kw = reading.getKw();
+        if (readingOpt.isEmpty()) {
+            response.setLevel("normal");
+            response.setStatus(deviceOpt.map(Device::isStatus).orElse(false));
+            response.setTimeStamp(LocalDateTime.now());
+            response.setPctVsUsual(0.0);
+            response.setLastReadingAt(LocalDateTime.now());
+            response.setKw(0.0);
+            return response;
+        }
+
+        Reading reading = readingOpt.get();
+        double kw = reading.getKw() != null ? reading.getKw() : 0.0;
 
         if (kw < LOW_KW_THRESHOLD) {
             response.setLevel("normal");
@@ -62,14 +72,18 @@ public class FlatService {
         }
 
         Double usualKw = readingRepository.findAverageKwByFlatId(flatId);
+        if (usualKw == null || usualKw <= NEG_KW) {
+            usualKw = kw > 0 ? kw : 1.5;
+        }
 
-        Double currentKw = reading.getKw();
+        double pctVsUsual = usualKw > 0 ? ((kw - usualKw) / usualKw) * 100.0 : 0.0;
+        double roundedPct = Math.round(pctVsUsual * 10.0) / 10.0;
 
-        response.setStatus(device.isStatus());
+        response.setStatus(deviceOpt.map(Device::isStatus).orElse(true));
         response.setTimeStamp(reading.getTimestamp());
-        response.setPctVsUsual( ( (currentKw - usualKw ) / usualKw) * 100);
+        response.setPctVsUsual(roundedPct);
         response.setLastReadingAt(reading.getTimestamp());
-        response.setKw(reading.getKw());
+        response.setKw(kw);
 
         return response;
     }
@@ -135,8 +149,8 @@ public class FlatService {
 
         response.setPeakDay(peakDay);
         response.setTotalKwh(totalKwh);
-        response.setEstCost(totalKwh * 8);
-        response.setProjectedCost(projectedTotal * 8);
+        response.setEstCost(totalKwh * COST_PER_UNIT);
+        response.setProjectedCost(projectedTotal * COST_PER_UNIT);
         response.setProjectedTotal(projectedTotal);
         response.setSeries(seriesResponses);
 
@@ -224,7 +238,7 @@ public class FlatService {
             previousWeekTotal += reading.getKwh();
         }
 
-        Double pctChange = 0.0;
+        double pctChange = 0.0;
 
         if (previousWeekTotal != 0) {
             pctChange = ((currentWeekTotal - previousWeekTotal) / previousWeekTotal) * 100;

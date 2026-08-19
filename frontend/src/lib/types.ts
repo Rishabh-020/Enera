@@ -172,6 +172,26 @@ export interface HourlyPoint {
   kwh: number;
 }
 
+export interface HourlyDataPoint {
+  hour: string;
+  base: number;
+  society: number;
+  common: number;
+  peak: number;
+  baseKwh?: number;
+  societyKwh?: number;
+  commonAreaKwh?: number;
+  peekKwh?: number;
+}
+
+export interface DailyTrendPoint {
+  date: string;
+  total: number;
+  common: number;
+  totalKwh?: number;
+  commonAreaKwh?: number;
+}
+
 export interface FlatHourlyProfile {
   profile: HourlyPoint[];
   peakHours: number[];
@@ -261,9 +281,68 @@ export interface DeviceRow extends Device {
   lastSeenAt: Date;
 }
 
+export interface AnomalyItem {
+  id: string;
+  flat: string;
+  flatNumber?: string;
+  blockName?: string;
+  currentKw?: number;
+  expectedKw?: number;
+  multiplier: string;
+  desc: string;
+  detectedAt?: string;
+  resolved: boolean;
+}
+
+export interface SocietyAnomalies {
+  societyId: number;
+  totalActive: number;
+  anomalies: AnomalyItem[];
+}
+
+export interface SuperAdminOverview {
+  totalBuilders: number;
+  totalSocieties: number;
+  totalBlocks: number;
+  totalFlats: number;
+  totalMeters: number;
+  liveGridKw: number;
+  mtdKwh: number;
+}
+
+export interface BuilderListItem {
+  id: number;
+  name: string;
+  email: string;
+  totalSocieties: number;
+  totalFlats: number;
+  liveKw: number;
+  mtdKwh: number;
+}
+
+export interface CreateSocietyInput {
+  name: string;
+  address: string;
+  city: string;
+  totalBlocks: number;
+  builderId: number;
+}
+
+export interface CreateBuilderInput {
+  name: string;
+  email: string;
+}
+
+export interface CreateBlockInput {
+  blockName: string;
+  societyId: number;
+}
+
 export interface RegisterDeviceInput {
   deviceSerial: string;
   deviceType: DeviceType;
   mappedTo: string;
   societyId: string;
+  flatId?: number | null;
+  commonAreaId?: number | null;
 }
