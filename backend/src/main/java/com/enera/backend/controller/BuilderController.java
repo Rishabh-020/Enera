@@ -23,14 +23,11 @@ import java.util.List;
 public class BuilderController {
     private final BuilderService builderService;
     private final SocietyService societyService;
-    private final BlockService blockService;
 
     BuilderController(BuilderService builderService,
-                      SocietyService societyService,
-                      BlockService blockService) {
+                      SocietyService societyService) {
         this.builderService = builderService;
         this.societyService = societyService;
-        this.blockService = blockService;
     }
 
     @GetMapping("/{id}/overview")
@@ -58,16 +55,8 @@ public class BuilderController {
         );
     }
 
-    @PostMapping
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
-    public ResponseEntity<Block> createBlock(@RequestBody CreateBlockRequest request) {
-        return ResponseEntity.ok(
-                blockService.createBlock(request)
-        );
-    }
-
     @PostMapping("/{id}/society")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN','BUILDER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<SocietyResponse> createSociety(@PathVariable Long id,@RequestBody CreateSocietyRequest request) {
         request.setBuilderId(id);
         return ResponseEntity.ok(

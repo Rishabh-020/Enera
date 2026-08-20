@@ -1,13 +1,10 @@
 package com.enera.backend.controller;
 
 import com.enera.backend.dto.builder.CreateBuilderRequest;
-import com.enera.backend.dto.society.CreateSocietyRequest;
-import com.enera.backend.dto.society.SocietyResponse;
 import com.enera.backend.dto.superAdmin.BuilderListResponse;
 import com.enera.backend.dto.superAdmin.SuperAdminOverviewResponse;
 import com.enera.backend.entity.Builder;
 import com.enera.backend.service.BuilderService;
-import com.enera.backend.service.SocietyService;
 import com.enera.backend.service.SuperAdminService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,7 +36,7 @@ public class SuperAdminController {
         return ResponseEntity.ok(superAdminService.getBuilders());
     }
 
-    @PostMapping("/create-builder")
+    @PostMapping("/builders")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<Builder> createBuilder(@RequestBody CreateBuilderRequest request) {
         return ResponseEntity.ok(

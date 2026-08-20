@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 public class RegisterResidentRequest {
-    @NotNull(message = "FlatIf can not be null")
+    @NotNull(message = "FlatId can not be null")
     private Long flatId;
 
     @NotBlank(message = "Name is required")

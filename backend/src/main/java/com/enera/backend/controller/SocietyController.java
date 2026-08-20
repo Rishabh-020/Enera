@@ -1,10 +1,13 @@
 package com.enera.backend.controller;
 
+import com.enera.backend.dto.block.CreateBlockRequest;
 import com.enera.backend.dto.device.RegisterDeviceRequest;
 import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
 import com.enera.backend.dto.user.CreateUserRequest;
+import com.enera.backend.entity.Block;
 import com.enera.backend.entity.Role;
+import com.enera.backend.service.BlockService;
 import com.enera.backend.service.SocietyService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -22,9 +25,12 @@ import java.util.List;
 @RequestMapping("/society")
 public class SocietyController {
     private final SocietyService societyService;
+    private final BlockService blockService;
 
-    SocietyController(SocietyService societyService){
+    SocietyController(SocietyService societyService,
+                      BlockService blockService){
         this.societyService = societyService;
+        this.blockService = blockService;
     }
 
     @GetMapping("/{id}/overview")
@@ -110,8 +116,17 @@ public class SocietyController {
         );
     }
 
+    @PostMapping("/{id}/block")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN','SOCIETY_ADMIN')")
+    public ResponseEntity<Block> createBlock(@PathVariable Long id, @RequestBody CreateBlockRequest request) {
+        request.setSocietyId(id);
+        return ResponseEntity.ok(
+                blockService.createBlock(request)
+        );
+    }
+
     @PostMapping("/{id}/resident")
-    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<RegisterResidentResponse> registerResident(@PathVariable Long id,
                                                                     @Valid @RequestBody CreateUserRequest request){
         request.setSocietyId(id);

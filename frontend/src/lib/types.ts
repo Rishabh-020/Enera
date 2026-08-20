@@ -331,11 +331,20 @@ export interface CreateSocietyInput {
 export interface CreateBuilderInput {
   name: string;
   email: string;
+  password?: string;
 }
 
 export interface CreateBlockInput {
   blockName: string;
   societyId: number;
+}
+
+export interface CreateResidentInput {
+  name: string;
+  email: string;
+  password?: string;
+  societyId: number;
+  flatId: number;
 }
 
 export interface RegisterDeviceInput {
@@ -346,3 +355,4 @@ export interface RegisterDeviceInput {
   flatId?: number | null;
   commonAreaId?: number | null;
 }
+

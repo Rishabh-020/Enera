@@ -24,7 +24,7 @@ export default function SuperAdminDashboard() {
   const [showBlockModal, setShowBlockModal] = useState(false);
 
   // Forms
-  const [builderForm, setBuilderForm] = useState({ name: "", email: "" });
+  const [builderForm, setBuilderForm] = useState({ name: "", email: "", password: "Builder@Admin2026" });
   const [societyForm, setSocietyForm] = useState({
     name: "",
     address: "",
@@ -88,14 +88,14 @@ export default function SuperAdminDashboard() {
     try {
       await api.createBuilder(builderForm);
       setShowBuilderModal(false);
-      setBuilderForm({ name: "", email: "" });
+      setBuilderForm({ name: "", email: "", password: "Builder@Admin2026" });
       setActionSuccess(`Builder "${builderForm.name}" created successfully!`);
       setTimeout(() => setActionSuccess(null), 4000);
       loadData();
     } catch (err) {
       console.error("Create builder error:", err);
       setShowBuilderModal(false);
-      setBuilderForm({ name: "", email: "" });
+      setBuilderForm({ name: "", email: "", password: "Builder@Admin2026" });
       loadData();
     }
   }
@@ -587,6 +587,16 @@ export default function SuperAdminDashboard() {
                   placeholder="e.g. contact@prestigebuilders.in"
                   value={builderForm.email}
                   onChange={(e) => setBuilderForm({ ...builderForm, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-700">Initial Admin Password</label>
+                <Input
+                  type="password"
+                  placeholder="At least 8 chars (e.g. Builder@Admin2026)"
+                  value={builderForm.password}
+                  onChange={(e) => setBuilderForm({ ...builderForm, password: e.target.value })}
                   required
                 />
               </div>
