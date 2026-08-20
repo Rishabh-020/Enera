@@ -69,4 +69,11 @@ public class BlockService {
         block.setSociety(society);
         return blockRepository.save(block);
     }
+
+    public void deleteBlock(Long blockId){
+        Block block = blockRepository.findById(blockId)
+                .orElseThrow(()-> new SocietyNotFoundException("Block not found"));
+
+//        block.re
+    }
 }

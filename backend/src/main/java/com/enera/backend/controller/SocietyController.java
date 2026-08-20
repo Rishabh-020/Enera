@@ -125,6 +125,12 @@ public class SocietyController {
         );
     }
 
+    @DeleteMapping("/{id}/block")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public void deleteBlock(@PathVariable Long id){
+        blockService.deleteBlock(id);
+    }
+
     @PostMapping("/{id}/resident")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<RegisterResidentResponse> registerResident(@PathVariable Long id,

@@ -216,32 +216,46 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
 
 /* ──────────────────────── TabPills ──────────────────────── */
 
+export interface TabItem {
+  key: string;
+  label: string;
+}
+
 interface TabPillsProps {
-  tabs: string[];
-  active: string;
+  tabs: (string | TabItem)[];
+  active?: string;
+  activeKey?: string;
   onChange: (tab: string) => void;
 }
 
-export function TabPills({ tabs, active, onChange }: TabPillsProps) {
+export function TabPills({ tabs, active, activeKey, onChange }: TabPillsProps) {
+  const currentActive = activeKey || active;
   return (
     <div className="inline-flex max-w-full overflow-x-auto items-center gap-1 rounded-xl bg-slate-100 p-1 no-scrollbar scroll-smooth">
-      {tabs.map((tab) => (
-        <button
-          key={tab}
-          onClick={() => onChange(tab)}
-          className={cn(
-            "shrink-0 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer whitespace-nowrap",
-            active === tab
-              ? "bg-white text-slate-900 shadow-sm font-semibold"
-              : "text-slate-500 hover:text-slate-700"
-          )}
-        >
-          {tab}
-        </button>
-      ))}
+      {tabs.map((tab) => {
+        const key = typeof tab === "string" ? tab : tab.key;
+        const label = typeof tab === "string" ? tab : tab.label;
+        const isSelected = currentActive === key || currentActive === label;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(key)}
+            className={cn(
+              "shrink-0 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer whitespace-nowrap",
+              isSelected
+                ? "bg-white text-slate-900 shadow-sm font-semibold"
+                : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
+
 
 /* ──────────────────────── FilterChips ──────────────────────── */
 

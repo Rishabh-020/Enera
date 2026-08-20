@@ -209,7 +209,7 @@ export interface SocietyOverview {
 }
 
 export interface SocietyBlockRow {
-  id: string;
+  id: string | number;
   name: string;
   liveKw: number;
   todayKwh: number;
@@ -219,14 +219,14 @@ export interface SocietyBlockRow {
 }
 
 export interface BlockFloorRow {
-  id: string;
+  id: string | number;
   floorNumber: number;
   flatCount: number;
   mtdKwh: number;
 }
 
 export interface FloorFlatRow {
-  id: number;
+  id: number | string;
   flatNumber: string;
   bhkType: string;
   residentName: string | null;
@@ -243,13 +243,13 @@ export interface SocietyCommonAreaRow extends CommonArea {
 export type HeatmapGrid = number[][];
 
 export interface SocietyFlatRow {
-  id: number;
+  id: number | string;
   flatNumber: string;
   bhkType: string;
-  occupied: boolean;
+  occupied?: boolean;
   residentName: string | null;
   blockName: string;
-  floorNumber: number;
+  floorNumber?: number;
   meterStatus: MeterStatus;
   mtdKwh: number;
 }
@@ -264,7 +264,7 @@ export interface BuilderOverview {
 }
 
 export interface BuilderSocietyRow {
-  id: string;
+  id: string | number;
   name: string;
   city: string;
   totalFlats: number;
@@ -311,7 +311,7 @@ export interface SuperAdminOverview {
 }
 
 export interface BuilderListItem {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
   totalSocieties: number;
@@ -324,8 +324,8 @@ export interface CreateSocietyInput {
   name: string;
   address: string;
   city: string;
-  totalBlocks: number;
-  builderId: number;
+  totalBlocks?: number;
+  builderId: number | string;
 }
 
 export interface CreateBuilderInput {
@@ -336,22 +336,23 @@ export interface CreateBuilderInput {
 
 export interface CreateBlockInput {
   blockName: string;
-  societyId: number;
+  societyId: number | string;
 }
 
 export interface CreateResidentInput {
   name: string;
   email: string;
   password?: string;
-  societyId: number;
-  flatId: number;
+  role?: Role | string;
+  societyId: number | string;
+  flatId?: number | string | null;
 }
 
 export interface RegisterDeviceInput {
   deviceSerial: string;
   deviceType: DeviceType;
   mappedTo: string;
-  societyId: string;
+  societyId: string | number;
   flatId?: number | null;
   commonAreaId?: number | null;
 }

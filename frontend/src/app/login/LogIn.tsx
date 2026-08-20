@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, ArrowRight } from "lucide-react";
+import { Zap, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Button, Input } from "../../components/ui/primitives";
 import { cn } from "../../lib/utils";
@@ -29,6 +29,7 @@ export default function Login() {
   const [role, setRole] = useState<Role>("RESIDENT");
   const [email, setEmail] = useState(ROLES[0].demo);
   const [password, setPassword] = useState(ROLE_PASSWORDS.RESIDENT);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -118,11 +119,23 @@ export default function Login() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">Password</label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  title={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             {error && <p className="text-xs font-medium text-high-500">{error}</p>}
             <Button type="submit" variant="teal" disabled={loading} className="mt-2 w-full">

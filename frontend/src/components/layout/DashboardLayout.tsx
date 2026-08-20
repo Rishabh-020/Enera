@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Zap, LogOut, LayoutGrid, Cpu, Building2, Bell, ChevronLeft, ChevronRight, BarChart3, AlertTriangle, Users, CreditCard, Settings, Home, FileText, Menu, X } from "lucide-react";
+import { Zap, LogOut, LayoutGrid, Cpu, Building2, Bell, ChevronLeft, ChevronRight, BarChart3, AlertTriangle, Users, CreditCard, Settings, Home, FileText, Menu, X, KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
@@ -8,6 +8,8 @@ import { cn } from "../../lib/utils";
 // this is helpfull
 import type { Role } from "../../lib/types";
 import { Avatar, SearchBar, SwitchViewToggle } from "../ui/primitives";
+import { ChangePasswordModal } from "../auth/ChangePasswordModal";
+
 
 const ROLE_LABEL: Record<Role, string> = {
   RESIDENT: "Resident",
@@ -49,6 +51,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const handleSwitchView = (option: string) => {
     const routes: Record<string, string> = {
@@ -147,14 +150,29 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
               collapsed && "p-2 flex items-center justify-center"
             )}>
               {collapsed ? (
-                <Avatar name={user?.name ?? "U"} size="sm" />
-              ) : (
-                <div className="flex items-center gap-2.5 sidebar-fade-in min-w-0">
+                <button
+                  onClick={() => setShowPasswordModal(true)}
+                  title="Change Password"
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                >
                   <Avatar name={user?.name ?? "U"} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-white truncate">{user?.name ?? "User"}</p>
-                    <p className="text-[11px] text-slate-400 truncate">{user?.email ?? ""}</p>
+                </button>
+              ) : (
+                <div className="flex items-center justify-between gap-2 sidebar-fade-in min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <Avatar name={user?.name ?? "U"} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-white truncate">{user?.name ?? "User"}</p>
+                      <p className="text-[11px] text-slate-400 truncate">{user?.email ?? ""}</p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setShowPasswordModal(true)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                    title="Change Password"
+                  >
+                    <KeyRound size={14} />
+                  </button>
                 </div>
               )}
             </div>
@@ -277,16 +295,28 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
                   <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  logout();
-                  navigate("/login");
-                }}
-                className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
-                title="Log Out"
-              >
-                <LogOut size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setShowPasswordModal(true);
+                  }}
+                  className="p-2 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-white/5 transition-colors cursor-pointer"
+                  title="Change Password"
+                >
+                  <KeyRound size={16} />
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate("/login");
+                  }}
+                  className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
+                  title="Log Out"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -309,8 +339,15 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
                 <Bell size={18} className="text-slate-500" />
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-teal-500 ring-2 ring-white" />
               </button>
-              {/* Avatar */}
-              <Avatar name={user?.name ?? "U"} />
+              {/* Avatar + Profile trigger */}
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="flex items-center gap-2 p-1 pl-2.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer border border-transparent hover:border-slate-200 group"
+                title="Account Settings & Password"
+              >
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 hidden lg:inline">{user?.name}</span>
+                <Avatar name={user?.name ?? "U"} />
+              </button>
             </div>
           </div>
 
@@ -332,9 +369,14 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
               </div>
             </div>
             <div className="flex items-center gap-2.5">
-              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                {user ? ROLE_LABEL[user.role] : ""}
-              </span>
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 cursor-pointer flex items-center gap-1"
+                title="Change Password"
+              >
+                <span>{user ? ROLE_LABEL[user.role] : ""}</span>
+                <KeyRound size={12} className="text-slate-500" />
+              </button>
               <button className="relative p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer">
                 <Bell size={17} />
                 <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-teal-500" />
@@ -347,6 +389,12 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
           <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8">{children}</div>
         </main>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </div>
   );
 }

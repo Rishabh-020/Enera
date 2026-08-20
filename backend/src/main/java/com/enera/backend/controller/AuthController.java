@@ -6,6 +6,7 @@ import com.enera.backend.entity.User;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.UserRepository;
 import com.enera.backend.security.JwtService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -60,8 +61,5 @@ public class AuthController {
                 builderId
         );
     }
-
-//    @PostMapping("/forgot-password")
-//    public ResponseEntity<>
 
 }

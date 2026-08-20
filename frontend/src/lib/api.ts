@@ -323,3 +323,25 @@ export async function registerResident(input: CreateResidentInput): Promise<any>
 export const createResident = registerResident;
 export const createRedident = registerResident;
 
+// -------------------------------------------------------- Deletion APIs ----
+export async function deleteResident(societyId: string | number, residentId: string | number): Promise<any> {
+  const response = await api.delete(`/society/${societyId}/resident/${residentId}`);
+  return response.data;
+}
+
+export async function deleteBlock(societyId: string | number, blockId: string | number): Promise<any> {
+  const response = await api.delete(`/society/${societyId}/block/${blockId}`);
+  return response.data;
+}
+
+export async function deleteSociety(builderId: string | number, societyId: string | number): Promise<any> {
+  const response = await api.delete(`/builder/${builderId}/society/${societyId}`);
+  return response.data;
+}
+
+export async function deleteBuilder(builderId: string | number): Promise<any> {
+  const response = await api.delete(`/superAdmin/builders/${builderId}`);
+  return response.data;
+}
+
+
