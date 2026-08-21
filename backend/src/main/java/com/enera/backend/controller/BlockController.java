@@ -26,12 +26,4 @@ public class BlockController {
                 blockService.getBlockFloors(id)
         );
     }
-
-    @PostMapping
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
-    public ResponseEntity<Block> createBlock(@RequestBody CreateBlockRequest request) {
-        return ResponseEntity.ok(
-                blockService.createBlock(request)
-        );
-    }
 }

@@ -64,7 +64,7 @@ public class SecurityConfig {
                         .hasAnyAuthority("SUPER_ADMIN", "SOCIETY_ADMIN", "BUILDER_ADMIN")
 
                         .requestMatchers("/flat/**")
-                        .hasAnyAuthority("RESIDENT","SOCIETY_ADMIN")
+                        .hasAnyAuthority("RESIDENT", "SOCIETY_ADMIN", "BUILDER_ADMIN", "SUPER_ADMIN")
 
                         .anyRequest().authenticated()
                 )

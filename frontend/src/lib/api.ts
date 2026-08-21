@@ -3,7 +3,7 @@ import type {
   FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, RegisterDeviceInput, Session,
   SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint, FlatDetail, MeterStatus,
   DailyTrendPoint, HourlyDataPoint, AnomalyItem, SuperAdminOverview, BuilderListItem, CreateSocietyInput,
-  CreateBuilderInput, CreateBlockInput
+  CreateBuilderInput, CreateBlockInput, CreateResidentInput
 } from "./types";
 import api from '../api/api'
 
@@ -31,14 +31,29 @@ export async function login(email: string, password: string): Promise<Session> {
   };
 }
 
+export async function changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<{ message: string }> {
+  const response = await api.patch("/user/change-password", {
+    currentPassword,
+    newPassword,
+    confirmPassword,
+  });
+  return response.data;
+}
+
+export async function getCurrentUser(): Promise<Session["user"]> {
+  const response = await api.get("/user/me");
+  return response.data;
+}
+
 // ------------------------------------------------------- Flat ----
 export async function getFlatLive(flatId: string): Promise<FlatLive> {
   const response = await api.get(`/flat/${flatId}/live`);
   const data = response.data;
   return {
     ...data,
+    online: Boolean(data.status ?? data.online),
     lastReadingAt: data.lastReadingAt ? new Date(data.lastReadingAt) : undefined,
-    timestamp: data.timestamp ? new Date(data.timestamp) : undefined,
+    timestamp: data.timeStamp ? new Date(data.timeStamp) : (data.timestamp ? new Date(data.timestamp) : undefined),
   };
 }
 
@@ -286,16 +301,47 @@ export async function getAllBuilders(): Promise<BuilderListItem[]> {
 }
 
 export async function createSociety(input: CreateSocietyInput): Promise<any> {
-  const response = await api.post("/society", input);
+  const response = await api.post(`/builder/${input.builderId}/society`, input);
   return response.data;
 }
 
 export async function createBuilder(input: CreateBuilderInput): Promise<any> {
-  const response = await api.post("/builder", input);
+  const response = await api.post("/superAdmin/builders", input);
   return response.data;
 }
 
 export async function createBlock(input: CreateBlockInput): Promise<any> {
-  const response = await api.post("/block", input);
+  const response = await api.post(`/society/${input.societyId}/block`, input);
   return response.data;
 }
+
+export async function registerResident(input: CreateResidentInput): Promise<any> {
+  const response = await api.post(`/society/${input.societyId}/resident`, input);
+  return response.data;
+}
+
+export const createResident = registerResident;
+export const createRedident = registerResident;
+
+// -------------------------------------------------------- Deletion APIs ----
+export async function deleteResident(societyId: string | number, residentId: string | number): Promise<any> {
+  const response = await api.delete(`/society/${societyId}/resident/${residentId}`);
+  return response.data;
+}
+
+export async function deleteBlock(societyId: string | number, blockId: string | number): Promise<any> {
+  const response = await api.delete(`/society/${societyId}/block/${blockId}`);
+  return response.data;
+}
+
+export async function deleteSociety(builderId: string | number, societyId: string | number): Promise<any> {
+  const response = await api.delete(`/builder/${builderId}/society/${societyId}`);
+  return response.data;
+}
+
+export async function deleteBuilder(builderId: string | number): Promise<any> {
+  const response = await api.delete(`/superAdmin/builders/${builderId}`);
+  return response.data;
+}
+
+

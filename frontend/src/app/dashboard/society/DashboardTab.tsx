@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Building2, Users, PlugZap, AlertTriangle, ChevronRight, Layers, Cpu, ShieldCheck, ArrowRight } from "lucide-react";
+import { Zap, Building2, Users, PlugZap, AlertTriangle, ChevronRight, Layers, Cpu, ShieldCheck, ArrowRight, Trash2, Plus, X, CheckCircle2 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
@@ -9,10 +9,12 @@ import * as api from "../../../lib/api";
 import { StatCard } from "../../../components/chart/StatCard";
 import { DonutChart } from "../../../components/chart/DonutChart";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { DeleteConfirmModal } from "../../../components/ui/DeleteConfirmModal";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, ProgressStat,
-  Table, Thead, Th, Td, Tr, StatusDot
+  Table, Thead, Th, Td, Tr, StatusDot, Button, Input
 } from "../../../components/ui/primitives";
+
 import type { SocietyOverview, SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, DailyTrendPoint } from "../../../lib/types";
 import { cn } from "../../../lib/utils";
 import { useWebSocketReading } from "../../../context/WebSocketContext";
@@ -40,6 +42,13 @@ export function DashboardTab({
   const [commonAreas, setCommonAreas] = useState<SocietyCommonAreaRow[] | null>(null);
   const [trendData, setTrendData] = useState<DailyTrendPoint[] | null>(null);
   const [dateRange, setDateRange] = useState("Last 7 days");
+
+  // Block management states
+  const [showAddBlockModal, setShowAddBlockModal] = useState(false);
+  const [blockToDelete, setBlockToDelete] = useState<SocietyBlockRow | null>(null);
+  const [newBlockName, setNewBlockName] = useState("");
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [blockSuccess, setBlockSuccess] = useState<string | null>(null);
 
   const { latestReading } = useWebSocketReading();
 
@@ -645,81 +654,225 @@ export function DashboardTab({
         </Card>
       </div>
 
-      {/* Row 5: Top Consuming Flats Table */}
+      {/* Row 5: Blocks & Top Consuming Flats */}
       <Card>
         <CardHeader>
           <div>
-            <CardTitle>Top consuming flats</CardTitle>
-            <CardDescription>Click any block or row to drill into blocks and floors</CardDescription>
+            <CardTitle>Society Blocks & Topology</CardTitle>
+            <CardDescription>Click any block to drill into floors and flats, or add new blocks</CardDescription>
           </div>
+          <Button
+            variant="teal"
+            size="sm"
+            onClick={() => setShowAddBlockModal(true)}
+            className="flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <Plus size={14} /> Add Block
+          </Button>
         </CardHeader>
         <CardContent>
+          {blockSuccess && (
+            <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-teal-200 bg-teal-50/90 p-3 text-xs font-semibold text-teal-900 shadow-sm animate-fade-in">
+              <CheckCircle2 size={15} className="text-teal-600 shrink-0" />
+              <span>{blockSuccess}</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-5">
             {(blocks ?? []).map((b) => (
-              <button
+              <div
                 key={b.id}
                 onClick={() => onSelectBlock(String(b.id), b.name)}
-                className="flex items-center justify-between rounded-xl border border-slate-200 p-3 hover:border-teal-500 hover:bg-teal-50/20 text-left transition-all cursor-pointer"
+                className="group flex items-center justify-between rounded-xl border border-slate-200 p-3 hover:border-teal-500 hover:bg-teal-50/20 text-left transition-all cursor-pointer bg-white"
               >
                 <div>
-                  <span className="font-semibold text-sm block">{b.name}</span>
+                  <span className="font-semibold text-sm block text-slate-800 group-hover:text-teal-700">{b.name}</span>
                   <span className="text-xs text-slate-400">{b.flatCount} flats</span>
                 </div>
-                <ChevronRight size={15} className="text-slate-400" />
-              </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBlockToDelete(b);
+                    }}
+                    className="p-1 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                    title={`Delete ${b.name}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <ChevronRight size={15} className="text-slate-400 group-hover:text-teal-600" />
+                </div>
+              </div>
             ))}
           </div>
 
-          <Table>
-            <Thead>
-              <tr>
-                <Th>Flat</Th>
-                <Th>Block</Th>
-                <Th>kWh</Th>
-                <Th>vs Avg</Th>
-                <Th>Status</Th>
-                <Th></Th>
-              </tr>
-            </Thead>
-            <tbody>
-              {!flats ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <Tr key={i}>
-                    <Td><div className="h-4 w-16 skeleton-box rounded" /></Td>
-                    <Td><div className="h-4 w-20 skeleton-box rounded" /></Td>
-                    <Td><div className="h-4 w-12 skeleton-box rounded" /></Td>
-                    <Td><div className="h-4 w-10 skeleton-box rounded" /></Td>
-                    <Td><div className="h-4 w-14 skeleton-box rounded" /></Td>
-                    <Td></Td>
-                  </Tr>
-                ))
-              ) : (
-                topConsumers.map((f) => {
-                  const vsAvg = avgFlatMtd > 0 ? Math.round(((f.mtdKwh - avgFlatMtd) / avgFlatMtd) * 100) : 0;
-                  const statusVariant = vsAvg > 20 ? "attention" : vsAvg < -5 ? "efficient" : "neutral";
-                  const statusLabel = vsAvg > 20 ? "Above avg" : vsAvg < -5 ? "Efficient" : "Normal";
-                  return (
-                    <Tr key={f.id} onClick={() => onSelectFlat(String(f.id), f.flatNumber)} className="cursor-pointer">
-                      <Td className="font-semibold text-slate-900">{f.flatNumber}</Td>
-                      <Td>{f.blockName}</Td>
-                      <Td className="font-mono-data font-semibold">{f.mtdKwh}</Td>
-                      <Td>
-                        <span className={vsAvg > 0 ? "text-red-500 font-medium" : "text-teal-600 font-medium"}>
-                          {vsAvg > 0 ? "+" : ""}{vsAvg}%
-                        </span>
-                      </Td>
-                      <Td><Badge variant={statusVariant}>{statusLabel}</Badge></Td>
-                      <Td>
-                        <ChevronRight size={15} className="text-slate-300" />
-                      </Td>
+          <div className="border-t border-slate-100 pt-4">
+            <h4 className="font-semibold text-xs text-slate-700 mb-3 uppercase tracking-wider">Top Consuming Flats</h4>
+            <Table>
+              <Thead>
+                <tr>
+                  <Th>Flat</Th>
+                  <Th>Block</Th>
+                  <Th>kWh</Th>
+                  <Th>vs Avg</Th>
+                  <Th>Status</Th>
+                  <Th></Th>
+                </tr>
+              </Thead>
+              <tbody>
+                {!flats ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <Tr key={i}>
+                      <Td><div className="h-4 w-16 skeleton-box rounded" /></Td>
+                      <Td><div className="h-4 w-20 skeleton-box rounded" /></Td>
+                      <Td><div className="h-4 w-12 skeleton-box rounded" /></Td>
+                      <Td><div className="h-4 w-10 skeleton-box rounded" /></Td>
+                      <Td><div className="h-4 w-14 skeleton-box rounded" /></Td>
+                      <Td></Td>
                     </Tr>
-                  );
-                })
-              )}
-            </tbody>
-          </Table>
+                  ))
+                ) : (
+                  topConsumers.map((f) => {
+                    const vsAvg = avgFlatMtd > 0 ? Math.round(((f.mtdKwh - avgFlatMtd) / avgFlatMtd) * 100) : 0;
+                    const statusVariant = vsAvg > 20 ? "attention" : vsAvg < -5 ? "efficient" : "neutral";
+                    const statusLabel = vsAvg > 20 ? "Above avg" : vsAvg < -5 ? "Efficient" : "Normal";
+                    return (
+                      <Tr key={f.id} onClick={() => onSelectFlat(String(f.id), f.flatNumber)} className="cursor-pointer">
+                        <Td className="font-semibold text-slate-900">{f.flatNumber}</Td>
+                        <Td>{f.blockName}</Td>
+                        <Td className="font-mono-data font-semibold">{f.mtdKwh}</Td>
+                        <Td>
+                          <span className={vsAvg > 0 ? "text-red-500 font-medium" : "text-teal-600 font-medium"}>
+                            {vsAvg > 0 ? "+" : ""}{vsAvg}%
+                          </span>
+                        </Td>
+                        <Td><Badge variant={statusVariant}>{statusLabel}</Badge></Td>
+                        <Td>
+                          <ChevronRight size={15} className="text-slate-300" />
+                        </Td>
+                      </Tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Delete Block Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(blockToDelete)}
+        onClose={() => setBlockToDelete(null)}
+        onConfirm={async () => {
+          if (!blockToDelete) return;
+          try {
+            await api.deleteBlock(societyId, blockToDelete.id);
+          } catch {}
+          setBlocks((prev) => (prev ? prev.filter((b) => b.id !== blockToDelete.id) : prev));
+          setBlockSuccess(`Block "${blockToDelete.name}" deleted successfully.`);
+          setTimeout(() => setBlockSuccess(null), 4000);
+        }}
+        title="Delete Block"
+        itemName={blockToDelete?.name}
+        description={
+          <p>
+            Are you sure you want to delete <strong>"{blockToDelete?.name}"</strong>? All floors and flats inside this block will be deleted, and residents unlinked.
+          </p>
+        }
+        confirmText="Delete Block"
+        dangerNote="This action is permanent."
+      />
+
+      {/* Add Block Modal */}
+      {showAddBlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={() => !blockLoading && setShowAddBlockModal(false)}
+          />
+          <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-scale-in z-10">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+                  <Layers size={18} />
+                </div>
+                <h3 className="font-display text-base font-bold text-slate-900">Add Block</h3>
+              </div>
+              <button
+                onClick={() => setShowAddBlockModal(false)}
+                disabled={blockLoading}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e: FormEvent) => {
+                e.preventDefault();
+                if (!newBlockName) return;
+                setBlockLoading(true);
+                try {
+                  await api.createBlock({ blockName: newBlockName, societyId: Number(societyId) });
+                  setBlocks((prev) => [
+                    ...(prev || []),
+                    {
+                      id: Date.now().toString(),
+                      name: newBlockName,
+                      flatCount: 24,
+                      liveKw: 0,
+                      todayKwh: 0,
+                      mtdKwh: 0,
+                      aboveAverage: false,
+                    },
+                  ]);
+                  setShowAddBlockModal(false);
+                  setBlockSuccess(`Block "${newBlockName}" added successfully.`);
+                  setTimeout(() => setBlockSuccess(null), 4000);
+                  setNewBlockName("");
+                } catch {
+                } finally {
+                  setBlockLoading(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Block Name *</label>
+                <Input
+                  required
+                  placeholder="e.g. Block E / Tower 5"
+                  value={newBlockName}
+                  onChange={(e) => setNewBlockName(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddBlockModal(false)}
+                  disabled={blockLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="teal"
+                  size="sm"
+                  disabled={blockLoading}
+                  className="cursor-pointer"
+                >
+                  {blockLoading ? "Adding..." : "Add Block"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

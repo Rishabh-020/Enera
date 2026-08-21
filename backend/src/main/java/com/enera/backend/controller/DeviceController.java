@@ -16,7 +16,7 @@ public class DeviceController {
         this.deviceService = deviceService;
     }
 
-    @DeleteMapping("{id}")
+    @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<Map<String,String>> deRegisterDevice(@PathVariable Long id){
         deviceService.deRegisterDevice(id);

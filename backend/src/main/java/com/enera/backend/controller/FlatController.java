@@ -25,7 +25,7 @@ public class FlatController {
         );
     }
 
-    @GetMapping("{id}/summary")
+    @GetMapping("/{id}/summary")
     @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatSummaryResponse> getFlatSummary(@PathVariable Long id, @RequestParam String month){
         return ResponseEntity.ok(
@@ -33,7 +33,7 @@ public class FlatController {
         );
     }
 
-    @GetMapping("{id}/trend")
+    @GetMapping("/{id}/trend")
     @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatTrendResponse> getFlatTrend(@PathVariable Long id){
         return ResponseEntity.ok(
@@ -41,7 +41,7 @@ public class FlatController {
         );
     }
 
-    @GetMapping("{id}/hourly-profile")
+    @GetMapping("/{id}/hourly-profile")
     @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatHourlyProfileResponse> getFlatHourlyProfile(@PathVariable Long id){
         return ResponseEntity.ok(
@@ -49,7 +49,7 @@ public class FlatController {
         );
     }
 
-    @GetMapping("{id}/details")
+    @GetMapping("/{id}/details")
     @PreAuthorize("hasAnyAuthority('RESIDENT','SOCIETY_ADMIN','BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<FlatDetailResponse> getFlatDetail(@PathVariable Long id){
         return ResponseEntity.ok(

@@ -169,7 +169,14 @@ export default function SocietyAdminDashboard() {
           )}
 
           {activeKey === "residents" && (
-            <ResidentsTab flats={flats} onSelectFlat={selectFlat} />
+            <ResidentsTab
+              societyId={societyId || "1"}
+              flats={flats}
+              onSelectFlat={selectFlat}
+              onRefresh={() => {
+                if (societyId) api.getSocietyFlatsList(societyId).then(setFlats);
+              }}
+            />
           )}
 
           {activeKey === "billing" && (

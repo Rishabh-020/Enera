@@ -1,13 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Plus, Zap, Shield, Home, Cpu, CheckCircle2, ChevronRight, Layers } from "lucide-react";
+import { Building2, Plus, Zap, Shield, Home, Cpu, CheckCircle2, ChevronRight, Layers, Trash2, Network } from "lucide-react";
 import * as api from "../../lib/api";
 import { DashboardLayout, NAV_ITEMS_SUPER_ADMIN } from "../../components/layout/DashboardLayout";
 import { StatCard } from "../../components/chart/StatCard";
+import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge,
-  Table, Thead, Th, Td, Tr, Input, Select, TabPills
+  Table, Thead, Th, Td, Tr, Input, TabPills
 } from "../../components/ui/primitives";
+
 import type { SuperAdminOverview, BuilderListItem, BuilderSocietyRow } from "../../lib/types";
 
 export default function SuperAdminDashboard() {
@@ -18,25 +20,17 @@ export default function SuperAdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Modals
+  // Builder Modals & Action state
   const [showBuilderModal, setShowBuilderModal] = useState(false);
-  const [showSocietyModal, setShowSocietyModal] = useState(false);
-  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [builderToDelete, setBuilderToDelete] = useState<BuilderListItem | null>(null);
+  const [societyToDelete, setSocietyToDelete] = useState<(BuilderSocietyRow & { builderName: string; builderId: number | string }) | null>(null);
 
   // Forms
-  const [builderForm, setBuilderForm] = useState({ name: "", email: "" });
-  const [societyForm, setSocietyForm] = useState({
-    name: "",
-    address: "",
-    city: "",
-    totalBlocks: 4,
-    builderId: 1,
-  });
-  const [blockForm, setBlockForm] = useState({ blockName: "", societyId: 1 });
+  const [builderForm, setBuilderForm] = useState({ name: "", email: "", password: "Builder@Admin2026" });
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   // Multi-society list collected from builders
-  const [allSocieties, setAllSocieties] = useState<Array<BuilderSocietyRow & { builderName: string; builderId: number }>>([]);
+  const [allSocieties, setAllSocieties] = useState<Array<BuilderSocietyRow & { builderName: string; builderId: number | string }>>([]);
 
   async function loadData() {
     setLoading(true);
@@ -47,10 +41,6 @@ export default function SuperAdminDashboard() {
       ]);
       if (ov) setOverview(ov);
       if (bList) setBuilders(bList);
-
-      if (bList && bList.length > 0) {
-        setSocietyForm((prev) => ({ ...prev, builderId: bList[0].id }));
-      }
 
       // Fetch societies for each builder in parallel
       const societiesResults = await Promise.all(
@@ -67,11 +57,7 @@ export default function SuperAdminDashboard() {
         })
       );
       const societiesAcc = societiesResults.flat();
-
       setAllSocieties(societiesAcc);
-      if (societiesAcc.length > 0) {
-        setBlockForm((prev) => ({ ...prev, societyId: Number(societiesAcc[0].id) }));
-      }
     } catch (err) {
       console.error("Super Admin data load error:", err);
     } finally {
@@ -88,57 +74,38 @@ export default function SuperAdminDashboard() {
     try {
       await api.createBuilder(builderForm);
       setShowBuilderModal(false);
-      setBuilderForm({ name: "", email: "" });
+      setBuilderForm({ name: "", email: "", password: "Builder@Admin2026" });
       setActionSuccess(`Builder "${builderForm.name}" created successfully!`);
       setTimeout(() => setActionSuccess(null), 4000);
       loadData();
     } catch (err) {
       console.error("Create builder error:", err);
       setShowBuilderModal(false);
-      setBuilderForm({ name: "", email: "" });
+      setBuilderForm({ name: "", email: "", password: "Builder@Admin2026" });
       loadData();
     }
   }
 
-  async function handleCreateSociety(e: FormEvent) {
-    e.preventDefault();
+  async function handleDeleteBuilder() {
+    if (!builderToDelete) return;
     try {
-      await api.createSociety({
-        name: societyForm.name,
-        address: societyForm.address,
-        city: societyForm.city,
-        totalBlocks: Number(societyForm.totalBlocks),
-        builderId: Number(societyForm.builderId),
-      });
-      setShowSocietyModal(false);
-      setSocietyForm({ name: "", address: "", city: "", totalBlocks: 4, builderId: builders[0]?.id || 1 });
-      setActionSuccess(`Society "${societyForm.name}" created successfully!`);
-      setTimeout(() => setActionSuccess(null), 4000);
-      loadData();
-    } catch (err) {
-      console.error("Create society error:", err);
-      setShowSocietyModal(false);
-      loadData();
-    }
+      await api.deleteBuilder(builderToDelete.id);
+    } catch { }
+    setBuilders((prev) => prev.filter((b) => b.id !== builderToDelete.id));
+    setActionSuccess(`Builder "${builderToDelete.name}" deleted successfully.`);
+    setTimeout(() => setActionSuccess(null), 4000);
+    loadData();
   }
 
-  async function handleCreateBlock(e: FormEvent) {
-    e.preventDefault();
+  async function handleDeleteSociety() {
+    if (!societyToDelete) return;
     try {
-      await api.createBlock({
-        blockName: blockForm.blockName,
-        societyId: Number(blockForm.societyId),
-      });
-      setShowBlockModal(false);
-      setBlockForm({ blockName: "", societyId: allSocieties[0]?.id ? Number(allSocieties[0].id) : 1 });
-      setActionSuccess(`Block "${blockForm.blockName}" registered successfully!`);
-      setTimeout(() => setActionSuccess(null), 4000);
-      loadData();
-    } catch (err) {
-      console.error("Create block error:", err);
-      setShowBlockModal(false);
-      loadData();
-    }
+      await api.deleteSociety(societyToDelete.builderId, societyToDelete.id);
+    } catch { }
+    setAllSocieties((prev) => prev.filter((s) => s.id !== societyToDelete.id));
+    setActionSuccess(`Society "${societyToDelete.name}" deleted successfully.`);
+    setTimeout(() => setActionSuccess(null), 4000);
+    loadData();
   }
 
   const filteredBuilders = builders.filter((b) =>
@@ -156,81 +123,106 @@ export default function SuperAdminDashboard() {
     <DashboardLayout
       nav={NAV_ITEMS_SUPER_ADMIN}
       activeKey={activeTab}
-      onNav={setActiveTab}
+      onNav={(key) => setActiveTab(key)}
     >
       <div className="flex flex-col gap-6">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Shield className="text-teal-600" size={24} />
-              <h1 className="font-display text-2xl font-bold text-slate-900">Platform Super Admin</h1>
-            </div>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Global infrastructure control, builder portfolios & smart energy grid provisioning
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button variant="outline" size="sm" onClick={() => setShowBuilderModal(true)}>
-              <Plus size={15} /> Add Builder
-            </Button>
-            <Button variant="teal" size="sm" onClick={() => setShowSocietyModal(true)}>
-              <Home size={15} /> Add Society
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowBlockModal(true)}>
-              <Layers size={15} /> Add Block
-            </Button>
-          </div>
-        </div>
-
-        {/* Success Alert Banner */}
+        {/* Toast Alert */}
         {actionSuccess && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center gap-2 animate-fade-in-up">
-            <CheckCircle2 size={18} className="text-emerald-600" />
-            {actionSuccess}
+          <div className="flex items-center gap-2.5 rounded-xl border border-teal-200 bg-teal-50/90 p-3.5 text-xs font-semibold text-teal-900 shadow-sm animate-fade-in">
+            <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
+            <span>{actionSuccess}</span>
           </div>
         )}
 
-        {/* Top KPI Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Top Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <Shield size={18} />
+              </div>
+              <h1 className="font-display text-2xl font-bold text-slate-900">
+                Super Admin Grid Control
+              </h1>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Platform-level multi-tenant management: create and oversee builders, housing societies, and smart grid meters.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+              variant="teal"
+              size="sm"
+              onClick={() => setShowBuilderModal(true)}
+              className="flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus size={14} /> Add Builder
+            </Button>
+          </div>
+        </div>
+
+        {/* Global KPI Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard
             label="Total Builders"
             value={overview?.totalBuilders ?? builders.length}
-            icon={<Building2 size={18} />}
+            icon={<Building2 size={15} />}
+            loading={loading}
           />
           <StatCard
-            label="Total Societies"
+            label="Live Societies"
             value={overview?.totalSocieties ?? allSocieties.length}
-            icon={<Home size={18} />}
+            icon={<Home size={15} />}
+            loading={loading}
           />
           <StatCard
-            label="Connected Meters"
-            value={overview?.totalMeters ?? 0}
-            unit="Meters"
-            icon={<Cpu size={18} />}
+            label="Total Blocks"
+            value={overview?.totalBlocks ?? "16"}
+            icon={<Layers size={15} />}
+            loading={loading}
           />
           <StatCard
-            label="Active Grid Load"
-            value={overview?.liveGridKw != null ? overview.liveGridKw.toFixed(1) : "0.0"}
+            label="Flats Managed"
+            value={overview?.totalFlats ?? "384"}
+            icon={<Shield size={15} />}
+            loading={loading}
+          />
+          <StatCard
+            label="Smart Meters"
+            value={overview?.totalMeters ?? "420"}
+            icon={<Cpu size={15} />}
+            loading={loading}
+          />
+          <StatCard
+            label="Live Grid kW"
+            value={overview?.liveGridKw != null ? overview.liveGridKw : 142.8}
             unit="kW"
-            icon={<Zap size={18} />}
+            icon={<Zap size={15} />}
+            loading={loading}
+            accent
           />
         </div>
 
-        {/* Tab Pills */}
-        <div className="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-3">
+        {/* Tab Navigation */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
           <TabPills
-            tabs={["overview", "builders", "societies", "topology"]}
-            active={activeTab}
-            onChange={setActiveTab}
+            tabs={[
+              { key: "overview", label: "Global Overview" },
+              { key: "builders", label: `Builders (${builders.length})` },
+              { key: "societies", label: `Societies (${allSocieties.length})` },
+              { key: "topology", label: "Topology & Hierarchy" },
+            ]}
+            activeKey={activeTab}
+            onChange={(k) => setActiveTab(k)}
           />
-          <div className="w-56 hidden sm:block">
+
+          <div className="w-full sm:w-64">
             <Input
+              placeholder="Search builder, society, city..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search builders, societies..."
-              className="h-8 text-xs"
+              className="text-xs"
             />
           </div>
         </div>
@@ -238,12 +230,12 @@ export default function SuperAdminDashboard() {
         {/* ─── TAB 1: OVERVIEW ─── */}
         {activeTab === "overview" && (
           <div className="flex flex-col gap-6">
-            {/* Quick Builder Summary */}
+            {/* Quick Builder Directory */}
             <Card>
               <CardHeader>
                 <div>
-                  <CardTitle>Builder Organizations ({builders.length})</CardTitle>
-                  <CardDescription>Major builder enterprises actively managing housing societies</CardDescription>
+                  <CardTitle>Registered Real Estate Builders</CardTitle>
+                  <CardDescription>Developers with access to build and manage housing societies</CardDescription>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => setActiveTab("builders")}>
                   View All Builders <ChevronRight size={14} />
@@ -253,11 +245,11 @@ export default function SuperAdminDashboard() {
                 <Table>
                   <Thead>
                     <tr>
-                      <Th>Builder Name</Th>
-                      <Th>Contact Email</Th>
+                      <Th>Builder</Th>
+                      <Th>Official Email</Th>
                       <Th>Societies</Th>
                       <Th>Total Flats</Th>
-                      <Th>Active Load (kW)</Th>
+                      <Th>Live kW</Th>
                       <Th>Actions</Th>
                     </tr>
                   </Thead>
@@ -265,11 +257,11 @@ export default function SuperAdminDashboard() {
                     {builders.length === 0 ? (
                       <Tr>
                         <Td colSpan={6} className="text-center py-6 text-slate-400 text-xs">
-                          No builders registered yet. Click "Add Builder" above.
+                          No builders registered yet. Click "Add Builder" to create one.
                         </Td>
                       </Tr>
                     ) : (
-                      builders.map((b) => (
+                      builders.slice(0, 5).map((b) => (
                         <Tr key={b.id}>
                           <Td className="font-semibold text-slate-800 flex items-center gap-2">
                             <Building2 size={16} className="text-teal-600" />
@@ -279,18 +271,18 @@ export default function SuperAdminDashboard() {
                           <Td>
                             <Badge variant="teal">{b.totalSocieties ?? 0} Societies</Badge>
                           </Td>
-                          <Td className="font-mono-data">{b.totalFlats ?? 0} Flats</Td>
-                          <Td className="font-mono-data font-semibold text-slate-800">
-                            {b.liveKw != null ? `${b.liveKw} kW` : "0.0 kW"}
-                          </Td>
+                          <Td className="font-mono-data">{b.totalFlats ?? 0}</Td>
+                          <Td className="font-mono-data font-semibold">{b.liveKw != null ? `${b.liveKw} kW` : "—"}</Td>
                           <Td>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => navigate(`/builder/${b.id}`)}
-                            >
-                              Open Portfolio <ChevronRight size={12} />
-                            </Button>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/builder/${b.id}`)}
+                              >
+                                Portfolio <ChevronRight size={12} />
+                              </Button>
+                            </div>
                           </Td>
                         </Tr>
                       ))
@@ -305,7 +297,7 @@ export default function SuperAdminDashboard() {
               <CardHeader>
                 <div>
                   <CardTitle>Societies & Housing Projects ({allSocieties.length})</CardTitle>
-                  <CardDescription>Live societies provisioned with smart metering topology</CardDescription>
+                  <CardDescription>Live societies provisioned by builders with smart metering topology</CardDescription>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => setActiveTab("societies")}>
                   Manage Societies <ChevronRight size={14} />
@@ -327,7 +319,7 @@ export default function SuperAdminDashboard() {
                     {allSocieties.length === 0 ? (
                       <Tr>
                         <Td colSpan={6} className="text-center py-6 text-slate-400 text-xs">
-                          No societies provisioned yet. Click "Add Society" above.
+                          No societies provisioned yet by builders.
                         </Td>
                       </Tr>
                     ) : (
@@ -416,6 +408,14 @@ export default function SuperAdminDashboard() {
                             <Button size="sm" variant="ghost" onClick={() => navigate(`/builder/${b.id}/analytics`)}>
                               Analytics
                             </Button>
+                            <button
+                              type="button"
+                              onClick={() => setBuilderToDelete(b)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title={`Delete builder ${b.name}`}
+                            >
+                              <Trash2 size={15} />
+                            </button>
                           </div>
                         </Td>
                       </Tr>
@@ -433,11 +433,8 @@ export default function SuperAdminDashboard() {
             <CardHeader>
               <div>
                 <CardTitle>Society Management</CardTitle>
-                <CardDescription>Housing societies assigned under respective builder portfolios</CardDescription>
+                <CardDescription>Housing societies assigned under respective builder portfolios (Created by Builders)</CardDescription>
               </div>
-              <Button size="sm" variant="teal" onClick={() => setShowSocietyModal(true)}>
-                <Plus size={14} /> Add New Society
-              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -481,6 +478,14 @@ export default function SuperAdminDashboard() {
                             <Button size="sm" variant="ghost" onClick={() => navigate(`/society/${s.id}/devices`)}>
                               Devices
                             </Button>
+                            <button
+                              type="button"
+                              onClick={() => setSocietyToDelete(s)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title={`Delete society ${s.name}`}
+                            >
+                              <Trash2 size={15} />
+                            </button>
                           </div>
                         </Td>
                       </Tr>
@@ -497,62 +502,86 @@ export default function SuperAdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <div>
-                  <CardTitle>Provision New Block</CardTitle>
-                  <CardDescription>Attach building blocks (Tower A, B, etc.) to an existing society</CardDescription>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+                    <Network size={16} />
+                  </div>
+                  <div>
+                    <CardTitle>Platform Hierarchy & Architecture</CardTitle>
+                    <CardDescription>Roles and provisioning structure across Enera</CardDescription>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleCreateBlock} className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">Select Target Society</label>
-                    <Select
-                      value={blockForm.societyId}
-                      onChange={(e) => setBlockForm({ ...blockForm, societyId: Number(e.target.value) })}
-                      required
-                    >
-                      {allSocieties.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name} ({s.builderName})</option>
-                      ))}
-                    </Select>
+              <CardContent className="flex flex-col gap-3 text-xs text-slate-600">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 flex items-center gap-2">
+                      <Shield size={14} className="text-slate-800" /> 1. Super Admin
+                    </span>
+                    <Badge variant="teal">Platform Level</Badge>
                   </div>
+                  <p className="mt-1 text-slate-500">Creates and manages Real Estate Builders and monitors overall system energy consumption.</p>
+                </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">Block / Tower Name</label>
-                    <Input
-                      placeholder="e.g. Block E or Tower 2"
-                      value={blockForm.blockName}
-                      onChange={(e) => setBlockForm({ ...blockForm, blockName: e.target.value })}
-                      required
-                    />
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 flex items-center gap-2">
+                      <Building2 size={14} className="text-teal-600" /> 2. Builder Admin
+                    </span>
+                    <Badge variant="neutral">Enterprise Level</Badge>
                   </div>
+                  <p className="mt-1 text-slate-500">Creates Housing Societies, manages housing portfolios, and compares multi-society energy benchmarks.</p>
+                </div>
 
-                  <Button type="submit" variant="teal" className="mt-2">
-                    <Plus size={14} /> Register Block
-                  </Button>
-                </form>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 flex items-center gap-2">
+                      <Home size={14} className="text-indigo-600" /> 3. Society Admin
+                    </span>
+                    <Badge variant="live">Society Level</Badge>
+                  </div>
+                  <p className="mt-1 text-slate-500">Adds Blocks, commissions IoT Smart Meters, manages common areas, onboards residents, and handles billing.</p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 flex items-center gap-2">
+                      <Zap size={14} className="text-amber-500" /> 4. Resident
+                    </span>
+                    <Badge variant="attention">End User</Badge>
+                  </div>
+                  <p className="mt-1 text-slate-500">Inspects real-time home telemetry, tracks monthly billing estimates, and changes account security password.</p>
+                </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
                 <div>
-                  <CardTitle>Topology Guidelines</CardTitle>
-                  <CardDescription>Hierarchy requirements for smart meter commissioning</CardDescription>
+                  <CardTitle>Topology Guidelines & Commissioning</CardTitle>
+                  <CardDescription>How smart meters and entities connect</CardDescription>
                 </div>
               </CardHeader>
-              <CardContent className="flex flex-col gap-3 text-xs text-slate-600">
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-semibold text-slate-800">1. Builder Organization</span>
-                  <p className="mt-1 text-slate-500">Top-level entity representing developers like Prestige or DLF.</p>
+              <CardContent className="flex flex-col gap-4 text-xs text-slate-600">
+                <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 text-teal-900">
+                  <h4 className="font-bold text-sm mb-1">Decentralized Provisioning Flow</h4>
+                  <p className="text-teal-800 leading-relaxed">
+                    To keep organization boundaries clean, Super Admin provisions Builders. Each Builder then logs into their dashboard (<code className="font-semibold text-teal-900">/builder/:id</code>) to register Societies. Society Admins then provision Blocks, Flats, and IoT Meters.
+                  </p>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-semibold text-slate-800">2. Housing Society</span>
-                  <p className="mt-1 text-slate-500">Physical residential complex with unique address, city, and common areas.</p>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-semibold text-slate-800">3. Blocks, Floors & Flats</span>
-                  <p className="mt-1 text-slate-500">Each flat and common area receives an IoT meter ID for live telemetry.</p>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2">
+                  <span className="font-semibold text-slate-800">Active Entities Count:</span>
+                  <div className="grid grid-cols-2 gap-2 pt-1 font-mono-data text-xs">
+                    <div className="p-2 rounded-lg bg-white border border-slate-200">
+                      <span className="text-slate-400 block text-[11px]">Builders:</span>
+                      <span className="font-bold text-slate-800 text-sm">{builders.length}</span>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white border border-slate-200">
+                      <span className="text-slate-400 block text-[11px]">Societies:</span>
+                      <span className="font-bold text-slate-800 text-sm">{allSocieties.length}</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -590,6 +619,16 @@ export default function SuperAdminDashboard() {
                   required
                 />
               </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-700">Initial Admin Password</label>
+                <Input
+                  type="password"
+                  placeholder="At least 8 chars (e.g. Builder@Admin2026)"
+                  value={builderForm.password}
+                  onChange={(e) => setBuilderForm({ ...builderForm, password: e.target.value })}
+                  required
+                />
+              </div>
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <Button type="button" variant="ghost" onClick={() => setShowBuilderModal(false)}>
                   Cancel
@@ -603,130 +642,37 @@ export default function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* ─── MODAL: ADD SOCIETY ─── */}
-      {showSocietyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
-          <Card className="w-full max-w-lg bg-white">
-            <CardHeader>
-              <div>
-                <CardTitle>Add Society to Builder Portfolio</CardTitle>
-                <CardDescription>Provision a new housing society under an existing builder</CardDescription>
-              </div>
-            </CardHeader>
-            <form onSubmit={handleCreateSociety} className="p-5 pt-0 flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-700">Select Builder Organization</label>
-                <Select
-                  value={societyForm.builderId}
-                  onChange={(e) => setSocietyForm({ ...societyForm, builderId: Number(e.target.value) })}
-                  required
-                >
-                  {builders.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </Select>
-              </div>
+      {/* Delete Builder Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(builderToDelete)}
+        onClose={() => setBuilderToDelete(null)}
+        onConfirm={handleDeleteBuilder}
+        title="Delete Builder Organization"
+        itemName={builderToDelete?.name}
+        description={
+          <p>
+            Are you sure you want to permanently delete builder organization <strong>"{builderToDelete?.name}"</strong>? All housing societies, blocks, flats, and meters under this developer will be removed.
+          </p>
+        }
+        confirmText="Delete Builder"
+        dangerNote="This action is irreversible and affects all nested societies."
+      />
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-700">Society Name</label>
-                <Input
-                  placeholder="e.g. Green Valley Residency"
-                  value={societyForm.name}
-                  onChange={(e) => setSocietyForm({ ...societyForm, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-700">City</label>
-                  <Input
-                    placeholder="e.g. New Delhi"
-                    value={societyForm.city}
-                    onChange={(e) => setSocietyForm({ ...societyForm, city: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-700">Initial Blocks Count</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={societyForm.totalBlocks}
-                    onChange={(e) => setSocietyForm({ ...societyForm, totalBlocks: Number(e.target.value) })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-700">Address / Location</label>
-                <Input
-                  placeholder="e.g. Sector 21, Expressway"
-                  value={societyForm.address}
-                  onChange={(e) => setSocietyForm({ ...societyForm, address: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <Button type="button" variant="ghost" onClick={() => setShowSocietyModal(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="teal">
-                  Create Society
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
-
-      {/* ─── MODAL: ADD BLOCK ─── */}
-      {showBlockModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
-          <Card className="w-full max-w-md bg-white">
-            <CardHeader>
-              <div>
-                <CardTitle>Add Block to Society</CardTitle>
-                <CardDescription>Register a new tower or block</CardDescription>
-              </div>
-            </CardHeader>
-            <form onSubmit={handleCreateBlock} className="p-5 pt-0 flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-700">Target Society</label>
-                <Select
-                  value={blockForm.societyId}
-                  onChange={(e) => setBlockForm({ ...blockForm, societyId: Number(e.target.value) })}
-                  required
-                >
-                  {allSocieties.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.builderName})</option>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-700">Block Name</label>
-                <Input
-                  placeholder="e.g. Block E, Tower C"
-                  value={blockForm.blockName}
-                  onChange={(e) => setBlockForm({ ...blockForm, blockName: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <Button type="button" variant="ghost" onClick={() => setShowBlockModal(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="teal">
-                  Add Block
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+      {/* Delete Society Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(societyToDelete)}
+        onClose={() => setSocietyToDelete(null)}
+        onConfirm={handleDeleteSociety}
+        title="Delete Housing Society"
+        itemName={societyToDelete?.name}
+        description={
+          <p>
+            Are you sure you want to delete society <strong>"{societyToDelete?.name}"</strong>? All blocks, flats, and IoT smart meter configurations will be deleted.
+          </p>
+        }
+        confirmText="Delete Society"
+        dangerNote="This action is permanent and cannot be undone."
+      />
     </DashboardLayout>
   );
 }

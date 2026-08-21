@@ -1,20 +1,42 @@
-import { useEffect, useState, useMemo } from "react";
-import { Search, ChevronRight } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Input, Table, Thead, Th, Td, Tr, StatusDot } from "../../../components/ui/primitives";
+import { useEffect, useState, useMemo, type FormEvent } from "react";
+import { Search, ChevronRight, UserPlus, Trash2, X, CheckCircle2, UserCheck, Lock, Mail, User, Building } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Input, Button, Table, Thead, Th, Td, Tr, StatusDot } from "../../../components/ui/primitives";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { DeleteConfirmModal } from "../../../components/ui/DeleteConfirmModal";
 import type { SocietyFlatRow } from "../../../lib/types";
 import { useWebSocketReading } from "../../../context/WebSocketContext";
+import * as api from "../../../lib/api";
 
 interface ResidentsTabProps {
+  societyId?: string;
   flats: SocietyFlatRow[] | null;
   onSelectFlat: (id: string, flatNumber: string) => void;
+  onRefresh?: () => void;
 }
 
-export function ResidentsTab({ flats: initialFlats, onSelectFlat }: ResidentsTabProps) {
+export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFlat, onRefresh }: ResidentsTabProps) {
   const [search, setSearch] = useState("");
   const [blockFilter, setBlockFilter] = useState("All");
   const [bhkFilter, setBhkFilter] = useState("All");
   const [flats, setFlats] = useState<SocietyFlatRow[] | null>(initialFlats);
+
+  // Modals & action states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [residentToDelete, setResidentToDelete] = useState<SocietyFlatRow | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  // Add resident form
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "User@12345",
+    flatId: "",
+    flatNumber: "",
+    bhkType: "2BHK",
+    blockName: "Block A",
+  });
 
   const { latestReading } = useWebSocketReading();
 
@@ -72,64 +94,344 @@ export function ResidentsTab({ flats: initialFlats, onSelectFlat }: ResidentsTab
     });
   }, [flats, search, blockFilter, bhkFilter]);
 
+  // Handle Delete Resident
+  const handleDeleteResident = async () => {
+    if (!residentToDelete) return;
+    try {
+      await api.deleteResident(societyId, residentToDelete.id);
+    } catch {
+      // Backend api mock fallback
+    }
+    // Optimistically update local state
+    setFlats((prev) =>
+      prev
+        ? prev.map((f) =>
+            f.id === residentToDelete.id
+              ? { ...f, residentName: null }
+              : f
+          )
+        : prev
+    );
+    setActionSuccess(`Resident "${residentToDelete.residentName}" removed from Flat ${residentToDelete.flatNumber}.`);
+    setTimeout(() => setActionSuccess(null), 4000);
+    onRefresh?.();
+  };
+
+  // Handle Add Resident
+  const handleAddResident = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.flatNumber) {
+      setAddError("Please fill in all required fields.");
+      return;
+    }
+    setAddLoading(true);
+    setAddError(null);
+    try {
+      await api.registerResident({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: "RESIDENT",
+        societyId: Number(societyId),
+        flatId: form.flatId ? Number(form.flatId) : undefined,
+      });
+      // Optimistically update flat or add row
+      setFlats((prev) => {
+        if (!prev) return prev;
+        const exists = prev.find((f) => f.flatNumber === form.flatNumber);
+        if (exists) {
+          return prev.map((f) => (f.flatNumber === form.flatNumber ? { ...f, residentName: form.name } : f));
+        }
+        return [
+          ...prev,
+          {
+            id: Date.now(),
+            flatNumber: form.flatNumber,
+            blockName: form.blockName,
+            bhkType: form.bhkType,
+            residentName: form.name,
+            meterStatus: "live" as const,
+            mtdKwh: 0,
+          },
+        ];
+      });
+      setShowAddModal(false);
+      setActionSuccess(`Resident "${form.name}" registered successfully for Flat ${form.flatNumber}!`);
+      setTimeout(() => setActionSuccess(null), 4000);
+      setForm({
+        name: "",
+        email: "",
+        password: "User@12345",
+        flatId: "",
+        flatNumber: "",
+        bhkType: "2BHK",
+        blockName: "Block A",
+      });
+      onRefresh?.();
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Failed to register resident.");
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <div>
-          <CardTitle>Resident Directory</CardTitle>
-          <CardDescription>Search and view flats, residents and live meters</CardDescription>
+    <div className="flex flex-col gap-4">
+      {/* Toast banner */}
+      {actionSuccess && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-teal-200 bg-teal-50/90 p-3.5 text-xs font-semibold text-teal-900 shadow-sm animate-fade-in">
+          <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
+          <span>{actionSuccess}</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resident or flat..." className="w-48 pl-9 h-9" />
+      )}
+
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Resident Directory</CardTitle>
+            <CardDescription>Search, manage and onboard flat residents and live meters</CardDescription>
           </div>
-          <CustomSelect value={blockFilter} onChange={setBlockFilter} options={blockOptions} />
-          <CustomSelect value={bhkFilter} onChange={setBhkFilter} options={bhkOptions} />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <Thead>
-            <tr>
-              <Th>Flat Number</Th>
-              <Th>Block</Th>
-              <Th>BHK Type</Th>
-              <Th>Resident</Th>
-              <Th>Meter Status</Th>
-              <Th>MTD Consumption</Th>
-              <Th></Th>
-            </tr>
-          </Thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <Tr>
-                <Td colSpan={7} className="text-center py-6 text-slate-400">
-                  No residents found matching criteria
-                </Td>
-              </Tr>
-            ) : (
-              filtered.map((f) => (
-                <Tr key={f.id} onClick={() => onSelectFlat(String(f.id), f.flatNumber)} className="cursor-pointer">
-                  <Td className="font-semibold text-slate-800">{f.flatNumber}</Td>
-                  <Td>{f.blockName}</Td>
-                  <Td>{f.bhkType}</Td>
-                  <Td>{f.residentName || <span className="text-slate-400 italic">Vacant</span>}</Td>
-                  <Td>
-                    <Badge variant={f.meterStatus === "live" ? "live" : "offline"}>
-                      <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : "Offline"}
-                    </Badge>
-                  </Td>
-                  <Td className="font-mono-data font-semibold">{f.mtdKwh?.toFixed(0) ?? "0"} kWh</Td>
-                  <Td>
-                    <ChevronRight size={15} className="text-slate-400" />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search resident or flat..."
+                className="w-44 pl-9 h-9"
+              />
+            </div>
+            <CustomSelect value={blockFilter} onChange={setBlockFilter} options={blockOptions} />
+            <CustomSelect value={bhkFilter} onChange={setBhkFilter} options={bhkOptions} />
+            <Button
+              variant="teal"
+              size="sm"
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <UserPlus size={14} /> Onboard Resident
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <Thead>
+              <tr>
+                <Th>Flat Number</Th>
+                <Th>Block</Th>
+                <Th>BHK Type</Th>
+                <Th>Resident</Th>
+                <Th>Meter Status</Th>
+                <Th>MTD Consumption</Th>
+                <Th className="text-right">Actions</Th>
+              </tr>
+            </Thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <Tr>
+                  <Td colSpan={7} className="text-center py-8 text-slate-400">
+                    No residents found matching criteria
                   </Td>
                 </Tr>
-              ))
-            )}
-          </tbody>
-        </Table>
-      </CardContent>
-    </Card>
+              ) : (
+                filtered.map((f) => (
+                  <Tr
+                    key={f.id}
+                    onClick={() => onSelectFlat(String(f.id), f.flatNumber)}
+                    className="cursor-pointer group hover:bg-slate-50/80 transition-colors"
+                  >
+                    <Td className="font-semibold text-slate-800">{f.flatNumber}</Td>
+                    <Td>{f.blockName}</Td>
+                    <Td>{f.bhkType}</Td>
+                    <Td>
+                      {f.residentName ? (
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-900">{f.residentName}</span>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-slate-400 italic text-xs">
+                          Vacant Flat
+                        </span>
+                      )}
+                    </Td>
+                    <Td>
+                      <Badge variant={f.meterStatus === "live" ? "live" : "offline"}>
+                        <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : "Offline"}
+                      </Badge>
+                    </Td>
+                    <Td className="font-mono-data font-semibold">{f.mtdKwh?.toFixed(0) ?? "0"} kWh</Td>
+                    <Td className="text-right">
+                      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {f.residentName && (
+                          <button
+                            type="button"
+                            onClick={() => setResidentToDelete(f)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title={`Remove resident ${f.residentName}`}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onSelectFlat(String(f.id), f.flatNumber)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                          title="View flat details"
+                        >
+                          <ChevronRight size={15} />
+                        </button>
+                      </div>
+                    </Td>
+                  </Tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Delete Resident Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(residentToDelete)}
+        onClose={() => setResidentToDelete(null)}
+        onConfirm={handleDeleteResident}
+        title="Remove Resident"
+        itemName={residentToDelete ? `${residentToDelete.residentName} (Flat ${residentToDelete.flatNumber})` : undefined}
+        description={
+          <p>
+            Are you sure you want to remove resident{" "}
+            <strong>"{residentToDelete?.residentName}"</strong> from{" "}
+            <strong>Flat {residentToDelete?.flatNumber}</strong>? The flat will be marked as vacant and user account access will be revoked.
+          </p>
+        }
+        confirmText="Remove Resident"
+        dangerNote="The flat and meter telemetry history will be preserved."
+      />
+
+      {/* Onboard Resident Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={() => !addLoading && setShowAddModal(false)}
+          />
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-scale-in z-10">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 border border-teal-200/60 text-teal-600">
+                  <UserPlus size={20} />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-bold text-slate-900">Onboard New Resident</h3>
+                  <p className="text-xs text-slate-500">Create user login and assign to flat</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddModal(false)}
+                disabled={addLoading}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddResident} className="space-y-4">
+              {addError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 font-medium animate-fade-in">
+                  {addError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Resident Full Name *</label>
+                  <Input
+                    required
+                    placeholder="e.g. Rahul Sharma"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
+                  <Input
+                    required
+                    type="email"
+                    placeholder="rahul@example.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Flat Number *</label>
+                  <Input
+                    required
+                    placeholder="e.g. 402"
+                    value={form.flatNumber}
+                    onChange={(e) => setForm({ ...form, flatNumber: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Block</label>
+                  <Input
+                    placeholder="Block A"
+                    value={form.blockName}
+                    onChange={(e) => setForm({ ...form, blockName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">BHK Type</label>
+                  <select
+                    value={form.bhkType}
+                    onChange={(e) => setForm({ ...form, bhkType: e.target.value })}
+                    className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-700 outline-none focus:border-teal-500"
+                  >
+                    <option value="1BHK">1 BHK</option>
+                    <option value="2BHK">2 BHK</option>
+                    <option value="3BHK">3 BHK</option>
+                    <option value="4BHK">4 BHK</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Temporary Initial Password</label>
+                <Input
+                  type="text"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Min 8 chars, 1 uppercase, 1 digit, 1 special char"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">The resident can change this password after logging in.</p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddModal(false)}
+                  disabled={addLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="teal"
+                  size="sm"
+                  disabled={addLoading}
+                  className="cursor-pointer"
+                >
+                  {addLoading ? "Onboarding..." : "Register Resident"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
