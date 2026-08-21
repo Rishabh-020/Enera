@@ -62,9 +62,9 @@ export function DashboardTab({
       setOverview((prev) =>
         prev
           ? {
-              ...prev,
-              liveKw: Number((prev.liveKw + (latestReading.kw ?? 0) * 0.05).toFixed(1)),
-            }
+            ...prev,
+            liveKw: Number((prev.liveKw + (latestReading.kw ?? 0) * 0.05).toFixed(1)),
+          }
           : prev
       );
 
@@ -90,10 +90,10 @@ export function DashboardTab({
       setCommonAreas((prev) =>
         prev
           ? prev.map((ca) =>
-              String(ca.id) === String(latestReading.commonAreaId)
-                ? { ...ca, currentKw: latestReading.kw }
-                : ca
-            )
+            String(ca.id) === String(latestReading.commonAreaId)
+              ? { ...ca, currentKw: latestReading.kw }
+              : ca
+          )
           : prev
       );
     }
@@ -102,13 +102,13 @@ export function DashboardTab({
       setBlocks((prev) =>
         prev
           ? prev.map((block) =>
-              latestReading.flatNumber?.startsWith(block.name.replace("Block ", ""))
-                ? {
-                    ...block,
-                    liveKw: Number((block.liveKw + (latestReading.kw ?? 0) * 0.05).toFixed(1)),
-                  }
-                : block
-            )
+            latestReading.flatNumber?.startsWith(block.name.replace("Block ", ""))
+              ? {
+                ...block,
+                liveKw: Number((block.liveKw + (latestReading.kw ?? 0) * 0.05).toFixed(1)),
+              }
+              : block
+          )
           : prev
       );
     }
@@ -120,9 +120,9 @@ export function DashboardTab({
     setBlocks(null);
     setCommonAreas(null);
 
-    api.getSocietyOverview(societyId).then(setOverview).catch(() => {});
-    api.getSocietyBlocks(societyId).then(setBlocks).catch(() => {});
-    api.getSocietyCommonAreas(societyId).then(setCommonAreas).catch(() => {});
+    api.getSocietyOverview(societyId).then(setOverview).catch(() => { });
+    api.getSocietyBlocks(societyId).then(setBlocks).catch(() => { });
+    api.getSocietyCommonAreas(societyId).then(setCommonAreas).catch(() => { });
   }, [societyId]);
 
   // Fetch real daily trend strictly from backend API
@@ -360,108 +360,110 @@ export function DashboardTab({
                 <CardDescription className="mt-0.5">Per-flat average consumption vs society baseline</CardDescription>
               </div>
               <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
-                Avg: {avgFlatMtd} kWh/flat
+                Avg: {avgFlatMtd.toFixed(2)} kWh/flat
               </span>
             </div>
           </CardHeader>
 
-          <CardContent className="pt-4 flex flex-col gap-2.5">
-            {!blocks ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-14 skeleton-box rounded-xl" />
-              ))
-            ) : blockComparisonData.length === 0 ? (
-              <div className="flex h-44 items-center justify-center text-xs text-slate-400">
-                No block telemetry provisioned
-              </div>
-            ) : (
-              (() => {
-                const maxKwh = Math.max(...blockComparisonData.map((b) => b.kwh), 1);
-                return blockComparisonData.map((b, idx) => {
-                  const pct = Math.min(100, Math.round((b.kwh / maxKwh) * 100));
-                  const isTop = idx === 0 && b.kwh > 0;
-                  const isAbove = avgFlatMtd > 0 && b.kwh > avgFlatMtd;
+          <CardContent className="pt-4">
+            <div className="flex flex-col gap-2.5 max-h-[305px] overflow-y-auto pr-1">
+              {!blocks ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-14 skeleton-box rounded-xl" />
+                ))
+              ) : blockComparisonData.length === 0 ? (
+                <div className="flex h-44 items-center justify-center text-xs text-slate-400">
+                  No block telemetry provisioned
+                </div>
+              ) : (
+                (() => {
+                  const maxKwh = Math.max(...blockComparisonData.map((b) => b.kwh), 1);
+                  return blockComparisonData.map((b, idx) => {
+                    const pct = Math.min(100, Math.round((b.kwh / maxKwh) * 100));
+                    const isTop = idx === 0 && b.kwh > 0;
+                    const isAbove = avgFlatMtd > 0 && b.kwh > avgFlatMtd;
 
-                  return (
-                    <div
-                      key={b.name}
-                      onClick={() => b.id && onSelectBlock(String(b.id), b.name)}
-                      className={cn(
-                        "group p-3 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col gap-2",
-                        b.kwh > 0
-                          ? "bg-white border-slate-200 hover:border-teal-400 hover:shadow-md hover:shadow-teal-500/5"
-                          : "bg-slate-50/60 border-slate-200/70 hover:bg-slate-50 hover:border-slate-300"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
+                    return (
+                      <div
+                        key={b.name}
+                        onClick={() => b.id && onSelectBlock(String(b.id), b.name)}
+                        className={cn(
+                          "group p-3 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col gap-2",
+                          b.kwh > 0
+                            ? "bg-white border-slate-200 hover:border-teal-400 hover:shadow-md hover:shadow-teal-500/5"
+                            : "bg-slate-50/60 border-slate-200/70 hover:bg-slate-50 hover:border-slate-300"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={cn(
+                                "h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-transform duration-200 group-hover:scale-105",
+                                b.kwh > 0
+                                  ? isTop
+                                    ? "bg-teal-500 text-white shadow-xs"
+                                    : "bg-slate-100 text-slate-700 border border-slate-200"
+                                  : "bg-slate-100 text-slate-400"
+                              )}
+                            >
+                              {b.name}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-xs text-slate-800 group-hover:text-teal-700 transition-colors">
+                                {`Block ${b.name}`}
+                              </span>
+                              <span className="text-[11px] text-slate-400 ml-2">
+                                {b.flatCount} Flats · {b.liveKw != null ? `${b.liveKw.toFixed(2)} kW live` : "Standby"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {b.kwh > 0 ? (
+                              <>
+                                <span className="font-mono-data text-xs font-bold text-slate-900">
+                                  {b.kwh.toFixed(1)} <span className="text-[10px] font-normal text-slate-500">kWh/flat</span>
+                                </span>
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                                    isAbove
+                                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                                      : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  )}
+                                >
+                                  {isAbove ? "Above avg" : "Optimal"}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                                Standby · 0 kWh
+                              </span>
+                            )}
+                            <ChevronRight size={13} className="text-slate-400 group-hover:text-teal-600 transition-transform group-hover:translate-x-0.5" />
+                          </div>
+                        </div>
+
+                        {/* Progress Fill Bar */}
+                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative">
                           <div
                             className={cn(
-                              "h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-transform duration-200 group-hover:scale-105",
+                              "h-full rounded-full transition-all duration-500",
                               b.kwh > 0
                                 ? isTop
-                                  ? "bg-teal-500 text-white shadow-xs"
-                                  : "bg-slate-100 text-slate-700 border border-slate-200"
-                                : "bg-slate-100 text-slate-400"
+                                  ? "bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400"
+                                  : "bg-gradient-to-r from-sky-500 via-teal-400 to-emerald-300"
+                                : "bg-transparent"
                             )}
-                          >
-                            {b.name.replace("Block ", "") || "B"}
-                          </div>
-                          <div>
-                            <span className="font-semibold text-xs text-slate-800 group-hover:text-teal-700 transition-colors">
-                              {b.name}
-                            </span>
-                            <span className="text-[11px] text-slate-400 ml-2">
-                              {b.flatCount} Flats · {b.liveKw != null ? `${b.liveKw} kW live` : "Standby"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {b.kwh > 0 ? (
-                            <>
-                              <span className="font-mono-data text-xs font-bold text-slate-900">
-                                {b.kwh} <span className="text-[10px] font-normal text-slate-500">kWh/flat</span>
-                              </span>
-                              <span
-                                className={cn(
-                                  "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
-                                  isAbove
-                                    ? "bg-amber-50 text-amber-700 border-amber-200"
-                                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                )}
-                              >
-                                {isAbove ? "Above avg" : "Optimal"}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                              Standby · 0 kWh
-                            </span>
-                          )}
-                          <ChevronRight size={13} className="text-slate-400 group-hover:text-teal-600 transition-transform group-hover:translate-x-0.5" />
+                            style={{ width: b.kwh > 0 ? `${Math.max(6, pct)}%` : "0%" }}
+                          />
                         </div>
                       </div>
-
-                      {/* Progress Fill Bar */}
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative">
-                        <div
-                          className={cn(
-                            "h-full rounded-full transition-all duration-500",
-                            b.kwh > 0
-                              ? isTop
-                                ? "bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400"
-                                : "bg-gradient-to-r from-sky-500 via-teal-400 to-emerald-300"
-                              : "bg-transparent"
-                          )}
-                          style={{ width: b.kwh > 0 ? `${Math.max(6, pct)}%` : "0%" }}
-                        />
-                      </div>
-                    </div>
-                  );
-                });
-              })()
-            )}
+                    );
+                  });
+                })()
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -473,36 +475,38 @@ export function DashboardTab({
             </div>
             {anomalies.filter((a) => !a.resolved).length > 0 && <Badge variant="high">Active</Badge>}
           </CardHeader>
-          <CardContent className="flex flex-col gap-3.5">
-            {anomalies.length === 0 ? (
-              <div className="flex h-32 items-center justify-center text-xs text-slate-400">No active anomalies</div>
-            ) : (
-              anomalies.map((a) => (
-                <div
-                  key={a.id}
-                  className={cn(
-                    "p-3 rounded-xl border transition-all flex flex-col justify-between gap-1.5",
-                    a.resolved ? "border-slate-100 bg-slate-50/50 opacity-60" : "border-red-100 bg-red-50/30"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-slate-800">{a.flat}</span>
-                    <Badge variant={a.resolved ? "neutral" : "high"}>{a.resolved ? "Handled" : a.multiplier}</Badge>
-                  </div>
-                  <p className="text-xs text-slate-600">{a.desc}</p>
-                  {!a.resolved && (
-                    <div className="flex gap-3 mt-1">
-                      <button
-                        onClick={() => setAnomalies(anomalies.map((an) => (an.id === a.id ? { ...an, resolved: true } : an)))}
-                        className="text-xs font-semibold text-slate-500 hover:text-slate-600 cursor-pointer"
-                      >
-                        Dismiss
-                      </button>
+          <CardContent className="pt-4">
+            <div className="flex flex-col gap-3.5 max-h-[305px] overflow-y-auto pr-2">
+              {anomalies.length === 0 ? (
+                <div className="flex h-32 items-center justify-center text-xs text-slate-400">No active anomalies</div>
+              ) : (
+                anomalies.map((a) => (
+                  <div
+                    key={a.id}
+                    className={cn(
+                      "p-3 rounded-xl border transition-all flex flex-col justify-between gap-1.5",
+                      a.resolved ? "border-slate-100 bg-slate-50/50 opacity-60" : "border-red-100 bg-red-50/30"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-sm text-slate-800">{a.flat}</span>
+                      <Badge variant={a.resolved ? "neutral" : "high"}>{a.resolved ? "Handled" : a.multiplier}</Badge>
                     </div>
-                  )}
-                </div>
-              ))
-            )}
+                    <p className="text-xs text-slate-600">{a.desc}</p>
+                    {!a.resolved && (
+                      <div className="flex gap-3 mt-1">
+                        <button
+                          onClick={() => setAnomalies(anomalies.map((an) => (an.id === a.id ? { ...an, resolved: true } : an)))}
+                          className="text-xs font-semibold text-slate-500 hover:text-slate-600 cursor-pointer"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -769,10 +773,12 @@ export function DashboardTab({
           if (!blockToDelete) return;
           try {
             await api.deleteBlock(societyId, blockToDelete.id);
-          } catch {}
-          setBlocks((prev) => (prev ? prev.filter((b) => b.id !== blockToDelete.id) : prev));
-          setBlockSuccess(`Block "${blockToDelete.name}" deleted successfully.`);
-          setTimeout(() => setBlockSuccess(null), 4000);
+            setBlocks((prev) => (prev ? prev.filter((b) => b.id !== blockToDelete.id) : prev));
+            setBlockSuccess(`Block "${blockToDelete.name}" deleted successfully.`);
+            setTimeout(() => setBlockSuccess(null), 4000);
+          } catch (err: any) {
+            console.error("Failed to delete block", err);
+          }
         }}
         title="Delete Block"
         itemName={blockToDelete?.name}

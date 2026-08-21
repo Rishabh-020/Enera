@@ -10,6 +10,7 @@ import com.enera.backend.entity.Block;
 import com.enera.backend.service.BlockService;
 import com.enera.backend.service.BuilderService;
 import com.enera.backend.service.SocietyService;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -57,7 +58,7 @@ public class BuilderController {
 
     @PostMapping("/{id}/society")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
-    public ResponseEntity<SocietyResponse> createSociety(@PathVariable Long id,@RequestBody CreateSocietyRequest request) {
+    public ResponseEntity<SocietyResponse> createSociety(@PathVariable Long id, @Valid @RequestBody CreateSocietyRequest request) {
         request.setBuilderId(id);
         return ResponseEntity.ok(
                 societyService.createSociety(request)

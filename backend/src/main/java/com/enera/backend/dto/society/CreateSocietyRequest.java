@@ -1,10 +1,8 @@
 package com.enera.backend.dto.society;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.validation.constraints.*;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import java.time.LocalDateTime;
 
 @Data
 public class CreateSocietyRequest {
@@ -22,4 +20,18 @@ public class CreateSocietyRequest {
 
     @NotNull(message = "Total blocks is required")
     private Long totalBlocks;
+
+    private String adminName;
+
+    @Email(message = "Enter correct email format")
+    @JsonAlias({"email", "adminEmail"})
+    private String adminEmail;
+
+    @Size(min = 8, message = "Password must contain at least 8 characters")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&^#()_+\\-={}\\[\\]:;\"'<>,./~`|\\\\]).{8,}$",
+            message = "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character"
+    )
+    @JsonAlias({"password", "adminPassword"})
+    private String adminPassword;
 }

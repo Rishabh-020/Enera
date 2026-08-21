@@ -326,6 +326,9 @@ export interface CreateSocietyInput {
   city: string;
   totalBlocks?: number;
   builderId: number | string;
+  adminName?: string;
+  adminEmail?: string;
+  adminPassword?: string;
 }
 
 export interface CreateBuilderInput {

@@ -52,8 +52,8 @@ export default function DeviceManagement() {
 
   useEffect(() => {
     if (societyId) {
-      api.getSocietyFlatsList(societyId).then(setFlats).catch(() => {});
-      api.getSocietyCommonAreas(societyId).then(setCommonAreas).catch(() => {});
+      api.getSocietyFlatsList(societyId).then(setFlats).catch(() => { });
+      api.getSocietyCommonAreas(societyId).then(setCommonAreas).catch(() => { });
     }
   }, [societyId]);
 
@@ -80,7 +80,7 @@ export default function DeviceManagement() {
     e.preventDefault();
     setError("");
     try {
-      let flatId: number | null = null;
+      let flatId: number | null | string = null;
       let commonAreaId: number | null = null;
 
       if (form.deviceType === "Flat Meter") {

@@ -407,27 +407,50 @@ public class SocietyService {
         return responses;
     }
 
+    @Transactional
     public SocietyResponse createSociety(CreateSocietyRequest request) {
         Builder builder = builderRepository.findById(request.getBuilderId())
                 .orElseThrow(() -> new RuntimeException("Builder not found with id: " + request.getBuilderId()));
 
         Society society = new Society();
+
         society.setName(request.getName());
         society.setBuilder(builder);
         society.setAddress(request.getAddress());
         society.setCity(request.getCity());
         society.setTotalBlocks(request.getTotalBlocks());
 
-        Society saved = societyRepository.save(society);
+        Society savedSociety = societyRepository.save(society);
+
+        String adminEmail = request.getAdminEmail();
+        if (adminEmail != null && !adminEmail.isBlank()) {
+            if (userRepository.findByEmail(adminEmail).isPresent()) {
+                throw new DuplicateEmailException("User with email " + adminEmail + " already exists");
+            }
+
+            User admin = new User();
+            admin.setRole(Role.SOCIETY_ADMIN);
+            admin.setName(request.getAdminName() != null && !request.getAdminName().isBlank()
+                    ? request.getAdminName()
+                    : request.getName() + " Admin");
+            admin.setEmail(adminEmail);
+            String rawPassword = request.getAdminPassword() != null && !request.getAdminPassword().isBlank()
+                    ? request.getAdminPassword()
+                    : "Admin@123";
+            admin.setPasswordHash(passwordEncoder.encode(rawPassword));
+            admin.setSociety(savedSociety);
+
+            userRepository.save(admin);
+        }
 
         SocietyResponse response = new SocietyResponse();
-        response.setId(saved.getId());
-        response.setName(saved.getName());
+        response.setId(savedSociety.getId());
+        response.setName(savedSociety.getName());
         response.setBuilderId(builder.getId());
-        response.setAddress(saved.getAddress());
-        response.setCity(saved.getCity());
-        response.setTotalBlocks(saved.getTotalBlocks());
-        response.setCreatedAt(saved.getCreatedAt());
+        response.setAddress(savedSociety.getAddress());
+        response.setCity(savedSociety.getCity());
+        response.setTotalBlocks(savedSociety.getTotalBlocks());
+        response.setCreatedAt(savedSociety.getCreatedAt());
 
         return response;
     }

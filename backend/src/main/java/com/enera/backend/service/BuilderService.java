@@ -34,7 +34,7 @@ public class BuilderService {
     private final PasswordEncoder passwordEncoder;
     private static final double BASE_KW_PERCENTAGE = 0.30;
     private static final double SOCIETY_KW_PERCENTAGE = 0.50;
-    private static final double PEEK_KW_PERCENTAGE = 0.20;
+    private static final double PEAK_KW_PERCENTAGE = 0.20;
     private static final double ROUND_FACTOR = 0.10;
     private static final int COST_PER_UNIT = 8;
 
@@ -109,20 +109,28 @@ public class BuilderService {
             Integer totalFlat = flatRepository.countByFloorBlockSocietyId(society.getId());
             Integer occupiedFlat = flatRepository.countByFloorBlockSocietyIdAndStatus(society.getId(),true);
             Double averagePerFlat = totalFlat == 0 ? 0.0 : mtdKwh / totalFlat;
+            LocalDate today = LocalDate.now();
+            int dayOfMonth = Math.max(1, today.getDayOfMonth());
+            int lengthOfMonth = today.lengthOfMonth();
 
-            LocalDateTime prevMonthStart = LocalDate.now().minusMonths(1).withDayOfMonth(1).atStartOfDay();
-            LocalDateTime prevMonthEnd = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            double safeMtdKwh = mtdKwh != null ? mtdKwh : 0.0;
+            double projectedMtdKwh = (safeMtdKwh / dayOfMonth) * lengthOfMonth;
+
+            LocalDateTime prevMonthStart = today.minusMonths(1).withDayOfMonth(1).atStartOfDay();
+            LocalDateTime prevMonthEnd = today.withDayOfMonth(1).atStartOfDay();
             Double prevMonthKwh = readingRepository.getMonthKwhBySociety(society.getId(), prevMonthStart, prevMonthEnd);
-            if (prevMonthKwh == null || prevMonthKwh == 0.0) {
-                prevMonthKwh = occupiedFlat > 0 ? (double) occupiedFlat * 120.0 : (mtdKwh > 0 ? mtdKwh * 0.95 : 100.0);
+
+            double minRealisticPrevMonth = occupiedFlat > 0 ? (double) occupiedFlat * 40.0 : 50.0;
+            if (prevMonthKwh == null || prevMonthKwh < minRealisticPrevMonth) {
+                prevMonthKwh = occupiedFlat > 0 ? (double) occupiedFlat * 120.0 : (projectedMtdKwh > 0 ? projectedMtdKwh : 100.0);
             }
 
-            Double mom = prevMonthKwh > 0 ? ((mtdKwh - prevMonthKwh) / prevMonthKwh) * 100.0 : 0.0;
+            double mom = prevMonthKwh > 0 ? ((projectedMtdKwh - prevMonthKwh) / prevMonthKwh) * 100.0 : 0.0;
             Double roundedMom = Math.round(mom * ROUND_FACTOR) / ROUND_FACTOR;
 
             response.setName(society.getName());
             response.setId(society.getId());
-            response.setMtdKwh(mtdKwh);
+            response.setMtdKwh(safeMtdKwh);
             response.setOccupiedFlats(occupiedFlat);
             response.setTotalFlats(totalFlat);
             response.setAvgPerFlat(averagePerFlat);
@@ -164,7 +172,7 @@ public class BuilderService {
 
             double baseKwh = Math.round(totalFlatKwh * BASE_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
             double societyKwh = Math.round(totalFlatKwh * SOCIETY_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
-            double peekKwh = Math.round(totalFlatKwh * PEEK_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
+            double peekKwh = Math.round(totalFlatKwh * PEAK_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
             double commonAreaKwh = Math.round(commonKwh * ROUND_FACTOR) / ROUND_FACTOR;
 
             response.add(new HourlyBreakDownResponse(hour, baseKwh, societyKwh, commonAreaKwh, peekKwh));
@@ -190,4 +198,6 @@ public class BuilderService {
 
         return saveBuilder;
     }
+
+
 }

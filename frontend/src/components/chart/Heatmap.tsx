@@ -45,7 +45,7 @@ export function Heatmap({ grid, loading, title = "Consumption heatmap", descript
         </div>
         {hover && (
           <div className="rounded-lg bg-grid-900 px-3 py-1.5 text-xs text-white shadow-lg animate-fade-in">
-            {DOW[hover.d]} {hover.h}:00 — <span className="font-mono-data font-semibold">{hover.v} kWh</span>
+            {DOW[hover.d]} {hover.h}:00 — <span className="font-mono-data font-semibold">{hover.v === -1 ? "-1 (No data)" : `${hover.v} kWh`}</span>
           </div>
         )}
       </CardHeader>
@@ -74,7 +74,7 @@ export function Heatmap({ grid, loading, title = "Consumption heatmap", descript
               </div>
               <div className="flex flex-1 gap-[3px]">
                 {row.map((v, h) => {
-                  const intensity = max ? v / max : 0;
+                  const intensity = max > 0 && v >= 0 ? v / max : 0;
                   const isActive = hover?.d === d && hover?.h === h;
                   const isRowOrCol = hover && (hover.d === d || hover.h === h);
                   return (
@@ -84,7 +84,7 @@ export function Heatmap({ grid, loading, title = "Consumption heatmap", descript
                       onMouseLeave={onLeave}
                       className="h-7 flex-1 rounded-[5px] cursor-pointer"
                       style={{
-                        backgroundColor: intensityColor(intensity),
+                        backgroundColor: v === -1 ? "rgba(241, 245, 249, 0.9)" : intensityColor(intensity),
                         transform: isActive ? "scale(1.18)" : "scale(1)",
                         opacity: hover && !isRowOrCol ? 0.4 : 1,
                         boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.2)" : "none",

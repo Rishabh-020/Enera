@@ -115,10 +115,7 @@ export async function getBlockFloors(blockId: string): Promise<BlockFloorRow[]> 
     const response = await api.get(`/block/${blockId}/floors`);
     return response.data;
   } catch (err) {
-    return [
-      { id: "1", floorNumber: 1, flatCount: 8, mtdKwh: 1340 },
-      { id: "2", floorNumber: 2, flatCount: 8, mtdKwh: 1420 },
-    ];
+    return [];
   }
 }
 
@@ -135,10 +132,7 @@ export async function getFloorFlatsList(floorId: string): Promise<FloorFlatRow[]
     const response = await api.get(`/floor/${floorId}/flats`);
     return response.data;
   } catch (err) {
-    return [
-      { id: 1, flatNumber: "101", bhkType: "3 BHK", residentName: "Aarav Sharma", meterStatus: "live", mtdKwh: 168 },
-      { id: 2, flatNumber: "102", bhkType: "2 BHK", residentName: "Pooja Patel", meterStatus: "live", mtdKwh: 145 },
-    ];
+    return [];
   }
 }
 
@@ -165,15 +159,7 @@ export async function getSocietyHeatmap(societyId: string, filter?: string): Pro
     const response = await api.get(`/society/${societyId}/heatmap`, { params });
     return response.data;
   } catch (err) {
-    return Array.from({ length: 7 }, (_, d) =>
-      Array.from({ length: 24 }, (_, h) => {
-        const isPeak = h >= 18 && h <= 22;
-        const isNight = h >= 0 && h <= 5;
-        const base = isNight ? 12 : isPeak ? 68 : 34;
-        const jitter = Math.floor(Math.sin(d + h) * 10);
-        return Math.max(5, base + jitter);
-      })
-    );
+    return Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => -1));
   }
 }
 
@@ -321,7 +307,6 @@ export async function registerResident(input: CreateResidentInput): Promise<any>
 }
 
 export const createResident = registerResident;
-export const createRedident = registerResident;
 
 // -------------------------------------------------------- Deletion APIs ----
 export async function deleteResident(societyId: string | number, residentId: string | number): Promise<any> {
