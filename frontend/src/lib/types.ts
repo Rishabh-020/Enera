@@ -204,6 +204,7 @@ export interface SocietyOverview {
   occupiedFlats: number;
   devicesOnline: number;
   devicesOffline: number;
+  totalDevices?: number;
   mtdKwh: number;
   mtdCost: number;
 }

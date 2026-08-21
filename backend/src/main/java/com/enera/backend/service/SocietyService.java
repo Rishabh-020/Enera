@@ -62,8 +62,8 @@ public class SocietyService {
         Integer occupiedFlats = flatRepository.countByFloorBlockSocietyIdAndStatus(societyId,true);
 
         Integer devicesOnline = deviceRepository.countBySocietyIdAndStatus(societyId,true);
-
         Integer devicesOffline = deviceRepository.countBySocietyIdAndStatus(societyId,false);
+        Integer totalDevices = (devicesOnline != null ? devicesOnline : 0) + (devicesOffline != null ? devicesOffline : 0);
 
         LocalDateTime st = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime ed = LocalDateTime.now();
@@ -79,6 +79,7 @@ public class SocietyService {
         response.setOccupiedFlats(occupiedFlats);
         response.setDevicesOnline(devicesOnline);
         response.setDevicesOffline(devicesOffline);
+        response.setTotalDevices(totalDevices);
         response.setMtdKwh(mtdKwh);
         response.setMtdCost(mtdCost);
 
@@ -229,10 +230,16 @@ public class SocietyService {
         for(Device device : devices){
             SocietyDeviceResponse response = new SocietyDeviceResponse();
 
+            response.setId(device.getId());
+            response.setDeviceSerial(device.getDeviceSerial());
+            response.setDeviceType(device.getDeviceType());
+
             if(device.getFlat() != null){
                 response.setMappedTo(device.getFlat().getFlatNumber());
-            }else{
-                response.setMappedTo(device.getCommonArea().getCategory());
+            } else if(device.getCommonArea() != null) {
+                response.setMappedTo(device.getCommonArea().getName() != null ? device.getCommonArea().getName() : device.getCommonArea().getCategory());
+            } else {
+                response.setMappedTo("Unassigned");
             }
 
             response.setMeterStatus(device.isStatus());

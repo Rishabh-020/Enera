@@ -80,12 +80,12 @@ export default function DeviceManagement() {
     e.preventDefault();
     setError("");
     try {
-      let flatId: number | null | string = null;
+      let flatId: number | null = null;
       let commonAreaId: number | null = null;
 
       if (form.deviceType === "Flat Meter") {
         const found = flats.find((f) => f.flatNumber === form.mappedTo);
-        if (found) flatId = found.id;
+        if (found) flatId = Number(found.id);
       } else {
         const found = commonAreas.find((c) => c.name === form.mappedTo || c.category === form.mappedTo);
         if (found) commonAreaId = Number(found.id);
@@ -246,7 +246,16 @@ export default function DeviceManagement() {
                   <Td className="font-mono-data">
                     {d.status === "live" ? `${(95 + Math.random() * 5).toFixed(1)}%` : `${(80 + Math.random() * 15).toFixed(1)}%`}
                   </Td>
-                  <Td className="text-slate-500">{timeAgo(d.lastSeenAt)}</Td>
+                  <Td className="text-slate-500">
+                    {d.status === "live" ? (
+                      <span className="text-teal-700 font-medium text-xs flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
+                        Active now
+                      </span>
+                    ) : (
+                      timeAgo(d.lastSeenAt)
+                    )}
+                  </Td>
                   <Td>
                     {d.status !== "live" ? (
                       <button className="text-xs font-medium text-teal-600 hover:text-teal-500 cursor-pointer">

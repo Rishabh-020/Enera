@@ -249,13 +249,27 @@ export async function getSocietyDevices(societyId: string): Promise<DeviceRow[]>
   const url = isDemoSession() ? `/demo/devices` : `/society/${societyId}/devices`;
   const response = await api.get(url);
   const data = response.data;
-  return data.map((point: any, index: number) => ({
-    ...point,
-    id: point.id ? String(point.id) : point.deviceSerial ? `MTR-${point.deviceSerial}` : point.deviceId ? `DEV-${point.deviceId}` : `MTR-${index + 1}`,
-    status: point.status || (point.isActive ? "live" : "offline"),
-    mappedTo: point.mappedTo || point.commonAreaName || (point.flatNumber ? `Flat ${point.flatNumber}` : "Unassigned"),
-    lastSeenAt: point.lastSeenAt ? new Date(point.lastSeenAt) : new Date(),
-  }));
+  return (data || []).map((point: any, index: number) => {
+    let status: "live" | "offline" | "offline-long" = "offline";
+    if (point.meterStatus === true || point.status === "live" || point.status === true) {
+      status = "live";
+    } else if (point.meterStatus === false || point.status === "offline" || point.status === false) {
+      status = point.lastSeenAt ? "offline" : "offline-long";
+    }
+
+    const mappedToRaw = String(point.mappedTo || point.commonAreaName || (point.flatNumber ? `Flat ${point.flatNumber}` : "Unassigned"));
+    const mappedTo = mappedToRaw.startsWith("Flat ") || mappedToRaw === "Unassigned" || isNaN(Number(mappedToRaw))
+      ? mappedToRaw
+      : `Flat ${mappedToRaw}`;
+
+    return {
+      ...point,
+      id: point.id ? String(point.id) : point.deviceSerial ? `MTR-${point.deviceSerial}` : point.deviceId ? `DEV-${point.deviceId}` : `MTR-${index + 1}`,
+      status,
+      mappedTo,
+      lastSeenAt: point.lastSeenAt ? new Date(point.lastSeenAt) : null,
+    };
+  });
 }
 
 export async function registerDevice({ deviceSerial, deviceType, mappedTo, societyId, flatId, commonAreaId }: RegisterDeviceInput): Promise<Device> {

@@ -16,6 +16,8 @@ public class SocietyOverviewResponse {
 
     private Integer devicesOffline;
 
+    private Integer totalDevices;
+
     private Double mtdKwh;
 
     private Double mtdCost;

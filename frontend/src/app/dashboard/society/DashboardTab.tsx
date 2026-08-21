@@ -142,6 +142,8 @@ export function DashboardTab({
   const totalFlats = overview?.totalFlats ?? (flats?.length || 0);
   const occupiedFlats = overview?.occupiedFlats ?? (flats?.filter((f) => f.occupied || f.residentName).length || 0);
   const devicesOnline = overview?.devicesOnline ?? (flats?.filter((f) => f.meterStatus === "live").length || 0);
+  const devicesOffline = overview?.devicesOffline ?? 0;
+  const totalDevices = overview?.totalDevices ?? (devicesOnline + devicesOffline);
   const registeredResidents = flats?.filter((f) => Boolean(f.residentName)).length || 0;
 
   // Block comparison for bar chart
@@ -221,21 +223,21 @@ export function DashboardTab({
         <StatCard
           label="Total flats"
           value={overview ? `${overview.totalFlats}` : "—"}
-          sub={overview ? `${occupiedFlats} occupied` : ""}
+          sub={overview ? `${occupiedFlats} Occupied` : ""}
           icon={<Building2 size={16} />}
           loading={!overview}
         />
         <StatCard
           label="Meters online"
-          value={overview ? `${devicesOnline}/${totalFlats}` : "—"}
-          sub={overview && totalFlats > 0 ? `${((devicesOnline / totalFlats) * 100).toFixed(0)}% online` : ""}
+          value={overview ? `${devicesOnline}/${totalDevices > 0 ? totalDevices : totalFlats}` : "—"}
+          sub={overview ? `${((devicesOnline / totalDevices) * 100).toFixed(0)}% Online` : ""}
           icon={<PlugZap size={16} />}
           loading={!overview}
         />
         <StatCard
           label="Active alerts"
           value={anomalies.filter((a) => !a.resolved).length.toString()}
-          sub={`${anomalies.filter((a) => !a.resolved).length} active`}
+          sub={`${anomalies.filter((a) => !a.resolved).length} Active`}
           icon={<AlertTriangle size={16} className={anomalies.some((a) => !a.resolved) ? "text-red-500 animate-glow" : ""} />}
           loading={!overview}
         />
