@@ -1,18 +1,10 @@
 package com.enera.backend.service;
 
 import com.enera.backend.dto.FlatOwner.*;
-import com.enera.backend.entity.Device;
-import com.enera.backend.entity.Flat;
-import com.enera.backend.entity.Reading;
-import com.enera.backend.entity.User;
-import com.enera.backend.exception.DeviceNotFoundException;
-import com.enera.backend.exception.FlatNotFoundException;
-import com.enera.backend.exception.ReadingNotFoundException;
-import com.enera.backend.exception.UserNotFoundException;
-import com.enera.backend.repository.DeviceRepository;
-import com.enera.backend.repository.FlatRepository;
-import com.enera.backend.repository.ReadingRepository;
-import com.enera.backend.repository.UserRepository;
+import com.enera.backend.dto.floor.FloorResponse;
+import com.enera.backend.entity.*;
+import com.enera.backend.exception.*;
+import com.enera.backend.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -29,6 +21,7 @@ public class FlatService {
     private final ReadingRepository readingRepository;
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final FloorRepository floorRepository;
     private static final double LOW_KW_THRESHOLD = 2.0;
     private static final double MID_KW_THRESHOLD = 4.0;
     private static final double NEG_KW = 0.0;
@@ -37,11 +30,13 @@ public class FlatService {
     FlatService(FlatRepository flatRepository,
                 ReadingRepository readingRepository,
                 DeviceRepository deviceRepository,
+                FloorRepository floorRepository,
                 UserRepository userRepository){
         this.flatRepository = flatRepository;
         this.readingRepository = readingRepository;
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
+        this.floorRepository = floorRepository;
     }
     public FlatLiveResponse getFlatLive(Long flatId) {
         Flat flat = flatRepository.findById(flatId)
@@ -348,6 +343,29 @@ public class FlatService {
         response.setFloorNumber(floorNumber);
 
         return response;
+    }
+
+    @Transactional
+    public FlatResponse createFlat(Long floorId,CreateFlatRequest request){
+        Floor floor = floorRepository.findById(floorId)
+                .orElseThrow(()-> new FloorNotFoundException("Floor not found"));
+
+        Flat flat = new Flat();
+        flat.setFlatNumber(request.getFlatNumber());
+        flat.setBhkType(request.getBhkType());
+        flat.setFloor(floor);
+
+        Flat saveFlat = flatRepository.save(flat);
+
+        FlatResponse flatResponse = new FlatResponse();
+
+        flatResponse.setFlatId(saveFlat.getId());
+        flatResponse.setFloorId(floorId);
+
+        if (floor.getBlock() != null){
+            flatResponse.setBlockId(floor.getBlock().getId());
+        }
+        return flatResponse;
     }
 
     @Transactional

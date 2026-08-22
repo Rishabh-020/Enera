@@ -363,6 +363,21 @@ export async function createBlock(input: CreateBlockInput): Promise<any> {
   return response.data;
 }
 
+export async function createFloor(blockId: string | number, floorNumber: number): Promise<any> {
+  const response = await api.post(`/block/${blockId}/floor`, { blockId: Number(blockId), floorNumber });
+  return response.data;
+}
+
+export async function createFlat(floorId: string | number, data: { flatNumber: string; bhkType: string }): Promise<any> {
+  const response = await api.post(`/floor/${floorId}/flat`, data);
+  return response.data;
+}
+
+export async function createCommonArea(societyId: string | number, data: { name: string; category: string; floorOrLocation: string }): Promise<any> {
+  const response = await api.post(`/society/${societyId}/common-area`, { ...data, societyId: Number(societyId) });
+  return response.data;
+}
+
 export async function registerResident(input: CreateResidentInput): Promise<any> {
   const response = await api.post(`/society/${input.societyId}/resident`, input);
   return response.data;
@@ -391,13 +406,15 @@ export async function deleteBuilder(builderId: string | number): Promise<any> {
   return response.data;
 }
 
-export async function deleteFlat(flatId: string | number): Promise<any> {
-  const response = await api.delete(`/flat/${flatId}`);
+export async function deleteFlat(floorOrFlatId: string | number, flatId?: string | number): Promise<any> {
+  const url = flatId ? `/floor/${floorOrFlatId}/flat/${flatId}` : `/flat/${floorOrFlatId}`;
+  const response = await api.delete(url);
   return response.data;
 }
 
-export async function deleteFloor(floorId: string | number): Promise<any> {
-  const response = await api.delete(`/floor/${floorId}`);
+export async function deleteFloor(blockOrFloorId: string | number, floorId?: string | number): Promise<any> {
+  const url = floorId ? `/block/${blockOrFloorId}/floor/${floorId}` : `/floor/${blockOrFloorId}`;
+  const response = await api.delete(url);
   return response.data;
 }
 

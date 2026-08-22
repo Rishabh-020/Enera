@@ -19,8 +19,6 @@ public class BlockService {
     private final FloorRepository floorRepository;
     private final ReadingRepository readingRepository;
     private final SocietyRepository societyRepository;
-    private final DeviceRepository deviceRepository;
-    private final UserRepository userRepository;
     private final FloorService floorService;
 
     BlockService(FlatRepository flatRepository,
@@ -28,16 +26,12 @@ public class BlockService {
                  FloorRepository floorRepository,
                  ReadingRepository readingRepository,
                  SocietyRepository societyRepository,
-                 DeviceRepository deviceRepository,
-                 UserRepository userRepository,
                  FloorService floorService){
         this.flatRepository = flatRepository;
         this.blockRepository = blockRepository;
         this.floorRepository = floorRepository;
         this.readingRepository = readingRepository;
         this.societyRepository = societyRepository;
-        this.deviceRepository = deviceRepository;
-        this.userRepository = userRepository;
         this.floorService = floorService;
     }
 
@@ -68,6 +62,7 @@ public class BlockService {
         return responses;
     }
 
+    @Transactional
     public Block createBlock(CreateBlockRequest request) {
         Society society = societyRepository.findById(request.getSocietyId())
                 .orElseThrow(() -> new SocietyNotFoundException("Society not found with id: " + request.getSocietyId()));

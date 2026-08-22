@@ -1,5 +1,7 @@
 package com.enera.backend.service;
 
+import com.enera.backend.dto.commonArea.CommonAreaResponse;
+import com.enera.backend.dto.commonArea.CreateCommonAreaRequest;
 import com.enera.backend.dto.device.RegisterDeviceRequest;
 import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
@@ -10,6 +12,7 @@ import com.enera.backend.repository.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -575,6 +578,30 @@ public class SocietyService {
         }
 
         userRepository.delete(user);
+    }
+
+    @Transactional
+    public CommonAreaResponse createCommonArea(Long societyId, CreateCommonAreaRequest request){
+        Society society = societyRepository.findById(societyId)
+                .orElseThrow(()-> new SocietyNotFoundException("Society not found"));
+
+        CommonArea commonArea = new CommonArea();
+        commonArea.setSociety(society);
+        commonArea.setName(request.getName());
+        commonArea.setCategory(request.getCategory());
+        commonArea.setFloorOrLocation(request.getFloorOrLocation());
+
+        CommonArea saveCommonArea = commonAreaRepository.save(commonArea);
+
+        CommonAreaResponse response = new CommonAreaResponse();
+        response.setSocietyId(saveCommonArea.getSociety().getId());
+        response.setName(saveCommonArea.getName());
+        response.setSocietyName(saveCommonArea.getSociety().getName());
+        response.setCategory(saveCommonArea.getCategory());
+        response.setId(saveCommonArea.getId());
+        response.setFloorOrLocation(saveCommonArea.getFloorOrLocation());
+
+        return response;
     }
 
     @Transactional

@@ -1,6 +1,8 @@
 package com.enera.backend.controller;
 
 import com.enera.backend.dto.block.CreateBlockRequest;
+import com.enera.backend.dto.commonArea.CommonAreaResponse;
+import com.enera.backend.dto.commonArea.CreateCommonAreaRequest;
 import com.enera.backend.dto.device.RegisterDeviceRequest;
 import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
@@ -154,6 +156,15 @@ public class SocietyController {
         societyService.deleteResident(societyId,residentId);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{societyId}/common-area")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<CommonAreaResponse> createCommonArea(@PathVariable Long societyId, @Valid @RequestBody CreateCommonAreaRequest request){
+        return ResponseEntity.ok(
+                societyService.createCommonArea(societyId,request)
+        );
+    }
+
 
     @DeleteMapping("/{societyId}/common-area/{commonAreaId}")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
