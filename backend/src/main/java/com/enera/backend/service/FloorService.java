@@ -13,6 +13,7 @@ import com.enera.backend.repository.FloorRepository;
 import com.enera.backend.repository.ReadingRepository;
 import com.enera.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,7 @@ public class FloorService {
     private final ReadingRepository readingRepository;
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final FlatService flatService;
     private static final String online = "Live";
     private static final String offline = "Offline";
 
@@ -31,12 +33,14 @@ public class FloorService {
                  ReadingRepository readingRepository,
                  FlatRepository flatRepository,
                  DeviceRepository deviceRepository,
-                 UserRepository userRepository){
+                 UserRepository userRepository,
+                 FlatService flatService){
         this.floorRepository = floorRepository;
         this.readingRepository = readingRepository;
         this.flatRepository = flatRepository;
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
+        this.flatService = flatService;
     }
 
     public List<FloorFlatResponse> getFloorFlats(Long floorId){
@@ -70,5 +74,18 @@ public class FloorService {
         }
 
         return responses;
+    }
+
+    @Transactional
+    public void deleteFloor(Long floorId){
+        Floor floor = floorRepository.findById(floorId).orElseThrow(()-> new FloorNotFoundException("Floor not found"));
+
+        List<Flat> flats = flatRepository.findByFloorId(floorId);
+
+        for(Flat flat : flats){
+            flatService.deleteFlat(flat.getId());
+        }
+
+        floorRepository.delete(floor);
     }
 }

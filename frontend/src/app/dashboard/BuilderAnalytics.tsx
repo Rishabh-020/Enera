@@ -30,38 +30,18 @@ export default function BuilderAnalytics() {
   };
 
   const handleLoadHeatmap = async (filterName?: string) => {
-    if (!societies || societies.length === 0) return Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
-    if (!filterName || filterName === "All societies") {
-      const firstSoc = societies[0];
-      return firstSoc ? api.getSocietyHeatmap(String(firstSoc.id)) : Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
-    }
-    const targetSociety = societies.find((s) => s.name === filterName);
-    if (!targetSociety) return Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
-    return api.getSocietyHeatmap(String(targetSociety.id));
+    if (!builderId) return Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
+    return api.getBuilderHeatmap(builderId, filterName);
   };
 
   const handleLoadHourlyBreakdown = async (filterName?: string, date?: string) => {
-    if (!filterName || filterName === "All societies") {
-      if (builderId) {
-        return api.getBuilderHourlyBreakdown(builderId, date).catch(() => []);
-      }
-      return [];
-    }
-    if (!societies || societies.length === 0) return [];
-    const targetSociety = societies.find((s) => s.name === filterName);
-    if (!targetSociety) return [];
-    return api.getSocietyHourlyBreakdown(String(targetSociety.id), date);
+    if (!builderId) return [];
+    return api.getBuilderHourlyBreakdown(builderId, filterName, date);
   };
 
   const handleLoadAnomalies = async (filterName?: string) => {
-    if (!societies || societies.length === 0) return [];
-    if (!filterName || filterName === "All societies") {
-      const firstSoc = societies[0];
-      return firstSoc ? api.getSocietyAnomalies(String(firstSoc.id)) : [];
-    }
-    const targetSociety = societies.find((s) => s.name === filterName);
-    if (!targetSociety) return [];
-    return api.getSocietyAnomalies(String(targetSociety.id));
+    if (!builderId) return [];
+    return api.getBuilderAnomalies(builderId, filterName);
   };
 
   return (
@@ -72,7 +52,7 @@ export default function BuilderAnalytics() {
     >
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-grid-900">Analytics</h1>
-        <p className="text-sm text-slate-500">Deep dive into consumption patterns</p>
+        <p className="text-sm text-slate-500">Deep dive into consumption patterns across your portfolio</p>
       </div>
       <AnalyticsView
         filters={filterOptions}

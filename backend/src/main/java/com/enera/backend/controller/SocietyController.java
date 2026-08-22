@@ -58,15 +58,16 @@ public class SocietyController {
     }
 
     @GetMapping("/{id}/heatmap")
-    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
-    public ResponseEntity<double[][]> getSocietyHeatmap(@PathVariable Long id){
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<double[][]> getSocietyHeatmap(@PathVariable Long id,
+                                                        @RequestParam(required = false, defaultValue = "Whole society") String filter){
         return ResponseEntity.ok(
-                societyService.getSocietyHeatmap(id)
+                societyService.getSocietyHeatmap(id,filter)
         );
     }
 
     @GetMapping("/{id}/flats")
-    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<List<SocietyFlatResponse>> getSocietyFlatHeatmap(@PathVariable Long id){
         return ResponseEntity.ok(
                 societyService.getSocietyFlatResponse(id)
@@ -93,26 +94,29 @@ public class SocietyController {
     @GetMapping("/{id}/daily-trend")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<List<DailyTrendResponse>> getDailyTrend(@PathVariable Long id,
-                                                                  @RequestParam(defaultValue = "7") int days){
+                                                                  @RequestParam(defaultValue = "7") int days,
+                                                                  @RequestParam(required = false , defaultValue = "Whole society") String filter){
         return ResponseEntity.ok(
-                societyService.getDailyTrend(id,days)
+                societyService.getDailyTrend(id,days,filter)
         );
     }
 
     @GetMapping("/{id}/hourly-breakdown")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<HourlyBreakDownResponse>> getHourlyTrend(@PathVariable Long id,
-@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date){
+@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                                                                        @RequestParam(required = false,defaultValue = "Whole society") String filter){
         return ResponseEntity.ok(
-            societyService.getHourlyBreakDown(id,date)
+            societyService.getHourlyBreakDown(id,date,filter)
         );
     }
 
     @GetMapping("/{id}/anomalies")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
-    public ResponseEntity<List<SocietyAnomaliesResponse>> getAnomalies(@PathVariable Long id){
+    public ResponseEntity<List<SocietyAnomaliesResponse>> getAnomalies(@PathVariable Long id,
+                                                                       @RequestParam(required = false,defaultValue = "Whole society") String filter){
         return ResponseEntity.ok(
-                societyService.getAnomalies(id)
+                societyService.getAnomalies(id,filter)
         );
     }
 
@@ -142,5 +146,19 @@ public class SocietyController {
         return ResponseEntity.ok(
                 societyService.registerResident(request)
         );
+    }
+
+    @DeleteMapping("/{societyId}/resident/{residentId}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<Void> deleteResident(@PathVariable Long societyId,@PathVariable Long residentId){
+        societyService.deleteResident(societyId,residentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{societyId}/common-area/{commonAreaId}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
+    public ResponseEntity<Void> deleteCommonArea(@PathVariable Long societyId, @PathVariable Long commonAreaId){
+        societyService.deleteCommonArea(societyId, commonAreaId);
+        return ResponseEntity.noContent().build();
     }
 }

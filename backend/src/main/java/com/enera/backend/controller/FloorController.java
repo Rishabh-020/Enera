@@ -5,6 +5,7 @@ import com.enera.backend.repository.FloorRepository;
 import com.enera.backend.service.FloorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,4 +30,10 @@ public class FloorController {
         );
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN', 'SOCIETY_ADMIN')")
+    public ResponseEntity<Void> deleteFloor(@PathVariable Long id){
+        floorService.deleteFloor(id);
+        return ResponseEntity.noContent().build();
+    }
 }

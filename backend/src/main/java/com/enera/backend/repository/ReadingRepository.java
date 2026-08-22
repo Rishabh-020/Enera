@@ -142,15 +142,43 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     JOIN devices d ON r.device_id = d.id
     WHERE d.society_id = :societyId
       AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
-    GROUP BY
-        EXTRACT(DOW FROM r.timestamp),
-        EXTRACT(HOUR FROM r.timestamp)
-    ORDER BY
-        day_of_week,
-        hour
-    """, nativeQuery = true)
-    List<Object[]> getSocietyHeatmap(
-            @Param("societyId") Long societyId);
+    GROUP BY EXTRACT(DOW FROM r.timestamp), EXTRACT(HOUR FROM r.timestamp)
+    ORDER BY day_of_week, hour
+""", nativeQuery = true)
+    List<Object[]> getSocietyHeatmap(@Param("societyId") Long societyId);
+
+    @Query(value = """
+    SELECT
+        EXTRACT(DOW FROM r.timestamp) AS day_of_week,
+        EXTRACT(HOUR FROM r.timestamp) AS hour,
+        AVG(r.kw) AS average_kw
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    JOIN floors fl ON f.floor_id = fl.id
+    JOIN blocks b ON fl.block_id = b.id
+    WHERE d.society_id = :societyId
+      AND (b.block_name = :blockName OR CONCAT('Block ', b.block_name) = :blockName)
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
+    GROUP BY EXTRACT(DOW FROM r.timestamp), EXTRACT(HOUR FROM r.timestamp)
+    ORDER BY day_of_week, hour
+""", nativeQuery = true)
+    List<Object[]> getSocietyHeatmapByBlock(@Param("societyId") Long societyId, @Param("blockName") String blockName);
+
+    @Query(value = """
+    SELECT
+        EXTRACT(DOW FROM r.timestamp) AS day_of_week,
+        EXTRACT(HOUR FROM r.timestamp) AS hour,
+        AVG(r.kw) AS average_kw
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    WHERE d.society_id = :societyId
+      AND d.mapped_common_area_id IS NOT NULL
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
+    GROUP BY EXTRACT(DOW FROM r.timestamp), EXTRACT(HOUR FROM r.timestamp)
+    ORDER BY day_of_week, hour
+""", nativeQuery = true)
+    List<Object[]> getSocietyHeatmapCommonAreas(@Param("societyId") Long societyId);
 
     @Query(value = """
     SELECT COALESCE(SUM(r.kwh), 0)
@@ -244,6 +272,47 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     );
 
     @Query(value = """
+    SELECT 
+        TO_CHAR(r.timestamp, 'DD Mon') AS day_str,
+        0.0 AS total_kwh,
+        COALESCE(SUM(r.kwh), 0) AS common_kwh
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    WHERE d.society_id = :societyId
+      AND d.mapped_common_area_id IS NOT NULL
+      AND r.timestamp >= CURRENT_DATE - CAST(:days || ' days' AS INTERVAL)
+    GROUP BY DATE_TRUNC('day', r.timestamp), TO_CHAR(r.timestamp, 'DD Mon')
+    ORDER BY DATE_TRUNC('day', r.timestamp) ASC
+""", nativeQuery = true)
+    List<Object[]> getDailyTrendBySocietyCommonAreas(
+            @Param("societyId") Long societyId,
+            @Param("days") int days
+    );
+
+    @Query(value = """
+    SELECT 
+        TO_CHAR(r.timestamp, 'DD Mon') AS day_str,
+        COALESCE(SUM(r.kwh), 0) AS total_kwh,
+        0.0 AS common_kwh
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    JOIN floors fl ON f.floor_id = fl.id
+    JOIN blocks b ON fl.block_id = b.id
+    WHERE d.society_id = :societyId
+      AND (b.block_name = :blockName OR CONCAT('Block ', b.block_name) = :blockName)
+      AND r.timestamp >= CURRENT_DATE - CAST(:days || ' days' AS INTERVAL)
+    GROUP BY DATE_TRUNC('day', r.timestamp), TO_CHAR(r.timestamp, 'DD Mon')
+    ORDER BY DATE_TRUNC('day', r.timestamp) ASC
+""", nativeQuery = true)
+    List<Object[]> getDailyTrendBySocietyBlock(
+            @Param("societyId") Long societyId,
+            @Param("days") int days,
+            @Param("blockName") String blockName
+    );
+
+
+    @Query(value = """
         SELECT
             EXTRACT(HOUR FROM r.timestamp) AS hour_num,
             COALESCE(
@@ -286,6 +355,52 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     );
 
     @Query(value = """
+        SELECT
+            EXTRACT(HOUR FROM r.timestamp) AS hour_num,
+            COALESCE(SUM(r.kwh), 0) AS base_kwh,
+            0.0 AS common_area_kwh,
+            COALESCE(MAX(r.kw), 0) AS peak_kw
+        FROM readings r
+        JOIN devices d ON r.device_id = d.id
+        JOIN flats f ON d.mapped_flat_id = f.id
+        JOIN floors fl ON f.floor_id = fl.id
+        JOIN blocks b ON fl.block_id = b.id
+        WHERE d.society_id = :societyId
+          AND (b.block_name = :blockName OR CONCAT('Block ', b.block_name) = :blockName)
+          AND r.timestamp >= :startDate
+          AND r.timestamp < :endDate
+        GROUP BY EXTRACT(HOUR FROM r.timestamp)
+        ORDER BY hour_num ASC
+        """, nativeQuery = true)
+    List<Object[]> getHourlyBreakdownByBlock(
+            @Param("societyId") Long societyId,
+            @Param("blockName") String blockName,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query(value = """
+        SELECT
+            EXTRACT(HOUR FROM r.timestamp) AS hour_num,
+            0.0 AS base_kwh,
+            COALESCE(SUM(r.kwh), 0) AS common_area_kwh,
+            COALESCE(MAX(r.kw), 0) AS peak_kw
+        FROM readings r
+        JOIN devices d ON r.device_id = d.id
+        WHERE d.society_id = :societyId
+          AND d.mapped_common_area_id IS NOT NULL
+          AND r.timestamp >= :startDate
+          AND r.timestamp < :endDate
+        GROUP BY EXTRACT(HOUR FROM r.timestamp)
+        ORDER BY hour_num ASC
+        """, nativeQuery = true)
+    List<Object[]> getHourlyBreakdownByCommonAreas(
+            @Param("societyId") Long societyId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query(value = """
     SELECT
         EXTRACT(HOUR FROM r.timestamp) AS hour_num,
         COALESCE(SUM(CASE WHEN d.mapped_flat_id IS NOT NULL THEN r.kwh ELSE 0 END), 0) AS base_kwh,
@@ -320,7 +435,6 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     JOIN floors fl ON f.floor_id = fl.id
     JOIN blocks b ON fl.block_id = b.id
     LEFT JOIN (
-        -- Calculate 28-day baseline average per flat
         SELECT d2.mapped_flat_id AS flat_id, AVG(r2.kw) AS avg_kw
         FROM readings r2
         JOIN devices d2 ON r2.device_id = d2.id
@@ -336,6 +450,82 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     LIMIT 20
     """, nativeQuery = true)
     List<Object[]> findAnomaliesBySociety(@Param("societyId") Long societyId);
+
+    @Query(value = """
+    SELECT 
+        r.id AS reading_id,
+        f.flat_number,
+        b.block_name,
+        r.kw AS current_kw,
+        COALESCE(fb.avg_kw, 1.5) AS expected_kw,
+        r.timestamp
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN flats f ON d.mapped_flat_id = f.id
+    JOIN floors fl ON f.floor_id = fl.id
+    JOIN blocks b ON fl.block_id = b.id
+    LEFT JOIN (
+        SELECT d2.mapped_flat_id AS flat_id, AVG(r2.kw) AS avg_kw
+        FROM readings r2
+        JOIN devices d2 ON r2.device_id = d2.id
+        WHERE d2.society_id = :societyId
+          AND r2.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
+        GROUP BY d2.mapped_flat_id
+    ) fb ON fb.flat_id = f.id
+    WHERE d.society_id = :societyId
+      AND (b.block_name = :blockName OR CONCAT('Block ', b.block_name) = :blockName)
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+      AND r.kw >= 2.0
+      AND r.kw >= (2.5 * COALESCE(fb.avg_kw, 1.5))
+    ORDER BY r.timestamp DESC
+    LIMIT 20
+    """, nativeQuery = true)
+    List<Object[]> findAnomaliesByBlock(@Param("societyId") Long societyId, @Param("blockName") String blockName);
+
+    @Query(value = """
+    SELECT
+        EXTRACT(DOW FROM r.timestamp) AS day_of_week,
+        EXTRACT(HOUR FROM r.timestamp) AS hour,
+        AVG(r.kw) AS average_kw
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN societies s ON d.society_id = s.id
+    WHERE s.builder_id = :builderId
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
+    GROUP BY EXTRACT(DOW FROM r.timestamp), EXTRACT(HOUR FROM r.timestamp)
+    ORDER BY day_of_week, hour
+    """, nativeQuery = true)
+    List<Object[]> getBuilderHeatmap(@Param("builderId") Long builderId);
+
+    @Query(value = """
+    SELECT 
+        r.id AS reading_id,
+        f.flat_number,
+        s.name AS block_name,
+        r.kw AS current_kw,
+        COALESCE(fb.avg_kw, 1.5) AS expected_kw,
+        r.timestamp
+    FROM readings r
+    JOIN devices d ON r.device_id = d.id
+    JOIN societies s ON d.society_id = s.id
+    LEFT JOIN flats f ON d.mapped_flat_id = f.id
+    LEFT JOIN (
+        SELECT d2.mapped_flat_id AS flat_id, AVG(r2.kw) AS avg_kw
+        FROM readings r2
+        JOIN devices d2 ON r2.device_id = d2.id
+        JOIN societies s2 ON d2.society_id = s2.id
+        WHERE s2.builder_id = :builderId
+          AND r2.timestamp >= CURRENT_TIMESTAMP - INTERVAL '28 days'
+        GROUP BY d2.mapped_flat_id
+    ) fb ON fb.flat_id = f.id
+    WHERE s.builder_id = :builderId
+      AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+      AND r.kw >= 2.0
+      AND r.kw >= (2.5 * COALESCE(fb.avg_kw, 1.5))
+    ORDER BY r.timestamp DESC
+    LIMIT 30
+    """, nativeQuery = true)
+    List<Object[]> findAnomaliesByBuilder(@Param("builderId") Long builderId);
 
     @Query(value = """
     SELECT COALESCE(SUM(r.kw), 0.0)

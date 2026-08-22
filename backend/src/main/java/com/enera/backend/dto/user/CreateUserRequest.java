@@ -28,8 +28,11 @@ public class CreateUserRequest {
     @NotNull(message = "Society ID is required")
     private Long societyId;
 
+    @NotNull(message = "Flat is required")
     private Long flatId;
 
     private Long builderId;
 
+    @NotNull(message = "Block name is required")
+    private String blockName;
 }

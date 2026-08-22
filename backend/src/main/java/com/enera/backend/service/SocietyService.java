@@ -5,10 +5,7 @@ import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
 import com.enera.backend.dto.user.CreateUserRequest;
 import com.enera.backend.entity.*;
-import com.enera.backend.exception.DuplicateDeviceException;
-import com.enera.backend.exception.DuplicateEmailException;
-import com.enera.backend.exception.FlatNotFoundException;
-import com.enera.backend.exception.SocietyNotFoundException;
+import com.enera.backend.exception.*;
 import com.enera.backend.repository.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
-import java.sql.Timestamp;
 import java.util.*;
 
 @Service
@@ -30,6 +26,7 @@ public class SocietyService {
     private final UserRepository userRepository;
     private final BuilderRepository builderRepository;
     private final PasswordEncoder passwordEncoder;
+    private final BlockService blockService;
 
     SocietyService(SocietyRepository societyRepository,
                    ReadingRepository readingRepository,
@@ -39,7 +36,8 @@ public class SocietyService {
                    CommonAreaRepository commonAreaRepository,
                    UserRepository userRepository,
                    BuilderRepository builderRepository,
-                   PasswordEncoder passwordEncoder){
+                   PasswordEncoder passwordEncoder,
+                   BlockService blockService){
         this.societyRepository = societyRepository;
         this.readingRepository = readingRepository;
         this.flatRepository = flatRepository;
@@ -49,6 +47,7 @@ public class SocietyService {
         this.userRepository = userRepository;
         this.builderRepository = builderRepository;
         this.passwordEncoder = passwordEncoder;
+        this.blockService = blockService;
     }
 
     public SocietyOverviewResponse getSocietyOverview(Long societyId){
@@ -157,10 +156,21 @@ public class SocietyService {
         return responses;
     }
 
-    public double[][] getSocietyHeatmap(Long societyId) {
+    public double[][] getSocietyHeatmap(Long societyId,String filter) {
 
-        List<Object[]> data =
-                readingRepository.getSocietyHeatmap(societyId);
+        if(!societyRepository.existsById(societyId)){
+            throw new SocietyNotFoundException("Society not found");
+        }
+        List<Object[]> data ;
+
+        if (filter == null || filter.isBlank() || filter.equalsIgnoreCase("Whole society")
+                || filter.equalsIgnoreCase("All")) {
+            data = readingRepository.getSocietyHeatmap(societyId);
+        } else if (filter.trim().toLowerCase().startsWith("common")) {
+            data = readingRepository.getSocietyHeatmapCommonAreas(societyId);
+        } else {
+            data = readingRepository.getSocietyHeatmapByBlock(societyId, filter.trim());
+        }
 
         double[][] grid = new double[7][24];
 
@@ -168,12 +178,12 @@ public class SocietyService {
 
             int day = ((Number) row[0]).intValue();
             int hour = ((Number) row[1]).intValue();
+            double avgKw = ((Number) row[2]).doubleValue();
 
-            double avgKw =
-                    ((Number) row[2]).doubleValue();
+            if(day >= 0 && day < 7 && hour >= 0 && hour< 24){
+                grid[day][hour] = Math.round(avgKw * 100.0) / 100.0;
+            }
 
-            grid[day][hour] =
-                    Math.round(avgKw * 100.0) / 100.0;
         }
 
         return grid;
@@ -306,11 +316,19 @@ public class SocietyService {
         return response;
     }
 
-    public List<DailyTrendResponse> getDailyTrend(Long societyId,int date){
+    public List<DailyTrendResponse> getDailyTrend(Long societyId,int date,String filter){
         Society society = societyRepository.findById(societyId).
                 orElseThrow(() -> new SocietyNotFoundException("Society not found"));
 
-        List<Object[]> rows = readingRepository.getDailyTrendBySociety(societyId,date);
+        List<Object[]> rows;
+
+        if(filter == null || filter.isBlank() || filter.equalsIgnoreCase("Whole society")){
+            rows = readingRepository.getDailyTrendBySociety(societyId,date);
+        }else if(filter.equalsIgnoreCase("Common areas")){
+            rows = readingRepository.getDailyTrendBySocietyCommonAreas(societyId,date);
+        }else{
+            rows = readingRepository.getDailyTrendBySocietyBlock(societyId,date,filter.trim());
+        }
 
         List<DailyTrendResponse> responses = new ArrayList<>();
 
@@ -329,7 +347,7 @@ public class SocietyService {
         return responses;
     }
 
-    public List<HourlyBreakDownResponse> getHourlyBreakDown(Long societyId,LocalDate date){
+    public List<HourlyBreakDownResponse> getHourlyBreakDown(Long societyId,LocalDate date,String filter){
         Society society = societyRepository.findById(societyId).
                 orElseThrow(() -> new SocietyNotFoundException("Society not found"));
 
@@ -337,16 +355,20 @@ public class SocietyService {
             date = LocalDate.now();
         }
 
-
         List<HourlyBreakDownResponse> response = new ArrayList<>();
 
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = start.plusDays(1);
 
-        List<Object[]> rows = readingRepository.getHourlyBreakdownByDate(
-                        societyId,start,end
-        );
+        List<Object[]> rows ;
 
+        if(filter == null || filter.isBlank() || filter.equalsIgnoreCase("Whole society")){
+            rows = readingRepository.getHourlyBreakdownByDate(societyId,start,end);
+        }else if(filter.equalsIgnoreCase("Common areas")){
+            rows = readingRepository.getHourlyBreakdownByCommonAreas(societyId,start,end);
+        }else{
+            rows = readingRepository.getHourlyBreakdownByBlock(societyId,filter.trim(),start,end);
+        }
 
         for (Object[] row : rows) {
             int hourNum = ((Number) row[0]).intValue();
@@ -366,11 +388,19 @@ public class SocietyService {
         return response;
     }
 
-    public List<SocietyAnomaliesResponse> getAnomalies(Long societyId) {
+    public List<SocietyAnomaliesResponse> getAnomalies(Long societyId,String filter) {
         Society society = societyRepository.findById(societyId)
                 .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
 
-        List<Object[]> readings = readingRepository.findAnomaliesBySociety(societyId);
+        List<Object[]> readings;
+
+        if(filter == null || filter.isBlank() || filter.equalsIgnoreCase("Whole society")){
+            readings = readingRepository.findAnomaliesBySociety(societyId);
+        }else if(filter.equalsIgnoreCase("Common areas")){
+            readings = new ArrayList<>();
+        }else{
+            readings = readingRepository.findAnomaliesByBlock(societyId,filter.trim());
+        }
         List<SocietyAnomaliesResponse> responses = new ArrayList<>();
 
         for (Object[] reading : readings) {
@@ -463,6 +493,30 @@ public class SocietyService {
     }
 
     @Transactional
+    public void deleteSociety(Long societyId){
+        Society society = societyRepository.findById(societyId)
+                .orElseThrow(()-> new SocietyNotFoundException("Society not found"));
+
+        List<Block> blocks = blockRepository.findBySocietyId(societyId);
+        for(Block block : blocks){
+            blockService.deleteBlock(block.getId());
+        }
+
+        List<CommonArea> commonAreas = commonAreaRepository.findBySocietyId(societyId);
+        for(CommonArea commonArea : commonAreas){
+            deleteCommonArea(societyId, commonArea.getId());
+        }
+
+        List<User> users = userRepository.findBySociety(society);
+        for(User user : users){
+            user.setSociety(null);
+            userRepository.save(user);
+        }
+
+        societyRepository.delete(society);
+    }
+
+    @Transactional
     public RegisterResidentResponse registerResident(CreateUserRequest request) {
         Society society = societyRepository.findById(request.getSocietyId())
                 .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
@@ -492,6 +546,56 @@ public class SocietyService {
                 .role(saved.getRole().name())
                 .flatId(flat.getId())
                 .societyId(society.getId())
+                .blockName(request.getBlockName())
                 .build();
+    }
+
+    @Transactional
+    public void deleteResident(Long societyId,Long residentId){
+        User user = userRepository.findById(residentId)
+                .orElseThrow(()-> new UserNotFoundException("Resident not found"));
+
+        if(user.getSociety() == null || !user.getSociety().getId().equals(societyId)){
+            throw new RuntimeException("Resident do not belong to current society");
+        }
+
+        Flat flat = user.getFlat();
+
+        if(flat != null){
+            user.setFlat(null);
+            userRepository.save(user);
+
+            List<User> remainUser = userRepository.findByFlat(flat);
+
+            if(remainUser.isEmpty() ||
+                    (remainUser.size() == 1 && remainUser.get(0).getId().equals(residentId))){
+                flat.setStatus(false);
+                flatRepository.save(flat);
+            }
+        }
+
+        userRepository.delete(user);
+    }
+
+    @Transactional
+    public void deleteCommonArea(Long societyId, Long commonAreaId){
+        Society society = societyRepository.findById(societyId)
+                .orElseThrow(()-> new SocietyNotFoundException("Society not found"));
+
+        CommonArea commonArea = commonAreaRepository.findById(commonAreaId)
+                .orElseThrow(()-> new RuntimeException("Common area not found"));
+
+        if(commonArea.getSociety() == null || !commonArea.getSociety().getId().equals(societyId)){
+            throw new RuntimeException("Common area does not belong to this society");
+        }
+
+        List<Device> devices = deviceRepository.findByCommonArea(commonArea);
+        for(Device device : devices){
+            device.setStatus(false);
+            device.setCommonArea(null);
+            deviceRepository.save(device);
+        }
+
+        commonAreaRepository.delete(commonArea);
     }
 }

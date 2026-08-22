@@ -97,9 +97,16 @@ export async function getSocietyOverview(societyId: string): Promise<SocietyOver
 }
 
 export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockRow[]> {
-  const url = isDemoSession() ? `/demo/society/${societyId}/blocks` : `/society/${societyId}/blocks`;
-  const response = await api.get(url);
-  return response.data;
+  try {
+    if (!societyId) return [];
+    const url = isDemoSession() ? `/demo/society/${societyId}/blocks` : `/society/${societyId}/blocks`;
+    const response = await api.get(url);
+    const data = response.data;
+    return Array.isArray(data) ? data : (data?.blocks ?? []);
+  } catch (err) {
+    console.warn("Failed to fetch society blocks:", err);
+    return [];
+  }
 }
 
 export async function getBlockFloors(blockId: string): Promise<BlockFloorRow[]> {
@@ -154,13 +161,9 @@ export async function getSocietyHeatmap(societyId: string, filter?: string): Pro
       })
     );
   }
-  try {
-    const params = filter && filter !== "Whole society" && filter !== "All societies" ? { filter } : {};
-    const response = await api.get(`/society/${societyId}/heatmap`, { params });
-    return response.data;
-  } catch (err) {
-    return Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => -1));
-  }
+  const params = filter && filter !== "Whole society" && filter !== "All societies" ? { filter } : {};
+  const response = await api.get(`/society/${societyId}/heatmap`, { params });
+  return response.data;
 }
 
 export async function getSocietyHourlyBreakdown(societyId: string, filter?: string, date?: string): Promise<HourlyDataPoint[]> {
@@ -202,9 +205,11 @@ export async function getSocietyAnomalies(societyId: string, filter?: string): P
   }
 }
 
-export async function getSocietyDailyTrend(societyId: string, days: number = 7): Promise<DailyTrendPoint[]> {
+export async function getSocietyDailyTrend(societyId: string, days: number = 7, filter?: string): Promise<DailyTrendPoint[]> {
   const url = isDemoSession() ? `/demo/society/${societyId}/daily-trend` : `/society/${societyId}/daily-trend`;
-  const response = await api.get(url, { params: { days } });
+  const params: Record<string, any> = { days };
+  if (filter && filter !== "Whole society" && filter !== "All societies") params.filter = filter;
+  const response = await api.get(url, { params });
   return (response.data ?? []).map((d: any) => ({
     date: d.date,
     total: d.total ?? d.totalKwh ?? 0,
@@ -232,8 +237,27 @@ export async function getBuilderSocieties(builderId: string): Promise<BuilderSoc
   return response.data;
 }
 
-export async function getBuilderHourlyBreakdown(builderId: string, date?: string): Promise<HourlyDataPoint[]> {
-  const params = date ? { date } : {};
+export async function getBuilderHeatmap(builderId: string, filter?: string): Promise<HeatmapGrid> {
+  if (isDemoSession()) {
+    return Array.from({ length: 7 }, (_, d) =>
+      Array.from({ length: 24 }, (_, h) => {
+        const isPeak = h >= 18 && h <= 22;
+        const isNight = h >= 0 && h <= 5;
+        const base = isNight ? 24 : isPeak ? 130 : 68;
+        const jitter = Math.floor(Math.sin(d + h) * 15);
+        return Math.max(10, base + jitter);
+      })
+    );
+  }
+  const params = filter && filter !== "All societies" && filter !== "Whole society" ? { filter } : {};
+  const response = await api.get(`/builder/${builderId}/heatmap`, { params });
+  return response.data;
+}
+
+export async function getBuilderHourlyBreakdown(builderId: string, filter?: string, date?: string): Promise<HourlyDataPoint[]> {
+  const params: Record<string, string> = {};
+  if (date) params.date = date;
+  if (filter && filter !== "All societies" && filter !== "Whole society") params.filter = filter;
   const response = await api.get(`/builder/${builderId}/hourly-breakdown`, { params });
   return (response.data ?? []).map((d: any) => ({
     hour: d.hour,
@@ -242,6 +266,30 @@ export async function getBuilderHourlyBreakdown(builderId: string, date?: string
     common: d.common ?? d.commonAreaKwh ?? 0,
     peak: d.peak ?? d.peekKwh ?? 0,
   }));
+}
+
+export async function getBuilderAnomalies(builderId: string, filter?: string): Promise<AnomalyItem[]> {
+  try {
+    const params = filter && filter !== "All societies" && filter !== "Whole society" ? { filter } : {};
+    const response = await api.get(`/builder/${builderId}/anomalies`, { params });
+    const data = response.data;
+    const list: any[] = Array.isArray(data) ? data : (data?.anomalies ?? []);
+    return list.map((a: any, idx: number) => ({
+      id: a.id ? String(a.id) : `builder-anom-${idx + 1}`,
+      flat: a.flat || (a.flatNumber ? `Flat ${a.flatNumber}` : a.blockName ? `${a.blockName}` : `Anomaly #${idx + 1}`),
+      flatNumber: a.flatNumber,
+      blockName: a.blockName,
+      currentKw: a.currentKw,
+      expectedKw: a.expectedKw,
+      multiplier: a.multiplier || "2.5x usual",
+      desc: a.desc || a.description || `Drawing ${a.currentKw ?? 4.2} kW — expected ${a.expectedKw ?? 1.5} kW`,
+      detectedAt: a.detectedAt ? new Date(a.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently",
+      resolved: Boolean(a.resolved),
+    }));
+  } catch (err) {
+    console.warn("Backend builder anomalies API not yet available, falling back to empty list:", err);
+    return [];
+  }
 }
 
 // ------------------------------------------------------ Device Manager ----
@@ -340,6 +388,21 @@ export async function deleteSociety(builderId: string | number, societyId: strin
 
 export async function deleteBuilder(builderId: string | number): Promise<any> {
   const response = await api.delete(`/superAdmin/builders/${builderId}`);
+  return response.data;
+}
+
+export async function deleteFlat(flatId: string | number): Promise<any> {
+  const response = await api.delete(`/flat/${flatId}`);
+  return response.data;
+}
+
+export async function deleteFloor(floorId: string | number): Promise<any> {
+  const response = await api.delete(`/floor/${floorId}`);
+  return response.data;
+}
+
+export async function deleteCommonArea(societyId: string | number, commonAreaId: string | number): Promise<any> {
+  const response = await api.delete(`/society/${societyId}/common-area/${commonAreaId}`);
   return response.data;
 }
 

@@ -21,6 +21,7 @@ public class BlockService {
     private final SocietyRepository societyRepository;
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final FloorService floorService;
 
     BlockService(FlatRepository flatRepository,
                  BlockRepository blockRepository,
@@ -28,7 +29,8 @@ public class BlockService {
                  ReadingRepository readingRepository,
                  SocietyRepository societyRepository,
                  DeviceRepository deviceRepository,
-                 UserRepository userRepository){
+                 UserRepository userRepository,
+                 FloorService floorService){
         this.flatRepository = flatRepository;
         this.blockRepository = blockRepository;
         this.floorRepository = floorRepository;
@@ -36,6 +38,7 @@ public class BlockService {
         this.societyRepository = societyRepository;
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
+        this.floorService = floorService;
     }
 
     public List<BlockFloorResponse> getBlockFloors(Long blockId){
@@ -80,33 +83,9 @@ public class BlockService {
         Block block = blockRepository.findById(blockId)
                 .orElseThrow(()-> new SocietyNotFoundException("Block not found"));
 
-        List<Flat> flats = flatRepository.findByFloorBlockId(blockId);
-
-        for(Flat flat : flats){
-            List<Device> devices = deviceRepository.findByFlat(flat);
-
-            for(Device device : devices){
-                device.setFlat(null);
-                deviceRepository.save(device);
-            }
-
-            List<User> residents = userRepository.findByFlat(flat);
-
-            for(User resident : residents){
-                resident.setFlat(null);
-                userRepository.save(resident);
-            }
-
-        }
-
-        if(!flats.isEmpty()){
-            flatRepository.deleteAll(flats);
-        }
-
         List<Floor> floors = floorRepository.findByBlockId(blockId);
-
-        if(!floors.isEmpty()){
-            floorRepository.deleteAll(floors);
+        for(Floor floor : floors){
+            floorService.deleteFloor(floor.getId());
         }
 
         blockRepository.delete(block);

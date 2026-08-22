@@ -14,6 +14,8 @@ import com.enera.backend.repository.FlatRepository;
 import com.enera.backend.repository.ReadingRepository;
 import com.enera.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -346,5 +348,26 @@ public class FlatService {
         response.setFloorNumber(floorNumber);
 
         return response;
+    }
+
+    @Transactional
+    public void deleteFlat(Long flatId){
+        Flat flat = flatRepository.findById(flatId)
+                .orElseThrow(()-> new FlatNotFoundException("Flat not found"));
+
+        List<Device> devices = deviceRepository.findByFlat(flat);
+        for(Device device : devices){
+            device.setFlat(null);
+            device.setStatus(false);
+            deviceRepository.save(device);
+        }
+
+        List<User> residents = userRepository.findByFlat(flat);
+        for(User resident : residents){
+            resident.setFlat(null);
+            userRepository.save(resident);
+        }
+
+        flatRepository.delete(flat);
     }
 }
