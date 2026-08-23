@@ -25,11 +25,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByFlat(Flat flat);
 
-    Optional<User> findByFlatAndRole(Flat flat, Role role);
+    List<User> findByFlatAndRole(Flat flat, Role role);
+
+    Optional<User> findFirstByFlatAndRoleOrderByIdDesc(Flat flat, Role role);
 
     List<User> findByBuilder(Builder builder);
 
     List<User> findByBuilderAndRole(Builder builder, Role role);
 
-    Optional<User> findByFlatId(Long flatId);
+    Optional<User> findFirstByFlatIdOrderByIdDesc(Long flatId);
 }

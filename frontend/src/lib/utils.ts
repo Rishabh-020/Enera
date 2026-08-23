@@ -46,3 +46,27 @@ export function timeAgo(d: Date | string | null | undefined): string {
 
   return dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
+
+export function getErrorMessage(err: unknown, fallback = "An unexpected error occurred."): string {
+  if (!err) return fallback;
+  if (typeof err === "string") return err;
+  if (typeof err === "object") {
+    const anyErr = err as any;
+    if (anyErr.response?.data) {
+      const data = anyErr.response.data;
+      if (typeof data === "string" && data.trim()) return data.trim();
+      if (typeof data === "object") {
+        if (data.message && typeof data.message === "string") return data.message;
+        if (data.error && typeof data.error === "string") return data.error;
+        if (data.details && typeof data.details === "string") return data.details;
+      }
+    }
+    if (anyErr.message && typeof anyErr.message === "string") {
+      return anyErr.message;
+    }
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return fallback;
+}

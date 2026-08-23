@@ -217,6 +217,7 @@ export interface SocietyBlockRow {
   mtdKwh: number;
   flatCount: number;
   aboveAverage: boolean;
+  blockName: string;
 }
 
 export interface BlockFloorRow {
@@ -248,7 +249,9 @@ export interface SocietyFlatRow {
   flatNumber: string;
   bhkType: string;
   occupied?: boolean;
+  residentId?: number | string | null;
   residentName: string | null;
+  residentEmail?: string | null;
   blockName: string;
   floorNumber?: number;
   meterStatus: MeterStatus;
@@ -278,6 +281,7 @@ export interface BuilderSocietyRow {
 
 export interface DeviceRow extends Device {
   status: MeterStatus;
+  blockName?: string;
   mappedTo?: string;
   lastSeenAt: Date;
 }
@@ -350,6 +354,7 @@ export interface CreateResidentInput {
   role?: Role | string;
   societyId: number | string;
   flatId?: number | string | null;
+  blockName?: string;
 }
 
 export interface RegisterDeviceInput {

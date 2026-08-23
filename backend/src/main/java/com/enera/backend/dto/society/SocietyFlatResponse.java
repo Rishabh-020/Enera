@@ -12,7 +12,11 @@ public class SocietyFlatResponse {
 
     private boolean occupied;
 
+    private Long residentId;
+
     private String residentName;
+
+    private String residentEmail;
 
     private String blockName;
 

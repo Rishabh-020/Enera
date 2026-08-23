@@ -33,6 +33,5 @@ public class CreateUserRequest {
 
     private Long builderId;
 
-    @NotNull(message = "Block name is required")
     private String blockName;
 }

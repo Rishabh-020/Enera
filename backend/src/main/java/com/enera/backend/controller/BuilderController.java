@@ -33,7 +33,7 @@ public class BuilderController {
     }
 
     @GetMapping("/{id}/overview")
-    @PreAuthorize("hasAuthority('BUILDER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<BuilderOverviewResponse> getBuilderOverview(@PathVariable Long id){
         return ResponseEntity.ok(
                 builderService.getBuilderOverview(id)
@@ -41,7 +41,7 @@ public class BuilderController {
     }
 
     @GetMapping("/{id}/societies")
-    @PreAuthorize("hasAuthority('BUILDER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<BuilderSocietyResponse>> getBuilderSocieties(@PathVariable Long id){
         return ResponseEntity.ok(
                 builderService.getBuilderSocieties(id)

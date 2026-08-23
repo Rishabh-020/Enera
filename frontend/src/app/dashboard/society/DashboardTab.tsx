@@ -820,27 +820,18 @@ export function DashboardTab({
             <form
               onSubmit={async (e: FormEvent) => {
                 e.preventDefault();
-                if (!newBlockName) return;
+                if (!newBlockName.trim()) return;
                 setBlockLoading(true);
                 try {
-                  await api.createBlock({ blockName: newBlockName, societyId: Number(societyId) });
-                  setBlocks((prev) => [
-                    ...(prev || []),
-                    {
-                      id: Date.now().toString(),
-                      name: newBlockName,
-                      flatCount: 24,
-                      liveKw: 0,
-                      todayKwh: 0,
-                      mtdKwh: 0,
-                      aboveAverage: false,
-                    },
-                  ]);
+                  await api.createBlock({ blockName: newBlockName.trim(), societyId: Number(societyId) });
+                  const updatedBlocks = await api.getSocietyBlocks(societyId);
+                  setBlocks(updatedBlocks);
                   setShowAddBlockModal(false);
-                  setBlockSuccess(`Block "${newBlockName}" added successfully.`);
+                  setBlockSuccess(`Block "${newBlockName.trim()}" added successfully.`);
                   setTimeout(() => setBlockSuccess(null), 4000);
                   setNewBlockName("");
-                } catch {
+                } catch (err) {
+                  console.error("Failed to add block:", err);
                 } finally {
                   setBlockLoading(false);
                 }

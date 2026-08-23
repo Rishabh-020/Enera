@@ -3,6 +3,7 @@ package com.enera.backend.repository;
 import com.enera.backend.entity.Device;
 import com.enera.backend.entity.Reading;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -550,4 +551,11 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
       AND r.timestamp >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
     """, nativeQuery = true)
     Double getLiveKwByBuilderId(@Param("builderId") Long builderId);
+
+    @Modifying
+    @Query(value = """
+    DELETE FROM readings
+    WHERE device_id IN (SELECT id FROM devices WHERE society_id = :societyId)
+    """, nativeQuery = true)
+    void deleteBySocietyId(@Param("societyId") Long societyId);
 }

@@ -14,6 +14,8 @@ public class SocietyDeviceResponse {
 
     private Boolean meterStatus;
 
+    private String blockName;
+
     private String mappedTo;
 
     private LocalDateTime lastSeenAt;

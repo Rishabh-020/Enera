@@ -102,7 +102,16 @@ export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockR
     const url = isDemoSession() ? `/demo/society/${societyId}/blocks` : `/society/${societyId}/blocks`;
     const response = await api.get(url);
     const data = response.data;
-    return Array.isArray(data) ? data : (data?.blocks ?? []);
+    const list = Array.isArray(data) ? data : (data?.blocks ?? []);
+    return list.map((b: any) => {
+      const rawName = b.blockName || b.name || `Block ${b.id}`;
+      const cleanName = rawName.replace(/^Block\s+/i, "");
+      return {
+        ...b,
+        name: cleanName,
+        blockName: cleanName,
+      };
+    });
   } catch (err) {
     console.warn("Failed to fetch society blocks:", err);
     return [];
@@ -313,6 +322,8 @@ export async function getSocietyDevices(societyId: string): Promise<DeviceRow[]>
     return {
       ...point,
       id: point.id ? String(point.id) : point.deviceSerial ? `MTR-${point.deviceSerial}` : point.deviceId ? `DEV-${point.deviceId}` : `MTR-${index + 1}`,
+      deviceSerial: point.deviceSerial ? String(point.deviceSerial) : String(point.id || ""),
+      blockName: point.blockName || (point.mappedTo?.includes("Block") ? point.mappedTo.split("·")[0].trim() : "—"),
       status,
       mappedTo,
       lastSeenAt: point.lastSeenAt ? new Date(point.lastSeenAt) : null,

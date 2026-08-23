@@ -59,7 +59,7 @@ public class FloorService {
             Boolean deviceOnline =
                     deviceRepository.getStatusByFlatId(flat.getId());
 
-            User resident = userRepository.findByFlatAndRole(flat, Role.RESIDENT)
+            User resident = userRepository.findFirstByFlatAndRoleOrderByIdDesc(flat, Role.RESIDENT)
                     .orElse(null);
 
             response.setId(flat.getId());

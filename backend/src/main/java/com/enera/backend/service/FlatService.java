@@ -320,11 +320,11 @@ public class FlatService {
     public FlatDetailResponse getFlatDetail(Long flatId){
         FlatDetailResponse response = new FlatDetailResponse();
 
-        Flat flat = flatRepository.findById(flatId).
-                orElseThrow(() -> new FlatNotFoundException("Flat not found"));
+        Flat flat = flatRepository.findById(flatId)
+                .orElseThrow(() -> new FlatNotFoundException("Flat not found"));
 
-        User user = userRepository.findById(flatId).
-                orElseThrow(() -> new UserNotFoundException("User not found"));
+        User user = userRepository.findFirstByFlatAndRoleOrderByIdDesc(flat, Role.RESIDENT)
+                .orElse(null);
 
         String flatNumber = flat.getFlatNumber();
 
@@ -349,6 +349,20 @@ public class FlatService {
     public FlatResponse createFlat(Long floorId,CreateFlatRequest request){
         Floor floor = floorRepository.findById(floorId)
                 .orElseThrow(()-> new FloorNotFoundException("Floor not found"));
+
+        if (request.getFlatNumber() == null || request.getFlatNumber().isBlank()) {
+            throw new BadRequestException("Flat number cannot be empty");
+        }
+
+        if(flatRepository.existsByFloorAndFlatNumber(floor, request.getFlatNumber())){
+            throw new RuntimeException("Flat already exists on that floor");
+        }
+
+        if (!request.getFlatNumber().trim().startsWith(String.valueOf(floor.getFloorNumber())) ||
+        request.getFlatNumber().length() < 3) {
+            throw new BadRequestException("Flat number must be according to the floor format (must start with " + floor.getFloorNumber() + " and have length 3)");
+        }
+
 
         Flat flat = new Flat();
         flat.setFlatNumber(request.getFlatNumber());
@@ -381,9 +395,8 @@ public class FlatService {
         }
 
         List<User> residents = userRepository.findByFlat(flat);
-        for(User resident : residents){
-            resident.setFlat(null);
-            userRepository.save(resident);
+        if (!residents.isEmpty()) {
+            userRepository.deleteAll(residents);
         }
 
         flatRepository.delete(flat);

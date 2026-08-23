@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Building2, Users, Zap, Plus, Download, Leaf, Trash2, X, CheckCircle2, ChevronRight } from "lucide-react";
+import { Building2, Users, Zap, Plus, Download, Leaf, Trash2, X, CheckCircle2, ChevronRight, AlertTriangle } from "lucide-react";
 import * as api from "../../lib/api";
 import { DashboardLayout, NAV_ITEMS_BUILDER } from "../../components/layout/DashboardLayout";
 import { StatCard } from "../../components/chart/StatCard";
@@ -24,6 +24,7 @@ export default function BuilderAdminDashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [societyToDelete, setSocietyToDelete] = useState<BuilderSocietyRow | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -220,15 +221,17 @@ export default function BuilderAdminDashboard() {
     if (!societyToDelete || !builderId) return;
     try {
       await api.deleteSociety(builderId, societyToDelete.id);
-    } catch {
-      // Mock fallback
+      setSocieties((prev) => (prev ? prev.filter((s) => s.id !== societyToDelete.id) : prev));
+      setOverview((prev) => prev ? { ...prev, totalSocieties: Math.max(0, prev.totalSocieties - 1) } : prev);
+      setActionSuccess(`Society "${societyToDelete.name}" has been deleted.`);
+      setTimeout(() => setActionSuccess(null), 4000);
+      loadData();
+    } catch (err: any) {
+      console.error("Delete society error:", err);
+      const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to delete society.");
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 5000);
     }
-    // Optimistically remove
-    setSocieties((prev) => (prev ? prev.filter((s) => s.id !== societyToDelete.id) : prev));
-    setOverview((prev) => prev ? { ...prev, totalSocieties: Math.max(0, prev.totalSocieties - 1) } : prev);
-    setActionSuccess(`Society "${societyToDelete.name}" has been deleted.`);
-    setTimeout(() => setActionSuccess(null), 4000);
-    loadData();
   };
 
   return (
@@ -242,6 +245,12 @@ export default function BuilderAdminDashboard() {
         <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-teal-200 bg-teal-50/90 p-3.5 text-xs font-semibold text-teal-900 shadow-sm animate-fade-in">
           <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
           <span>{actionSuccess}</span>
+        </div>
+      )}
+      {actionError && (
+        <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50/90 p-3.5 text-xs font-semibold text-rose-900 shadow-sm animate-fade-in">
+          <AlertTriangle size={16} className="text-rose-600 shrink-0" />
+          <span>{actionError}</span>
         </div>
       )}
 

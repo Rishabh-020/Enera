@@ -119,6 +119,7 @@ public class SocietyService {
 
             response.setId(id);
             response.setName(block.getBlockName());
+            response.setBlockName(block.getBlockName());
             response.setMtdKwh(mtdKwh);
             response.setLiveKw(liveKw);
             response.setFlatCount(flatCount);
@@ -208,19 +209,18 @@ public class SocietyService {
             response.setBhkType(flat.getBhkType());
             response.setOccupied(flat.isStatus());
 
-            // Get resident name from user linked to this flat
-            User resident = userRepository.findByFlatAndRole(flat, Role.RESIDENT)
+            User resident = userRepository.findFirstByFlatAndRoleOrderByIdDesc(flat, Role.RESIDENT)
                     .orElse(null);
+            response.setResidentId(resident != null ? resident.getId() : null);
             response.setResidentName(resident != null ? resident.getName() : null);
+            response.setResidentEmail(resident != null ? resident.getEmail() : null);
 
-            // Get block name via floor -> block
             response.setBlockName(flat.getFloor().getBlock().getBlockName());
             response.setFloorNumber(flat.getFloor().getFloorNumber());
 
             Double mtdKwh = readingRepository.getMonthKwhByFlatId(flat.getId());
             response.setMtdKwh(mtdKwh);
 
-            // Map boolean device status to string status for frontend
             Boolean deviceOnline = deviceRepository.getStatusByFlatId(flat.getId());
             response.setMeterStatus(Boolean.TRUE.equals(deviceOnline) ? "live" : "offline");
 
@@ -238,8 +238,6 @@ public class SocietyService {
 
         List<SocietyDeviceResponse> responses = new ArrayList<>();
 
-        // This will assign proper naming for the device, to whom it is mapped to
-
         for(Device device : devices){
             SocietyDeviceResponse response = new SocietyDeviceResponse();
 
@@ -247,11 +245,19 @@ public class SocietyService {
             response.setDeviceSerial(device.getDeviceSerial());
             response.setDeviceType(device.getDeviceType());
 
+            String blockName = null;
             if(device.getFlat() != null){
-                response.setMappedTo(device.getFlat().getFlatNumber());
+                if (device.getFlat().getFloor() != null && device.getFlat().getFloor().getBlock() != null) {
+                    blockName = device.getFlat().getFloor().getBlock().getBlockName();
+                }
+                String blockPrefix = blockName != null ? "Block " + blockName + " · " : "";
+                response.setBlockName(blockName != null ? "Block " + blockName : "—");
+                response.setMappedTo(blockPrefix + "Flat " + device.getFlat().getFlatNumber());
             } else if(device.getCommonArea() != null) {
+                response.setBlockName("Common Area");
                 response.setMappedTo(device.getCommonArea().getName() != null ? device.getCommonArea().getName() : device.getCommonArea().getCategory());
             } else {
+                response.setBlockName("—");
                 response.setMappedTo("Unassigned");
             }
 
@@ -286,9 +292,9 @@ public class SocietyService {
         device.setDeviceSerial(deviceSerial);
         device.setDeviceType(deviceType);
         device.setSociety(society);
+        device.setStatus(true);
 
         LocalDateTime time = LocalDateTime.now();
-
         device.setLastSeenAt(time);
 
         if(request.getFlatId() != null){
@@ -297,12 +303,14 @@ public class SocietyService {
             );
 
             device.setFlat(flat);
-        }else{
+        }else if(request.getCommonAreaId() != null){
             CommonArea commonArea = commonAreaRepository.findById(commonAreaId).orElseThrow(
                     ()-> new FlatNotFoundException("Common Area not found")
             );
 
             device.setCommonArea(commonArea);
+        } else {
+            throw new BadRequestException("Please select a flat or common area to map the device.");
         }
 
         Device savedDevice = deviceRepository.save(device);
@@ -500,20 +508,29 @@ public class SocietyService {
         Society society = societyRepository.findById(societyId)
                 .orElseThrow(()-> new SocietyNotFoundException("Society not found"));
 
+        readingRepository.deleteBySocietyId(societyId);
+
+        deviceRepository.deleteBySocietyId(societyId);
+
+        List<User> users = userRepository.findBySociety(society);
+        for(User user : users){
+            user.setFlat(null);
+            user.setSociety(null);
+            userRepository.save(user);
+        }
+
+        List<CommonArea> commonAreas = commonAreaRepository.findBySocietyId(societyId);
+        commonAreaRepository.deleteAll(commonAreas);
+
         List<Block> blocks = blockRepository.findBySocietyId(societyId);
         for(Block block : blocks){
             blockService.deleteBlock(block.getId());
         }
 
-        List<CommonArea> commonAreas = commonAreaRepository.findBySocietyId(societyId);
-        for(CommonArea commonArea : commonAreas){
-            deleteCommonArea(societyId, commonArea.getId());
-        }
-
-        List<User> users = userRepository.findBySociety(society);
         for(User user : users){
-            user.setSociety(null);
-            userRepository.save(user);
+            if(user.getRole() == Role.RESIDENT || user.getRole() == Role.SOCIETY_ADMIN){
+                userRepository.delete(user);
+            }
         }
 
         societyRepository.delete(society);
@@ -531,6 +548,14 @@ public class SocietyService {
             throw new DuplicateEmailException("User with email " + request.getEmail() + " already exists");
         }
 
+        Optional<User> existingResident = userRepository.findFirstByFlatAndRoleOrderByIdDesc(flat, Role.RESIDENT);
+        if (existingResident.isPresent()) {
+            throw new FlatAlreadyOccupiedException("Flat " + flat.getFlatNumber() + " is already occupied by " + existingResident.get().getName() + ". Please remove the existing resident before assigning a new one.");
+        }
+
+        flat.setStatus(true);
+        flatRepository.save(flat);
+
         User resident = new User();
         resident.setName(request.getName());
         resident.setEmail(request.getEmail());
@@ -538,9 +563,13 @@ public class SocietyService {
         resident.setRole(Role.RESIDENT);
         resident.setSociety(society);
         resident.setFlat(flat);
-        resident.setBuilder(society.getBuilder());
 
         User saved = userRepository.save(resident);
+
+        String blockName = request.getBlockName();
+        if ((blockName == null || blockName.isBlank()) && flat.getFloor() != null && flat.getFloor().getBlock() != null) {
+            blockName = flat.getFloor().getBlock().getBlockName();
+        }
 
         return RegisterResidentResponse.builder()
                 .id(saved.getId())
@@ -549,34 +578,36 @@ public class SocietyService {
                 .role(saved.getRole().name())
                 .flatId(flat.getId())
                 .societyId(society.getId())
-                .blockName(request.getBlockName())
+                .blockName(blockName)
                 .build();
     }
 
     @Transactional
-    public void deleteResident(Long societyId,Long residentId){
-        User user = userRepository.findById(residentId)
-                .orElseThrow(()-> new UserNotFoundException("Resident not found"));
-
-        if(user.getSociety() == null || !user.getSociety().getId().equals(societyId)){
-            throw new RuntimeException("Resident do not belong to current society");
-        }
-
-        Flat flat = user.getFlat();
-
-        if(flat != null){
-            user.setFlat(null);
-            userRepository.save(user);
-
-            List<User> remainUser = userRepository.findByFlat(flat);
-
-            if(remainUser.isEmpty() ||
-                    (remainUser.size() == 1 && remainUser.get(0).getId().equals(residentId))){
-                flat.setStatus(false);
-                flatRepository.save(flat);
+    public void deleteResident(Long societyId, Long residentOrFlatId){
+        // Try finding by user ID first
+        Optional<User> userOpt = userRepository.findById(residentOrFlatId);
+        
+        // If not found by user ID, check if flat ID was passed
+        if (userOpt.isEmpty()) {
+            Flat flat = flatRepository.findById(residentOrFlatId).orElse(null);
+            if (flat != null) {
+                userOpt = userRepository.findFirstByFlatAndRoleOrderByIdDesc(flat, Role.RESIDENT);
             }
         }
 
+        User user = userOpt.orElseThrow(() -> new UserNotFoundException("Resident not found"));
+
+        if(user.getSociety() == null || !user.getSociety().getId().equals(societyId)){
+            throw new RuntimeException("Resident does not belong to current society");
+        }
+
+        Flat flat = user.getFlat();
+        if(flat != null){
+            flat.setStatus(false);
+            flatRepository.save(flat);
+        }
+
+        // Permanently delete the user from the database
         userRepository.delete(user);
     }
 
