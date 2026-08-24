@@ -130,22 +130,28 @@ export interface FlatLive {
   level?: "normal" | "amber" | "high";
   pctVsUsual?: number;
   timestamp?: Date;
+  status?: boolean;
+}
+
+export interface DailySeries {
+  day: string | number;
+  kwh: number;
 }
 
 export interface DaySeriesPoint {
-  date: Date;
-  day: number;
+  date?: Date | string;
+  day?: string | number;
   kwh: number;
-  isWeekend: boolean;
+  isWeekend?: boolean;
 }
 
 export interface FlatSummary {
-  series: DaySeriesPoint[];
+  series: DailySeries[] | DaySeriesPoint[];
   totalKwh: number;
   estCost: number;
   projectedTotal: number;
   projectedCost: number;
-  peakDay: DaySeriesPoint;
+  peakDay: string | any;
 }
 
 export interface TrendPoint {

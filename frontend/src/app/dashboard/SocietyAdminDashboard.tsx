@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { Building2, ChevronRight, Plus, Trash2, X, Layers, Home, CheckCircle2 } from "lucide-react";
 import * as api from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 import { DashboardLayout, NAV_ITEMS_SOCIETY } from "../../components/layout/DashboardLayout";
 import { FlatDashboardView } from "../../components/FlatDashboardView";
 import { Card, CardHeader, CardTitle, CardDescription, Breadcrumb, Table, Thead, Th, Td, Tr, Button, Input, Badge, type BreadcrumbItem } from "../../components/ui/primitives";
@@ -799,8 +800,14 @@ function FloorFlatList({
 export default function SocietyAdminDashboard() {
   const { societyId } = useParams<{ societyId: string }>();
   const navigate = useNavigate();
+  const { user, isDemoMode } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const readOnly = searchParams.get("readonly") === "true";
+
+  // Enforce society ownership: redirect society admins if accessing another society's ID
+  if (!isDemoMode && user?.role === "SOCIETY_ADMIN" && user.societyId && String(user.societyId) !== String(societyId)) {
+    return <Navigate to={`/society/${user.societyId}`} replace />;
+  }
 
   const initialTab = searchParams.get("tab") || "dashboard";
   const [activeKey, setActiveKey] = useState(initialTab);

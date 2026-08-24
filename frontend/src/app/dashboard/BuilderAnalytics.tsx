@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Navigate } from "react-router-dom";
 import * as api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { DashboardLayout, NAV_ITEMS_BUILDER } from "../../components/layout/DashboardLayout";
@@ -9,7 +9,12 @@ import type { BuilderSocietyRow } from "../../lib/types";
 export default function BuilderAnalytics() {
   const { builderId } = useParams<{ builderId: string }>();
   const navigate = useNavigate();
-  const { session, isDemoMode } = useAuth();
+  const { session, user, isDemoMode } = useAuth();
+
+  // Enforce builder ownership: redirect builder admins if accessing another builder's ID
+  if (!isDemoMode && user?.role === "BUILDER_ADMIN" && user.builderId && String(user.builderId) !== String(builderId)) {
+    return <Navigate to={`/builder/${user.builderId}/analytics`} replace />;
+  }
   const [societies, setSocieties] = useState<BuilderSocietyRow[] | null>(null);
 
   useEffect(() => {

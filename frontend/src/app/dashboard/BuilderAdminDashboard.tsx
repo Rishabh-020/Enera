@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, type FormEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { Building2, Users, Zap, Plus, Download, Leaf, Trash2, X, CheckCircle2, ChevronRight, AlertTriangle } from "lucide-react";
 import * as api from "../../lib/api";
 import { DashboardLayout, NAV_ITEMS_BUILDER } from "../../components/layout/DashboardLayout";
@@ -14,7 +14,12 @@ import { useAuth } from "../../context/AuthContext";
 export default function BuilderAdminDashboard() {
   const { builderId } = useParams<{ builderId: string }>();
   const navigate = useNavigate();
-  const { isDemoMode } = useAuth();
+  const { user, isDemoMode } = useAuth();
+
+  // Enforce builder ownership: redirect builder admins if accessing another builder's ID
+  if (!isDemoMode && user?.role === "BUILDER_ADMIN" && user.builderId && String(user.builderId) !== String(builderId)) {
+    return <Navigate to={`/builder/${user.builderId}`} replace />;
+  }
   const [overview, setOverview] = useState<BuilderOverview | null>(null);
   const [societies, setSocieties] = useState<BuilderSocietyRow[] | null>(null);
   const [sortField, setSortField] = useState<"name" | "mtdKwh" | "avgPerFlat" | "mom">("mtdKwh");

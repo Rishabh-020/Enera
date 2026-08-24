@@ -36,11 +36,11 @@ export function PersonalisedInsights({
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border border-[var(--color-sage-mist,#afc4bf)] bg-white overflow-hidden flex flex-col justify-between">
+      <CardHeader className="pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <Lightbulb size={16} className="text-amber-500" />
-          <CardTitle>Personalised insights</CardTitle>
+          <CardTitle className="text-base sm:text-lg font-bold text-slate-900">Personalised insights</CardTitle>
         </div>
       </CardHeader>
       <div className="px-5 pb-5 pt-2 flex flex-col gap-3">

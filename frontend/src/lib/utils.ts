@@ -5,25 +5,34 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-export function formatKwh(n: number): string {
-  return `${n.toFixed(1)} kWh`;
+export function formatKwh(n: number | null | undefined): string {
+  const val = typeof n === "number" && !isNaN(n) ? n : Number(n) || 0;
+  return `${val.toFixed(1)} kWh`;
 }
 
-export function formatKw(n: number): string {
-  return `${n.toFixed(2)} kW`;
+export function formatKw(n: number | null | undefined): string {
+  const val = typeof n === "number" && !isNaN(n) ? n : Number(n) || 0;
+  return `${val.toFixed(2)} kW`;
 }
 
-export function formatCost(units: number, rate = 10): string {
-  const cost = units * rate;
-  return `₹${cost.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+export function formatCost(units: number | null | undefined, rate = 10): string {
+  const num = typeof units === "number" && !isNaN(units) ? units : Number(units) || 0;
+  const cost = num * rate;
+  return `₹${Math.round(cost).toLocaleString("en-IN")}`;
 }
 
-export function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+export function formatDate(d: Date | string | null | undefined): string {
+  if (!d) return "";
+  const dateObj = d instanceof Date ? d : new Date(d);
+  if (isNaN(dateObj.getTime())) return String(d);
+  return dateObj.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 }
 
-export function formatTime(d: Date): string {
-  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+export function formatTime(d: Date | string | null | undefined): string {
+  if (!d) return "";
+  const dateObj = d instanceof Date ? d : new Date(d);
+  if (isNaN(dateObj.getTime())) return String(d);
+  return dateObj.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
 
 export function timeAgo(d: Date | string | null | undefined): string {

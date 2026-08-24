@@ -1,15 +1,14 @@
 import type {
-  BlockFloorRow, BuilderOverview, BuilderSocietyRow, Device, DeviceRow, FlatHourlyProfile, FlatLive,
+  BlockFloorRow, BuilderOverview, BuilderSocietyRow, DeviceRow, FlatHourlyProfile, FlatLive,
   FlatSummary, FlatTrend, FloorFlatRow, HeatmapGrid, RegisterDeviceInput, Session,
-  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, TrendPoint, FlatDetail, MeterStatus,
-  DailyTrendPoint, HourlyDataPoint, AnomalyItem, SuperAdminOverview, BuilderListItem, CreateSocietyInput,
+  SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, SocietyOverview, FlatDetail,
+  DailyTrendPoint, HourlyDataPoint, AnomalyItem, SuperAdminOverview, BuilderListItem,
   CreateBuilderInput, CreateBlockInput, CreateResidentInput
 } from "./types";
-import api from '../api/api'
+import api from '../api/api';
 
 // ------------------------------------------------------- Auth ----
 export async function login(email: string, password: string): Promise<Session> {
-
   const response = await api.post("/auth/login", {
     email,
     password
@@ -47,42 +46,67 @@ export async function getCurrentUser(): Promise<Session["user"]> {
 
 // ------------------------------------------------------- Flat ----
 export async function getFlatLive(flatId: string): Promise<FlatLive> {
-  const response = await api.get(`/flat/${flatId}/live`);
-  const data = response.data;
-  return {
-    ...data,
-    online: Boolean(data.status ?? data.online),
-    lastReadingAt: data.lastReadingAt ? new Date(data.lastReadingAt) : undefined,
-    timestamp: data.timeStamp ? new Date(data.timeStamp) : (data.timestamp ? new Date(data.timestamp) : undefined),
-  };
+  try {
+    const response = await api.get(`/flat/${flatId}/live`);
+    const data = response.data || {};
+    return {
+      ...data,
+      kw: Number(data.kw) || 0,
+      online: Boolean(data.status ?? data.online),
+      lastReadingAt: data.lastReadingAt ? new Date(data.lastReadingAt) : undefined,
+      timestamp: data.timeStamp ? new Date(data.timeStamp) : (data.timestamp ? new Date(data.timestamp) : undefined),
+    };
+  } catch {
+    return { kw: 0, online: false, level: "normal", pctVsUsual: 0 };
+  }
 }
 
 export async function getFlatSummary(flatId: string, monthDate: Date = new Date()): Promise<FlatSummary> {
-  const month = monthDate.toISOString().slice(0, 7);
-  const response = await api.get(`/flat/${flatId}/summary?month=${month}`);
-  return response.data;
+  try {
+    const month = monthDate.toISOString().slice(0, 7);
+    const response = await api.get(`/flat/${flatId}/summary?month=${month}`);
+    return response.data || null;
+  } catch {
+    return null as any;
+  }
 }
 
 export async function getFlatTrend(flatId: string): Promise<FlatTrend> {
-  const response = await api.get(`/flat/${flatId}/trend`);
-  const data = response.data;
-  return {
-    ...data,
-    points: data.points.map((point: TrendPoint) => ({
-      ...point,
-      date: new Date(point.date),
-    })),
-  };
+  try {
+    const response = await api.get(`/flat/${flatId}/trend`);
+    const data = response.data || {};
+    const pts = Array.isArray(data.points) ? data.points : [];
+    return {
+      ...data,
+      pctChange: Number(data.pctChange) || 0,
+      points: pts.map((point: any) => ({
+        ...point,
+        date: new Date(point.date),
+      })),
+    };
+  } catch {
+    return { points: [], pctChange: 0 };
+  }
 }
 
-export async function getFlatHourlyProfile(flatId: string): Promise<FlatHourlyProfile> {
-  const response = await api.get(`/flat/${flatId}/hourly-profile`);
-  return response.data;
+export async function getFlatHourlyProfile(flatId: string, date?: string): Promise<FlatHourlyProfile> {
+  try {
+    const params: Record<string, string> = {};
+    if (date) params.date = date;
+    const response = await api.get(`/flat/${flatId}/hourly-profile`, { params });
+    return response.data || { profile: [] };
+  } catch (err) {
+    return { profile: [], peakHours: [] };
+  }
 }
 
 export async function getFlatDetail(flatId: string): Promise<FlatDetail> {
-  const response = await api.get(`/flat/${flatId}/details`);
-  return response.data;
+  try {
+    const response = await api.get(`/flat/${flatId}/details`);
+    return response.data || null;
+  } catch {
+    return null as any;
+  }
 }
 
 function isDemoSession(): boolean {
@@ -112,8 +136,7 @@ export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockR
         blockName: cleanName,
       };
     });
-  } catch (err) {
-    console.warn("Failed to fetch society blocks:", err);
+  } catch {
     return [];
   }
 }
@@ -130,7 +153,7 @@ export async function getBlockFloors(blockId: string): Promise<BlockFloorRow[]> 
   try {
     const response = await api.get(`/block/${blockId}/floors`);
     return response.data;
-  } catch (err) {
+  } catch {
     return [];
   }
 }
@@ -147,7 +170,7 @@ export async function getFloorFlatsList(floorId: string): Promise<FloorFlatRow[]
   try {
     const response = await api.get(`/floor/${floorId}/flats`);
     return response.data;
-  } catch (err) {
+  } catch {
     return [];
   }
 }
@@ -197,7 +220,7 @@ export async function getSocietyAnomalies(societyId: string, filter?: string): P
     const data = response.data;
     const list: any[] = Array.isArray(data) ? data : (data?.anomalies ?? []);
     return list.map((a: any, idx: number) => ({
-      id: a.id ? String(a.id) : `anom-${idx + 1}`,
+      id: a.id ? String(a.id) : `soc-anom-${idx + 1}`,
       flat: a.flat || (a.flatNumber ? `Flat ${a.flatNumber}` : a.blockName ? `${a.blockName}` : `Anomaly #${idx + 1}`),
       flatNumber: a.flatNumber,
       blockName: a.blockName,
@@ -208,8 +231,7 @@ export async function getSocietyAnomalies(societyId: string, filter?: string): P
       detectedAt: a.detectedAt ? new Date(a.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently",
       resolved: Boolean(a.resolved),
     }));
-  } catch (err) {
-    console.warn("Backend anomalies API not yet available, falling back to empty list:", err);
+  } catch {
     return [];
   }
 }
@@ -295,8 +317,7 @@ export async function getBuilderAnomalies(builderId: string, filter?: string): P
       detectedAt: a.detectedAt ? new Date(a.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently",
       resolved: Boolean(a.resolved),
     }));
-  } catch (err) {
-    console.warn("Backend builder anomalies API not yet available, falling back to empty list:", err);
+  } catch {
     return [];
   }
 }
@@ -331,7 +352,7 @@ export async function getSocietyDevices(societyId: string): Promise<DeviceRow[]>
   });
 }
 
-export async function registerDevice({ deviceSerial, deviceType, mappedTo, societyId, flatId, commonAreaId }: RegisterDeviceInput): Promise<Device> {
+export async function registerDevice({ deviceSerial, deviceType, mappedTo, societyId, flatId, commonAreaId }: RegisterDeviceInput): Promise<any> {
   const serialNumber = Number(deviceSerial.replace(/\D/g, "")) || 10001;
   const response = await api.post(`/society/${societyId}/register-device`, {
     deviceSerial: serialNumber,
@@ -356,11 +377,11 @@ export async function getSuperAdminOverview(): Promise<SuperAdminOverview> {
 
 export async function getAllBuilders(): Promise<BuilderListItem[]> {
   const response = await api.get("/superAdmin/builders");
-  return response.data ?? [];
+  return response.data;
 }
 
-export async function createSociety(input: CreateSocietyInput): Promise<any> {
-  const response = await api.post(`/builder/${input.builderId}/society`, input);
+export async function createSociety(input: any): Promise<any> {
+  const response = await api.post("/superAdmin/societies", input);
   return response.data;
 }
 
@@ -433,5 +454,3 @@ export async function deleteCommonArea(societyId: string | number, commonAreaId:
   const response = await api.delete(`/society/${societyId}/common-area/${commonAreaId}`);
   return response.data;
 }
-
-

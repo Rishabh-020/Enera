@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { Plus, Trash2, RefreshCw, Cpu, Building2, Layers, Home, Trees, CheckCircle2, X } from "lucide-react";
 import * as api from "../../lib/api";
 import { DashboardLayout, NAV_ITEMS_SOCIETY } from "../../components/layout/DashboardLayout";
@@ -11,6 +11,7 @@ import {
 import { CustomSelect } from "../../components/ui/CustomSelect";
 import type { DeviceRow, DeviceType, MeterStatus, SocietyBlockRow, BlockFloorRow, FloorFlatRow, SocietyCommonAreaRow } from "../../lib/types";
 import { useWebSocketReading } from "../../context/WebSocketContext";
+import { useAuth } from "../../context/AuthContext";
 
 const STATUS_LABEL: Record<MeterStatus, string> = {
   live: "Live",
@@ -28,6 +29,12 @@ const STATUS_BADGE: Record<MeterStatus, "live" | "amber" | "high" | "neutral"> =
 export default function DeviceManagement() {
   const { societyId } = useParams<{ societyId: string }>();
   const navigate = useNavigate();
+  const { user, isDemoMode } = useAuth();
+
+  // Enforce society ownership: redirect society admins if accessing another society's devices
+  if (!isDemoMode && user?.role === "SOCIETY_ADMIN" && user.societyId && String(user.societyId) !== String(societyId)) {
+    return <Navigate to={`/society/${user.societyId}/devices`} replace />;
+  }
 
   const [devices, setDevices] = useState<DeviceRow[] | null>(null);
   const [blocks, setBlocks] = useState<SocietyBlockRow[]>([]);
