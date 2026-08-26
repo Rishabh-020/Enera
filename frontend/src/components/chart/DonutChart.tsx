@@ -67,12 +67,12 @@ export function DonutChart({
   }
 
   return (
-    <Card className="h-full flex flex-col justify-between">
-      <CardHeader className="pb-2">
+    <Card className="h-full border border-[var(--color-sage-mist,#afc4bf)] bg-white overflow-hidden flex flex-col justify-between">
+      <CardHeader className="pb-3 border-b border-slate-100">
         <div className="flex items-center justify-between w-full">
           <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle className="text-base sm:text-lg font-bold text-slate-900">{title}</CardTitle>
+            <CardDescription className="text-xs text-slate-500 mt-0.5">{description}</CardDescription>
           </div>
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200/80 px-2 py-0.5 rounded-full">
             <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />

@@ -32,11 +32,11 @@ export function PeerComparisonBar({
   const userPct = range > 0 ? ((userValue - peerMin) / range) * 100 : 50;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border border-[var(--color-sage-mist,#afc4bf)] bg-white overflow-hidden flex flex-col justify-between">
+      <CardHeader className="pb-3 border-b border-slate-100">
         <div>
-          <CardTitle>{label}</CardTitle>
-          <CardDescription>vs similar {bhkType} flats in your block</CardDescription>
+          <CardTitle className="text-base sm:text-lg font-bold text-slate-900">{label}</CardTitle>
+          <CardDescription className="text-xs text-slate-500 mt-0.5">vs similar {bhkType} flats in your block</CardDescription>
         </div>
       </CardHeader>
       <div className="px-5 pb-5 pt-3">

@@ -19,6 +19,8 @@ public class RegisterDeviceRequest {
 
     private Long commonAreaId;
 
+    private String blockName;
+
     @NotNull(message = "Society id is required")
     private Long societyId;
 

@@ -5,6 +5,7 @@ import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { DeleteConfirmModal } from "../../../components/ui/DeleteConfirmModal";
 import type { SocietyFlatRow } from "../../../lib/types";
 import { useWebSocketReading } from "../../../context/WebSocketContext";
+import { getErrorMessage } from "../../../lib/utils";
 import * as api from "../../../lib/api";
 
 interface ResidentsTabProps {
@@ -97,24 +98,39 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
   // Handle Delete Resident
   const handleDeleteResident = async () => {
     if (!residentToDelete) return;
+    const targetId = residentToDelete.residentId ?? residentToDelete.id;
     try {
-      await api.deleteResident(societyId, residentToDelete.id);
-    } catch {
-      // Backend api mock fallback
+      await api.deleteResident(societyId, targetId);
+      setActionSuccess(`Resident "${residentToDelete.residentName}" removed from Flat ${residentToDelete.flatNumber} and permanently deleted.`);
+      setTimeout(() => setActionSuccess(null), 4000);
+
+      // Optimistically update local state
+      setFlats((prev) =>
+        prev
+          ? prev.map((f) =>
+              String(f.id) === String(residentToDelete.id)
+                ? { ...f, residentName: null, residentId: null, residentEmail: null, occupied: false }
+                : f
+            )
+          : prev
+      );
+
+      // Sync with server
+      try {
+        if (societyId) {
+          const fresh = await api.getSocietyFlatsList(societyId);
+          if (fresh && Array.isArray(fresh)) {
+            setFlats(fresh);
+          }
+        }
+      } catch (e) {}
+
+      onRefresh?.();
+    } catch (err) {
+      setAddError(getErrorMessage(err, "Failed to remove resident."));
+    } finally {
+      setResidentToDelete(null);
     }
-    // Optimistically update local state
-    setFlats((prev) =>
-      prev
-        ? prev.map((f) =>
-            f.id === residentToDelete.id
-              ? { ...f, residentName: null }
-              : f
-          )
-        : prev
-    );
-    setActionSuccess(`Resident "${residentToDelete.residentName}" removed from Flat ${residentToDelete.flatNumber}.`);
-    setTimeout(() => setActionSuccess(null), 4000);
-    onRefresh?.();
   };
 
   // Handle Add Resident
@@ -124,37 +140,58 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
       setAddError("Please fill in all required fields.");
       return;
     }
+
+    const matchedFlat = (flats ?? []).find((f) => {
+      if (form.flatId && String(f.id) === String(form.flatId)) return true;
+      if (form.blockName && form.blockName.trim()) {
+        return (
+          f.flatNumber.toLowerCase() === form.flatNumber.trim().toLowerCase() &&
+          f.blockName.toLowerCase() === form.blockName.trim().toLowerCase()
+        );
+      }
+      return f.flatNumber.toLowerCase() === form.flatNumber.trim().toLowerCase();
+    });
+
+    const targetFlatId = matchedFlat ? Number(matchedFlat.id) : (form.flatId ? Number(form.flatId) : null);
+
+    if (!targetFlatId) {
+      setAddError("The specified flat was not found. Please create the flat in Society Blocks & Topology first.");
+      return;
+    }
+
+    if (matchedFlat && matchedFlat.residentName) {
+      setAddError(`Flat ${matchedFlat.flatNumber} (${matchedFlat.blockName}) is already occupied by "${matchedFlat.residentName}". Please remove the existing resident first.`);
+      return;
+    }
+
+    const blockNameToUse = (form.blockName && form.blockName.trim()) || matchedFlat?.blockName || "Block";
+
     setAddLoading(true);
     setAddError(null);
     try {
       await api.registerResident({
-        name: form.name,
-        email: form.email,
+        name: form.name.trim(),
+        email: form.email.trim(),
         password: form.password,
         role: "RESIDENT",
         societyId: Number(societyId),
-        flatId: form.flatId ? Number(form.flatId) : undefined,
+        flatId: targetFlatId,
+        blockName: blockNameToUse,
       });
-      // Optimistically update flat or add row
-      setFlats((prev) => {
-        if (!prev) return prev;
-        const exists = prev.find((f) => f.flatNumber === form.flatNumber);
-        if (exists) {
-          return prev.map((f) => (f.flatNumber === form.flatNumber ? { ...f, residentName: form.name } : f));
-        }
-        return [
-          ...prev,
-          {
-            id: Date.now(),
-            flatNumber: form.flatNumber,
-            blockName: form.blockName,
-            bhkType: form.bhkType,
-            residentName: form.name,
-            meterStatus: "live" as const,
-            mtdKwh: 0,
-          },
-        ];
-      });
+
+      // Update local flats state immediately with new resident name
+      setFlats((prev) =>
+        prev
+          ? prev.map((f) =>
+              String(f.id) === String(targetFlatId) ||
+              (f.flatNumber.toLowerCase() === form.flatNumber.trim().toLowerCase() &&
+                f.blockName.toLowerCase() === blockNameToUse.toLowerCase())
+                ? { ...f, residentName: form.name.trim(), occupied: true }
+                : f
+            )
+          : prev
+      );
+
       setShowAddModal(false);
       setActionSuccess(`Resident "${form.name}" registered successfully for Flat ${form.flatNumber}!`);
       setTimeout(() => setActionSuccess(null), 4000);
@@ -167,9 +204,22 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
         bhkType: "2BHK",
         blockName: "Block A",
       });
+
+      // Refetch latest flats from server to guarantee sync
+      try {
+        if (societyId) {
+          const fresh = await api.getSocietyFlatsList(societyId);
+          if (fresh && Array.isArray(fresh)) {
+            setFlats(fresh);
+          }
+        }
+      } catch (e) {
+        // Fall back to optimistic update
+      }
+
       onRefresh?.();
     } catch (err) {
-      setAddError(err instanceof Error ? err.message : "Failed to register resident.");
+      setAddError(getErrorMessage(err, "Failed to register resident."));
     } finally {
       setAddLoading(false);
     }
@@ -364,6 +414,37 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
                 </div>
               </div>
 
+              {flats && flats.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Select Flat (from Society Flats)</label>
+                  <CustomSelect
+                    fullWidth
+                    size="md"
+                    value={form.flatId}
+                    onChange={(selectedId) => {
+                      const found = flats.find((f) => String(f.id) === selectedId);
+                      if (found) {
+                        setForm({
+                          ...form,
+                          flatId: String(found.id),
+                          flatNumber: found.flatNumber,
+                          blockName: found.blockName,
+                          bhkType: found.bhkType || "2BHK",
+                        });
+                      } else {
+                        setForm({ ...form, flatId: "" });
+                      }
+                    }}
+                    placeholder="-- Choose a Flat or enter details below --"
+                    options={flats.map((f) => ({
+                      value: String(f.id),
+                      label: `Flat ${f.flatNumber} (${f.blockName})`,
+                      sub: `${f.bhkType}${f.residentName ? ` · Occupied: ${f.residentName}` : " · Vacant"}`,
+                    }))}
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Flat Number *</label>
@@ -384,16 +465,13 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">BHK Type</label>
-                  <select
+                  <CustomSelect
+                    fullWidth
+                    size="md"
                     value={form.bhkType}
-                    onChange={(e) => setForm({ ...form, bhkType: e.target.value })}
-                    className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-700 outline-none focus:border-teal-500"
-                  >
-                    <option value="1BHK">1 BHK</option>
-                    <option value="2BHK">2 BHK</option>
-                    <option value="3BHK">3 BHK</option>
-                    <option value="4BHK">4 BHK</option>
-                  </select>
+                    onChange={(val) => setForm({ ...form, bhkType: val })}
+                    options={["1BHK", "2BHK", "3BHK", "4BHK"]}
+                  />
                 </div>
               </div>
 

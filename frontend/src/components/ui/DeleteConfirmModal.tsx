@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { AlertTriangle, Trash2, X, Loader2 } from "lucide-react";
 import { Button } from "./primitives";
+import { getErrorMessage } from "../../lib/utils";
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export function DeleteConfirmModal({
       await onConfirm();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete. Please try again.");
+      setError(getErrorMessage(err, "Failed to delete. Please try again."));
     } finally {
       setLoading(false);
     }

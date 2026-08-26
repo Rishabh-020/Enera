@@ -2,14 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import type { WebSocketReading } from "./types";
 
 function getWebSocketUrl(): string {
-  if (typeof window === "undefined") return "ws://localhost:8080/ws/energy";
+  try {
+    const envUrl = (import.meta as any)?.env?.VITE_WS_URL;
+    if (envUrl) return envUrl;
 
-  const envUrl = (import.meta as any).env?.VITE_WS_URL;
-  if (envUrl) return envUrl;
-
-  const isSecure = window.location.protocol === "https:";
-  const host = window.location.hostname || "localhost";
-  return `${isSecure ? "wss" : "ws"}://${host}:8080/ws/energy`;
+    if (typeof window !== "undefined" && window && window.location) {
+      const isSecure = window.location.protocol === "https:";
+      const host = window.location.hostname || "localhost";
+      return `${isSecure ? "wss" : "ws"}://${host}:8080/ws/energy`;
+    }
+  } catch (err) {
+    console.warn("WebSocket URL detection fallback:", err);
+  }
+  return "ws://localhost:8080/ws/energy";
 }
 
 export function useEnergyWebSocket(enabled: boolean = true) {

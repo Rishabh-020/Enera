@@ -43,4 +43,11 @@ public class SuperAdminController {
                 builderService.createBuilder(request)
         );
     }
+
+    @DeleteMapping("/builders/{builderId}")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<Void> deleteBuilder(@PathVariable Long builderId){
+        builderService.deleteBuilder(builderId);
+        return ResponseEntity.noContent().build();
+    }
 }

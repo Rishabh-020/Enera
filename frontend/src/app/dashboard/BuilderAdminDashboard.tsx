@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, type FormEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Building2, Users, Zap, Plus, Download, Leaf, Trash2, X, CheckCircle2, ChevronRight } from "lucide-react";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { Building2, Users, Zap, Plus, Download, Leaf, Trash2, X, CheckCircle2, ChevronRight, AlertTriangle } from "lucide-react";
 import * as api from "../../lib/api";
 import { DashboardLayout, NAV_ITEMS_BUILDER } from "../../components/layout/DashboardLayout";
 import { StatCard } from "../../components/chart/StatCard";
@@ -9,10 +9,17 @@ import { Card, CardHeader, CardTitle, CardDescription, Button, Badge, Table, The
 import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
 import type { BuilderOverview, BuilderSocietyRow } from "../../lib/types";
 import { useWebSocketReading } from "../../context/WebSocketContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function BuilderAdminDashboard() {
   const { builderId } = useParams<{ builderId: string }>();
   const navigate = useNavigate();
+  const { user, isDemoMode } = useAuth();
+
+  // Enforce builder ownership: redirect builder admins if accessing another builder's ID
+  if (!isDemoMode && user?.role === "BUILDER_ADMIN" && user.builderId && String(user.builderId) !== String(builderId)) {
+    return <Navigate to={`/builder/${user.builderId}`} replace />;
+  }
   const [overview, setOverview] = useState<BuilderOverview | null>(null);
   const [societies, setSocieties] = useState<BuilderSocietyRow[] | null>(null);
   const [sortField, setSortField] = useState<"name" | "mtdKwh" | "avgPerFlat" | "mom">("mtdKwh");
@@ -22,6 +29,7 @@ export default function BuilderAdminDashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [societyToDelete, setSocietyToDelete] = useState<BuilderSocietyRow | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -31,14 +39,27 @@ export default function BuilderAdminDashboard() {
     address: "",
     city: "Mumbai",
     totalBlocks: 4,
+    adminName: "",
+    adminEmail: "",
+    adminPassword: "",
   });
 
   const { latestReading } = useWebSocketReading();
 
   const getSocietyMom = (s: BuilderSocietyRow): number => {
     if (typeof s.mom === "number") return s.mom;
-    const baseline = s.prevMonthKwh && s.prevMonthKwh > 0 ? s.prevMonthKwh : (s.occupiedFlats > 0 ? s.occupiedFlats * 120 : (s.mtdKwh > 0 ? s.mtdKwh * 0.95 : 100));
-    return Number((((s.mtdKwh - baseline) / baseline) * 100).toFixed(1));
+    if (!isDemoMode) return -1;
+    const now = new Date();
+    const dayOfMonth = Math.max(1, now.getDate());
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const projectedMtdKwh = (s.mtdKwh / dayOfMonth) * daysInMonth;
+
+    const minRealistic = s.occupiedFlats > 0 ? s.occupiedFlats * 40 : 50;
+    const baseline = s.prevMonthKwh && s.prevMonthKwh >= minRealistic
+      ? s.prevMonthKwh
+      : (s.occupiedFlats > 0 ? s.occupiedFlats * 120 : (projectedMtdKwh > 0 ? projectedMtdKwh : 100));
+
+    return Number((((projectedMtdKwh - baseline) / baseline) * 100).toFixed(1));
   };
 
   useEffect(() => {
@@ -63,8 +84,18 @@ export default function BuilderAdminDashboard() {
               const addedKwh = latestReading.kwh ?? 0.05;
               const newMtdKwh = Number((s.mtdKwh + addedKwh).toFixed(2));
               const newAvgPerFlat = s.totalFlats > 0 ? Number((newMtdKwh / s.totalFlats).toFixed(2)) : s.avgPerFlat;
-              const baseline = s.prevMonthKwh && s.prevMonthKwh > 0 ? s.prevMonthKwh : (s.occupiedFlats > 0 ? s.occupiedFlats * 120 : (s.mtdKwh > 0 ? s.mtdKwh * 0.95 : 100));
-              const newMom = Number((((newMtdKwh - baseline) / baseline) * 100).toFixed(1));
+
+              const now = new Date();
+              const dayOfMonth = Math.max(1, now.getDate());
+              const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+              const projectedMtdKwh = (newMtdKwh / dayOfMonth) * daysInMonth;
+
+              const minRealistic = s.occupiedFlats > 0 ? s.occupiedFlats * 40 : 50;
+              const baseline = s.prevMonthKwh && s.prevMonthKwh >= minRealistic
+                ? s.prevMonthKwh
+                : (s.occupiedFlats > 0 ? s.occupiedFlats * 120 : (projectedMtdKwh > 0 ? projectedMtdKwh : 100));
+
+              const newMom = Number((((projectedMtdKwh - baseline) / baseline) * 100).toFixed(1));
 
               return {
                 ...s,
@@ -83,8 +114,8 @@ export default function BuilderAdminDashboard() {
 
   function loadData() {
     if (!builderId) return;
-    api.getBuilderOverview(builderId).then(setOverview).catch(() => {});
-    api.getBuilderSocieties(builderId).then(setSocieties).catch(() => {});
+    api.getBuilderOverview(builderId).then(setOverview).catch(() => { });
+    api.getBuilderSocieties(builderId).then(setSocieties).catch(() => { });
   }
 
   useEffect(() => {
@@ -134,8 +165,26 @@ export default function BuilderAdminDashboard() {
   const handleAddSociety = async (e: FormEvent) => {
     e.preventDefault();
     if (!societyForm.name || !builderId) return;
-    setAddLoading(true);
     setAddError(null);
+
+    // Frontend validation for admin credentials if provided
+    if (societyForm.adminPassword || societyForm.adminEmail) {
+      if (!societyForm.adminEmail) {
+        setAddError("Admin email is required when appointing a society admin.");
+        return;
+      }
+      if (!societyForm.adminPassword) {
+        setAddError("Password is required when appointing a society admin.");
+        return;
+      }
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()_+\-={}\[\]:;"'<>,./~`|\\]).{8,}$/;
+      if (!passwordRegex.test(societyForm.adminPassword)) {
+        setAddError("Password must be at least 8 characters and contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.");
+        return;
+      }
+    }
+
+    setAddLoading(true);
     try {
       await api.createSociety({
         ...societyForm,
@@ -160,10 +209,13 @@ export default function BuilderAdminDashboard() {
       setShowAddModal(false);
       setActionSuccess(`Society "${societyForm.name}" created successfully!`);
       setTimeout(() => setActionSuccess(null), 4000);
-      setSocietyForm({ name: "", address: "", city: "Mumbai", totalBlocks: 4 });
+      setSocietyForm({
+        name: "", address: "", city: "Mumbai", totalBlocks: 4, adminName: "", adminEmail: "", adminPassword: ""
+      });
       loadData();
-    } catch (err) {
-      setAddError(err instanceof Error ? err.message : "Failed to create society.");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to create society.");
+      setAddError(msg);
     } finally {
       setAddLoading(false);
     }
@@ -174,15 +226,17 @@ export default function BuilderAdminDashboard() {
     if (!societyToDelete || !builderId) return;
     try {
       await api.deleteSociety(builderId, societyToDelete.id);
-    } catch {
-      // Mock fallback
+      setSocieties((prev) => (prev ? prev.filter((s) => s.id !== societyToDelete.id) : prev));
+      setOverview((prev) => prev ? { ...prev, totalSocieties: Math.max(0, prev.totalSocieties - 1) } : prev);
+      setActionSuccess(`Society "${societyToDelete.name}" has been deleted.`);
+      setTimeout(() => setActionSuccess(null), 4000);
+      loadData();
+    } catch (err: any) {
+      console.error("Delete society error:", err);
+      const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to delete society.");
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 5000);
     }
-    // Optimistically remove
-    setSocieties((prev) => (prev ? prev.filter((s) => s.id !== societyToDelete.id) : prev));
-    setOverview((prev) => prev ? { ...prev, totalSocieties: Math.max(0, prev.totalSocieties - 1) } : prev);
-    setActionSuccess(`Society "${societyToDelete.name}" has been deleted.`);
-    setTimeout(() => setActionSuccess(null), 4000);
-    loadData();
   };
 
   return (
@@ -196,6 +250,12 @@ export default function BuilderAdminDashboard() {
         <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-teal-200 bg-teal-50/90 p-3.5 text-xs font-semibold text-teal-900 shadow-sm animate-fade-in">
           <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
           <span>{actionSuccess}</span>
+        </div>
+      )}
+      {actionError && (
+        <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50/90 p-3.5 text-xs font-semibold text-rose-900 shadow-sm animate-fade-in">
+          <AlertTriangle size={16} className="text-rose-600 shrink-0" />
+          <span>{actionError}</span>
         </div>
       )}
 
@@ -222,8 +282,8 @@ export default function BuilderAdminDashboard() {
           accent
         />
         <StatCard
-          label="Occupied flats"
-          value={overview ? overview.totalBlocks * 30 : "—"}
+          label="Total Blocks"
+          value={overview ? overview.totalBlocks : "—"}
           icon={<Users size={16} />}
           loading={!overview}
         />
@@ -242,8 +302,8 @@ export default function BuilderAdminDashboard() {
       </div>
 
       {/* Benchmarking + All societies table */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <BenchmarkChart societies={benchmarkData} loading={!societies} />
+      <div className="flex flex-col gap-6">
+        <BenchmarkChart societies={societies} loading={!societies} />
 
         <Card>
           <CardHeader>
@@ -282,7 +342,8 @@ export default function BuilderAdminDashboard() {
               <tbody>
                 {(sorted ?? []).map((s) => {
                   const mom = getSocietyMom(s);
-                  const isEfficient = mom <= 0;
+                  const isNoData = mom === -1;
+                  const isEfficient = mom <= 0 && !isNoData;
                   return (
                     <Tr
                       key={s.id}
@@ -294,13 +355,13 @@ export default function BuilderAdminDashboard() {
                       <Td>{s.occupiedFlats}/{s.totalFlats}</Td>
                       <Td className="font-mono-data">{s.avgPerFlat.toFixed(2)}</Td>
                       <Td>
-                        <span className={isEfficient ? "text-teal-600 font-medium" : "text-red-500 font-medium"}>
-                          {mom > 0 ? "+" : ""}{mom}%
+                        <span className={isNoData ? "text-slate-400 font-medium font-mono-data" : isEfficient ? "text-teal-600 font-medium font-mono-data" : "text-red-500 font-medium font-mono-data"}>
+                          {isNoData ? "-1%" : `${mom > 0 ? "+" : ""}${mom}%`}
                         </span>
                       </Td>
                       <Td>
-                        <Badge variant={isEfficient ? "efficient" : "attention"}>
-                          {isEfficient ? "Efficient" : "Needs attention"}
+                        <Badge variant={isNoData ? "neutral" : isEfficient ? "efficient" : "attention"}>
+                          {isNoData ? "No baseline (-1)" : isEfficient ? "Efficient" : "Needs attention"}
                         </Badge>
                       </Td>
                       <Td className="text-right">
@@ -355,8 +416,9 @@ export default function BuilderAdminDashboard() {
             className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
             onClick={() => !addLoading && setShowAddModal(false)}
           />
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-scale-in z-10">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+          <div className="relative w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-scale-in z-10 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 p-6 pb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 border border-teal-200/60 text-teal-600">
                   <Building2 size={20} />
@@ -375,55 +437,101 @@ export default function BuilderAdminDashboard() {
               </button>
             </div>
 
-            <form onSubmit={handleAddSociety} className="space-y-4">
-              {addError && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 font-medium animate-fade-in">
-                  {addError}
-                </div>
-              )}
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleAddSociety} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 pt-3 space-y-4 overflow-y-auto flex-1 max-h-[calc(90vh-140px)]">
+                {addError && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 font-medium animate-fade-in">
+                    {addError}
+                  </div>
+                )}
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Society Name *</label>
-                <Input
-                  required
-                  placeholder="e.g. Palm Grove Residency"
-                  value={societyForm.name}
-                  onChange={(e) => setSocietyForm({ ...societyForm, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Street Address</label>
-                <Input
-                  placeholder="e.g. Sector 14, Palm Avenue"
-                  value={societyForm.address}
-                  onChange={(e) => setSocietyForm({ ...societyForm, address: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">City *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Society Name *</label>
                   <Input
                     required
-                    placeholder="e.g. Mumbai"
-                    value={societyForm.city}
-                    onChange={(e) => setSocietyForm({ ...societyForm, city: e.target.value })}
+                    placeholder="e.g. Palm Grove Residency"
+                    value={societyForm.name}
+                    onChange={(e) => setSocietyForm({ ...societyForm, name: e.target.value })}
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Total Blocks</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Street Address</label>
                   <Input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={societyForm.totalBlocks}
-                    onChange={(e) => setSocietyForm({ ...societyForm, totalBlocks: Number(e.target.value) })}
+                    placeholder="e.g. Sector 14, Palm Avenue"
+                    value={societyForm.address}
+                    onChange={(e) => setSocietyForm({ ...societyForm, address: e.target.value })}
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">City *</label>
+                    <Input
+                      required
+                      placeholder="e.g. Mumbai"
+                      value={societyForm.city}
+                      onChange={(e) => setSocietyForm({ ...societyForm, city: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Total Blocks</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={societyForm.totalBlocks}
+                      onChange={(e) => setSocietyForm({ ...societyForm, totalBlocks: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                {/* Society Admin Section */}
+                <div className="border-t border-slate-100 pt-3 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <Users size={14} className="text-teal-600" />
+                    <span className="text-xs font-bold text-slate-800">Appoint Society Admin (Optional)</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Admin Full Name</label>
+                    <Input
+                      placeholder="e.g. Rajesh Sharma"
+                      value={societyForm.adminName}
+                      onChange={(e) => setSocietyForm({ ...societyForm, adminName: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Admin Email</label>
+                      <Input
+                        type="email"
+                        placeholder="admin@society.com"
+                        value={societyForm.adminEmail}
+                        onChange={(e) => setSocietyForm({ ...societyForm, adminEmail: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                        value={societyForm.adminPassword}
+                        onChange={(e) => setSocietyForm({ ...societyForm, adminPassword: e.target.value })}
+                      />
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Min 8 chars, 1 uppercase, 1 lowercase, 1 digit & 1 symbol
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              {/* Fixed Footer */}
+              <div className="flex items-center justify-end gap-2.5 p-6 py-3.5 border-t border-slate-100 bg-slate-50/70 shrink-0">
                 <Button
                   type="button"
                   variant="outline"

@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.access.AccessDeniedException;
 
+import org.springframework.web.bind.MethodArgumentNotValidException;
+
 import java.time.LocalDateTime;
 
 @RestControllerAdvice
@@ -22,6 +24,18 @@ public class GlobalExceptionHandler {
         );
 
         return new ResponseEntity<>(error,status);
+    }
+
+    // For 400 Bean Validation Error (from @Valid)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
+        String errorMessage = ex.getBindingResult().getFieldErrors().stream()
+                .map(fieldError -> fieldError.getDefaultMessage())
+                .filter(msg -> msg != null && !msg.isBlank())
+                .findFirst()
+                .orElse("Validation failed");
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
     }
     // For 500 Server error
     @ExceptionHandler(Exception.class)
@@ -68,12 +82,13 @@ public class GlobalExceptionHandler {
     }
 
 
-    // For 409 conflict with duplicate
+    // For 409 conflict with duplicate / already occupied
     @ExceptionHandler({
             DuplicateEmailException.class,
             DuplicateBuilderException.class,
             DuplicateDeviceException.class,
             DuplicateSocietyException.class,
+            FlatAlreadyOccupiedException.class
     })
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex){
         return buildErrorResponse(HttpStatus.CONFLICT,ex.getMessage());

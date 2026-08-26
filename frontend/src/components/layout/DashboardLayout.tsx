@@ -340,14 +340,14 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-teal-500 ring-2 ring-white" />
               </button>
               {/* Avatar + Profile trigger */}
-              <button
+              {/* <button
                 onClick={() => setShowPasswordModal(true)}
                 className="flex items-center gap-2 p-1 pl-2.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer border border-transparent hover:border-slate-200 group"
                 title="Account Settings & Password"
               >
                 <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 hidden lg:inline">{user?.name}</span>
                 <Avatar name={user?.name ?? "U"} />
-              </button>
+              </button> */}
             </div>
           </div>
 

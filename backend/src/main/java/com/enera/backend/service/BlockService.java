@@ -2,13 +2,12 @@ package com.enera.backend.service;
 
 import com.enera.backend.dto.block.BlockFloorResponse;
 import com.enera.backend.dto.block.CreateBlockRequest;
-import com.enera.backend.entity.Block;
-import com.enera.backend.entity.Floor;
-import com.enera.backend.entity.Society;
+import com.enera.backend.entity.*;
 import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,17 +19,20 @@ public class BlockService {
     private final FloorRepository floorRepository;
     private final ReadingRepository readingRepository;
     private final SocietyRepository societyRepository;
+    private final FloorService floorService;
 
     BlockService(FlatRepository flatRepository,
                  BlockRepository blockRepository,
                  FloorRepository floorRepository,
                  ReadingRepository readingRepository,
-                 SocietyRepository societyRepository){
+                 SocietyRepository societyRepository,
+                 FloorService floorService){
         this.flatRepository = flatRepository;
         this.blockRepository = blockRepository;
         this.floorRepository = floorRepository;
         this.readingRepository = readingRepository;
         this.societyRepository = societyRepository;
+        this.floorService = floorService;
     }
 
     public List<BlockFloorResponse> getBlockFloors(Long blockId){
@@ -60,6 +62,7 @@ public class BlockService {
         return responses;
     }
 
+    @Transactional
     public Block createBlock(CreateBlockRequest request) {
         Society society = societyRepository.findById(request.getSocietyId())
                 .orElseThrow(() -> new SocietyNotFoundException("Society not found with id: " + request.getSocietyId()));
@@ -70,10 +73,16 @@ public class BlockService {
         return blockRepository.save(block);
     }
 
+    @Transactional
     public void deleteBlock(Long blockId){
         Block block = blockRepository.findById(blockId)
                 .orElseThrow(()-> new SocietyNotFoundException("Block not found"));
 
-//        block.re
+        List<Floor> floors = floorRepository.findByBlockId(blockId);
+        for(Floor floor : floors){
+            floorService.deleteFloor(floor.getId());
+        }
+
+        blockRepository.delete(block);
     }
 }
