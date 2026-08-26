@@ -5,6 +5,7 @@ import com.enera.backend.entity.Device;
 import com.enera.backend.entity.Flat;
 import com.enera.backend.entity.Society;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -52,4 +53,8 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
     """, nativeQuery = true)
     Boolean getStatusByFlatId(
             @Param("flatId") Long flatId);
+
+    @Modifying
+    @Query(value = "DELETE FROM devices WHERE society_id = :societyId", nativeQuery = true)
+    void deleteBySocietyId(@Param("societyId") Long societyId);
 }

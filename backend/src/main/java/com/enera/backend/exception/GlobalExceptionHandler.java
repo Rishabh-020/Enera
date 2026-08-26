@@ -82,12 +82,13 @@ public class GlobalExceptionHandler {
     }
 
 
-    // For 409 conflict with duplicate
+    // For 409 conflict with duplicate / already occupied
     @ExceptionHandler({
             DuplicateEmailException.class,
             DuplicateBuilderException.class,
             DuplicateDeviceException.class,
             DuplicateSocietyException.class,
+            FlatAlreadyOccupiedException.class
     })
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex){
         return buildErrorResponse(HttpStatus.CONFLICT,ex.getMessage());

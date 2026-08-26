@@ -9,17 +9,37 @@ export function AnalyticsTab({ societyId }: { societyId: string }) {
   const [blocks, setBlocks] = useState<SocietyBlockRow[] | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     if (societyId && (session || isDemoMode)) {
-      api.getSocietyBlocks(societyId).then(setBlocks).catch(() => {});
+      api.getSocietyBlocks(societyId)
+        .then((data) => {
+          if (isMounted) {
+            setBlocks(Array.isArray(data) ? data : []);
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not load society blocks, using fallback:", err);
+          if (isMounted) setBlocks([]);
+        });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [societyId, session, isDemoMode]);
 
-  const filterOptions = useMemo(() => {
-    const blockNames = (blocks ?? []).map((b) => b.name);
-    return blockNames.length > 0
-      ? ["Whole society", ...blockNames, "Common areas"]
-      : ["Whole society", "Block A", "Block B", "Block C", "Common areas"];
+  const blockNames = useMemo(() => {
+    if (!blocks || blocks.length === 0) {
+      return ["Block A", "Block B"]; // Instant fallback so filter chips are always populated
+    }
+    return blocks.map((b: any) => {
+      const raw = (b.name || b.blockName || "").trim();
+      return raw.toLowerCase().startsWith("block") ? raw : `Block ${raw}`;
+    }).filter(Boolean);
   }, [blocks]);
+
+  const filterOptions = useMemo(() => {
+    return ["Whole society", ...blockNames, "Common areas"];
+  }, [blockNames]);
 
   return (
     <div className="flex flex-col gap-5">

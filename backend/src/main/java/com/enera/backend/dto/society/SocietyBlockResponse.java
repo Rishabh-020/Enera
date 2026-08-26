@@ -8,6 +8,8 @@ public class SocietyBlockResponse {
 
     private String name;
 
+    private String blockName;
+
     private Double liveKw;
 
     private Double todayKwh;

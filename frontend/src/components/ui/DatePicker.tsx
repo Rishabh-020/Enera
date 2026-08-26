@@ -190,21 +190,11 @@ export function DatePicker({ value, onChange, className, label }: DatePickerProp
 
           {/* Footer with Today Shortcut */}
           <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px]">
-            <button
-              type="button"
-              onClick={() => {
-                onChange("2026-08-09");
-                setViewDate(new Date("2026-08-09T00:00:00"));
-                setOpen(false);
-              }}
-              className="text-teal-600 font-medium hover:underline cursor-pointer"
-            >
-              09 Aug (DB data)
-            </button>
+            <span className="text-slate-400">Select any date</span>
             <button
               type="button"
               onClick={handleSetToday}
-              className="rounded-lg bg-slate-100 px-2 py-0.5 font-medium text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer"
+              className="rounded-lg bg-teal-50 px-2 py-0.5 font-medium text-teal-700 hover:bg-teal-100 hover:text-teal-900 transition-colors cursor-pointer"
             >
               Today
             </button>

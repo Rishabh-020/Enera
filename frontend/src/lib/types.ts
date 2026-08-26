@@ -130,22 +130,28 @@ export interface FlatLive {
   level?: "normal" | "amber" | "high";
   pctVsUsual?: number;
   timestamp?: Date;
+  status?: boolean;
+}
+
+export interface DailySeries {
+  day: string | number;
+  kwh: number;
 }
 
 export interface DaySeriesPoint {
-  date: Date;
-  day: number;
+  date?: Date | string;
+  day?: string | number;
   kwh: number;
-  isWeekend: boolean;
+  isWeekend?: boolean;
 }
 
 export interface FlatSummary {
-  series: DaySeriesPoint[];
+  series: DailySeries[] | DaySeriesPoint[];
   totalKwh: number;
   estCost: number;
   projectedTotal: number;
   projectedCost: number;
-  peakDay: DaySeriesPoint;
+  peakDay: string | any;
 }
 
 export interface TrendPoint {
@@ -217,6 +223,7 @@ export interface SocietyBlockRow {
   mtdKwh: number;
   flatCount: number;
   aboveAverage: boolean;
+  blockName: string;
 }
 
 export interface BlockFloorRow {
@@ -248,7 +255,9 @@ export interface SocietyFlatRow {
   flatNumber: string;
   bhkType: string;
   occupied?: boolean;
+  residentId?: number | string | null;
   residentName: string | null;
+  residentEmail?: string | null;
   blockName: string;
   floorNumber?: number;
   meterStatus: MeterStatus;
@@ -278,6 +287,7 @@ export interface BuilderSocietyRow {
 
 export interface DeviceRow extends Device {
   status: MeterStatus;
+  blockName?: string;
   mappedTo?: string;
   lastSeenAt: Date;
 }
@@ -350,6 +360,7 @@ export interface CreateResidentInput {
   role?: Role | string;
   societyId: number | string;
   flatId?: number | string | null;
+  blockName?: string;
 }
 
 export interface RegisterDeviceInput {

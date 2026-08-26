@@ -21,4 +21,6 @@ public class RegisterResidentResponse {
     private Long flatId;
     
     private Long societyId;
+
+    private String blockName;
 }
