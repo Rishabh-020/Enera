@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardDescription } from "../ui/primitives";
-import { Flame, Clock, Activity, Zap } from "lucide-react";
+import { Flame, Clock, Activity } from "lucide-react";
 import type { HeatmapGrid } from "../../lib/types";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

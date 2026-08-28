@@ -321,7 +321,7 @@ export async function getSocietyDevices(societyId: string): Promise<DeviceRow[]>
   });
 }
 
-export async function registerDevice({ deviceSerial, deviceType, mappedTo, societyId, flatId, commonAreaId }: RegisterDeviceInput): Promise<any> {
+export async function registerDevice({ deviceSerial, deviceType, societyId, flatId, commonAreaId }: RegisterDeviceInput): Promise<any> {
   const serialNumber = Number(deviceSerial.replace(/\D/g, "")) || 10001;
   const response = await api.post(`/society/${societyId}/register-device`, {
     deviceSerial: serialNumber,

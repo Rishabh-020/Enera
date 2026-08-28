@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, CardTitle, CardDescription } from "../ui/primitives";
-import { Zap, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 interface DonutSegment {

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Card, CardHeader, CardTitle, CardDescription, Badge } from "../ui/primitives";
+import { Card, CardHeader, CardTitle, CardDescription } from "../ui/primitives";
 import { Zap, TrendingUp, Clock } from "lucide-react";
 import type { HourlyDataPoint } from "../../lib/types";
 

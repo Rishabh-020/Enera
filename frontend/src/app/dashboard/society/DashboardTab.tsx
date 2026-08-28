@@ -11,7 +11,7 @@ import { DonutChart } from "../../../components/chart/DonutChart";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { DeleteConfirmModal } from "../../../components/ui/DeleteConfirmModal";
 import {
-  Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, ProgressStat,
+  Card, CardHeader, CardTitle, CardDescription, CardContent, Badge,
   Table, Thead, Th, Td, Tr, StatusDot, Button, Input
 } from "../../../components/ui/primitives";
 

@@ -46,7 +46,6 @@ export function MonthlyBarChart({
 
   // Build full-month 31-day data array with dates
   const { data, peakDayName, peakKwh, activeDaysCount, totalDaysInMonth, monthLabel } = useMemo(() => {
-    const now = new Date();
     const year = 2026;
     const monthIndex = 7; // August (0-indexed)
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate(); // 31 days

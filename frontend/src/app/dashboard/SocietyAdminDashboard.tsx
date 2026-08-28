@@ -334,8 +334,8 @@ function BlockFloorList({
                 type="button"
                 onClick={() => setMode("multiple")}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${mode === "multiple"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
                   }`}
               >
                 {isInitial ? "Range (1 to N)" : "Add Multiple Floors"}
@@ -344,8 +344,8 @@ function BlockFloorList({
                 type="button"
                 onClick={() => setMode("single")}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${mode === "single"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
                   }`}
               >
                 Single Floor

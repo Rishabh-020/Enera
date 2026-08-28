@@ -1,4 +1,4 @@
-import React, { useState, type ReactNode, Component, type ErrorInfo } from "react";
+import { useState, type ReactNode, Component, type ErrorInfo } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { DashboardLayout, NAV_ITEMS_RESIDENT } from "../../components/layout/DashboardLayout";
 import { FlatDashboardView } from "../../components/FlatDashboardView";
