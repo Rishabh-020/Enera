@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "../ui/primitives";
 import { formatDate } from "../../lib/utils";
 import type { FlatTrend } from "../../lib/types";
