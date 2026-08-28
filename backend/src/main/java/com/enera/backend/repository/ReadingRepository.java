@@ -263,7 +263,7 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     FROM readings r
     JOIN devices d ON r.device_id = d.id
     WHERE d.society_id = :societyId
-      AND r.timestamp >= CURRENT_DATE - CAST(:days || ' days' AS INTERVAL)
+      AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
     GROUP BY DATE_TRUNC('day', r.timestamp), TO_CHAR(r.timestamp, 'DD Mon')
     ORDER BY DATE_TRUNC('day', r.timestamp) ASC
     """, nativeQuery = true)
@@ -281,7 +281,7 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     JOIN devices d ON r.device_id = d.id
     WHERE d.society_id = :societyId
       AND d.mapped_common_area_id IS NOT NULL
-      AND r.timestamp >= CURRENT_DATE - CAST(:days || ' days' AS INTERVAL)
+      AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
     GROUP BY DATE_TRUNC('day', r.timestamp), TO_CHAR(r.timestamp, 'DD Mon')
     ORDER BY DATE_TRUNC('day', r.timestamp) ASC
 """, nativeQuery = true)
@@ -302,7 +302,7 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     JOIN blocks b ON fl.block_id = b.id
     WHERE d.society_id = :societyId
       AND (b.block_name = :blockName OR CONCAT('Block ', b.block_name) = :blockName)
-      AND r.timestamp >= CURRENT_DATE - CAST(:days || ' days' AS INTERVAL)
+      AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
     GROUP BY DATE_TRUNC('day', r.timestamp), TO_CHAR(r.timestamp, 'DD Mon')
     ORDER BY DATE_TRUNC('day', r.timestamp) ASC
 """, nativeQuery = true)

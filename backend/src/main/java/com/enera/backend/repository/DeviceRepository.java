@@ -29,6 +29,9 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
 
     List<Device> findBySocietyId(Long societyId);
 
+    boolean existsByDeviceSerial(Long deviceSerial);
+
+
     @Query(value = """
         SELECT d.*
         FROM devices d

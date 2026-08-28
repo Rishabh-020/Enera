@@ -74,16 +74,6 @@ export interface User {
   builderId: string | null;
 }
 
-export interface mockUser {
-  id: number;
-  name: string;
-  email: string;
-  password: string;
-  role: Role
-  flatId: string | null;
-  societyId: string | null;
-  builderId: string | null;
-}
 
 export interface WebSocketReading {
   deviceId?: number;

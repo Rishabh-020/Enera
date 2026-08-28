@@ -47,29 +47,25 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }: DashboardLayoutProps) {
-  const { user, logout, isDemoMode, loginDemo } = useAuth();
+  const { user, logout, isDemoMode, switchDemoRole } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  const handleSwitchView = (option: string) => {
-    const routes: Record<string, string> = {
-      Resident: `/flat/${user?.flatId || "1"}`,
-      Admin: `/society/${user?.societyId || "1"}`,
-      Builder: `/builder/${user?.builderId || "1"}`,
-    };
-
-    if (routes[option]) {
-      if (isDemoMode) {
-        const demoProfiles: Record<string, any> = {
-          Resident: { id: 1, name: "Resident View (Demo)", email: "owner001@enera.com", role: "RESIDENT", flatId: "1", societyId: "1", builderId: "1" },
-          Admin: { id: 1, name: "Society Admin (Demo)", email: "society1@enera.com", role: "SOCIETY_ADMIN", flatId: null, societyId: "1", builderId: "1" },
-          Builder: { id: 1, name: "Builder Admin (Demo)", email: "builder1@enera.com", role: "BUILDER_ADMIN", flatId: null, societyId: "1", builderId: "1" },
+  const handleSwitchView = async (option: string) => {
+    if (isDemoMode && (option === "Resident" || option === "Admin" || option === "Builder")) {
+      try {
+        const newUser = await switchDemoRole(option as "Resident" | "Admin" | "Builder");
+        const routes: Record<string, string> = {
+          Resident: `/flat/${newUser.flatId || "1"}`,
+          Admin: `/society/${newUser.societyId || "1"}`,
+          Builder: `/builder/${newUser.builderId || "1"}`,
         };
-        if (demoProfiles[option]) loginDemo(demoProfiles[option]);
+        navigate(routes[option] || "/");
+      } catch (err) {
+        console.error("Failed to switch demo role:", err);
       }
-      navigate(routes[option]);
     }
   };
 
@@ -328,26 +324,46 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
             <div className="w-[360px] max-w-full">
               <SearchBar placeholder="Search flats, residents, or devices..." />
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* Demo Mode Role Switcher in Topbar */}
+              {isDemoMode && (
+                <div className="flex items-center gap-1.5 rounded-xl bg-slate-100 p-1 border border-slate-200/80 shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-teal-600 px-2 flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" /> Demo:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {(["Resident", "Admin", "Builder"] as const).map((opt) => {
+                      const isActive = user && SWITCH_VIEW_OPTIONS[user.role] === opt;
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => handleSwitchView(opt)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                            isActive
+                              ? "bg-white text-slate-900 shadow-sm border border-slate-200/60"
+                              : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/60"
+                          )}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Role badge */}
               <div className="flex items-center gap-1.5 rounded-full bg-grid-900 px-3 py-1.5 text-xs font-medium text-slate-200">
                 <span className="text-teal-400">✦</span>
                 {user ? ROLE_LABEL[user.role] : ""}
               </div>
               {/* Notification bell */}
-              <button className="relative p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+              <button className="relative p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Notifications">
                 <Bell size={18} className="text-slate-500" />
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-teal-500 ring-2 ring-white" />
               </button>
-              {/* Avatar + Profile trigger */}
-              {/* <button
-                onClick={() => setShowPasswordModal(true)}
-                className="flex items-center gap-2 p-1 pl-2.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer border border-transparent hover:border-slate-200 group"
-                title="Account Settings & Password"
-              >
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 hidden lg:inline">{user?.name}</span>
-                <Avatar name={user?.name ?? "U"} />
-              </button> */}
             </div>
           </div>
 

@@ -30,6 +30,7 @@ public class SocietyService {
     private final BuilderRepository builderRepository;
     private final PasswordEncoder passwordEncoder;
     private final BlockService blockService;
+    private final com.enera.backend.config.DemoUserInitializer demoUserInitializer;
 
     SocietyService(SocietyRepository societyRepository,
                    ReadingRepository readingRepository,
@@ -40,7 +41,8 @@ public class SocietyService {
                    UserRepository userRepository,
                    BuilderRepository builderRepository,
                    PasswordEncoder passwordEncoder,
-                   BlockService blockService){
+                   BlockService blockService,
+                   com.enera.backend.config.DemoUserInitializer demoUserInitializer){
         this.societyRepository = societyRepository;
         this.readingRepository = readingRepository;
         this.flatRepository = flatRepository;
@@ -51,6 +53,7 @@ public class SocietyService {
         this.builderRepository = builderRepository;
         this.passwordEncoder = passwordEncoder;
         this.blockService = blockService;
+        this.demoUserInitializer = demoUserInitializer;
     }
 
     public SocietyOverviewResponse getSocietyOverview(Long societyId){
@@ -327,31 +330,54 @@ public class SocietyService {
         return response;
     }
 
-    public List<DailyTrendResponse> getDailyTrend(Long societyId,int date,String filter){
-        Society society = societyRepository.findById(societyId).
-                orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+    public List<DailyTrendResponse> getDailyTrend(Long societyId, int days, String filter) {
+        Society society = societyRepository.findById(societyId)
+                .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
 
-        List<Object[]> rows;
-
-        if(filter == null || filter.isBlank() || filter.equalsIgnoreCase("Whole society")){
-            rows = readingRepository.getDailyTrendBySociety(societyId,date);
-        }else if(filter.equalsIgnoreCase("Common areas")){
-            rows = readingRepository.getDailyTrendBySocietyCommonAreas(societyId,date);
-        }else{
-            rows = readingRepository.getDailyTrendBySocietyBlock(societyId,date,filter.trim());
+        if (readingRepository.count() < 1000) {
+            demoUserInitializer.ensureDemoSeeded();
         }
 
-        List<DailyTrendResponse> responses = new ArrayList<>();
+        List<Object[]> rows;
+        if (filter == null || filter.isBlank() || filter.equalsIgnoreCase("Whole society")) {
+            rows = readingRepository.getDailyTrendBySociety(societyId, days);
+        } else if (filter.equalsIgnoreCase("Common areas")) {
+            rows = readingRepository.getDailyTrendBySocietyCommonAreas(societyId, days);
+        } else {
+            rows = readingRepository.getDailyTrendBySocietyBlock(societyId, days, filter.trim());
+        }
 
-        for(Object[] row : rows){
+        Map<String, double[]> dbValuesByDay = new HashMap<>();
+        for (Object[] row : rows) {
             String dateStr = (String) row[0];
             double totalKwh = ((Number) row[1]).doubleValue();
             double commonAreaKwh = ((Number) row[2]).doubleValue();
+            if (dateStr != null) {
+                dbValuesByDay.put(dateStr.trim().toLowerCase(), new double[]{totalKwh, commonAreaKwh});
+            }
+        }
+
+        List<DailyTrendResponse> responses = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        LocalDate startOfMonth = today.withDayOfMonth(1);
+        java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd MMM", Locale.ENGLISH);
+
+        for (LocalDate d = startOfMonth; !d.isAfter(today); d = d.plusDays(1)) {
+            String formatted = d.format(dtf);
+            double totalKwh = 0.0;
+            double commonAreaKwh = 0.0;
+
+            String key = formatted.toLowerCase();
+            if (dbValuesByDay.containsKey(key)) {
+                double[] val = dbValuesByDay.get(key);
+                totalKwh = val[0];
+                commonAreaKwh = val[1];
+            }
 
             responses.add(DailyTrendResponse.builder()
-                    .date(dateStr)
-                    .totalKwh(Math.round(totalKwh*10.0)/10.0)
-                    .commonAreaKwh(Math.round(commonAreaKwh*10.0)/10.0)
+                    .date(formatted)
+                    .totalKwh(Math.round(totalKwh * 10.0) / 10.0)
+                    .commonAreaKwh(Math.round(commonAreaKwh * 10.0) / 10.0)
                     .build());
         }
 

@@ -1,23 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 import type { WebSocketReading } from "./types";
 
-function getWebSocketUrl(): string {
+function getWebSocketUrl(email?: string | null, isDemo?: boolean): string {
+  let base = "ws://localhost:8080/ws/energy";
   try {
     const envUrl = (import.meta as any)?.env?.VITE_WS_URL;
-    if (envUrl) return envUrl;
-
-    if (typeof window !== "undefined" && window && window.location) {
+    if (envUrl) {
+      base = envUrl;
+    } else if (typeof window !== "undefined" && window && window.location) {
       const isSecure = window.location.protocol === "https:";
       const host = window.location.hostname || "localhost";
-      return `${isSecure ? "wss" : "ws"}://${host}:8080/ws/energy`;
+      base = `${isSecure ? "wss" : "ws"}://${host}:8080/ws/energy`;
     }
   } catch (err) {
     console.warn("WebSocket URL detection fallback:", err);
   }
-  return "ws://localhost:8080/ws/energy";
+
+  const params = new URLSearchParams();
+  if (email) params.append("email", email);
+  if (isDemo) params.append("isDemo", "true");
+
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
 }
 
-export function useEnergyWebSocket(enabled: boolean = true) {
+export function useEnergyWebSocket(
+  enabled: boolean = true,
+  email?: string | null,
+  isDemo?: boolean
+) {
   const [latestReading, setLatestReading] = useState<WebSocketReading | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -37,13 +48,16 @@ export function useEnergyWebSocket(enabled: boolean = true) {
       if (!shouldReconnect) return;
 
       try {
-        const url = getWebSocketUrl();
+        const url = getWebSocketUrl(email, isDemo);
         const ws = new WebSocket(url);
         wsRef.current = ws;
 
         ws.onopen = () => {
           setIsConnected(true);
           retryCountRef.current = 0;
+          try {
+            ws.send("CONNECTION_REQUEST");
+          } catch (_) { }
         };
 
         ws.onmessage = (event) => {
@@ -64,7 +78,7 @@ export function useEnergyWebSocket(enabled: boolean = true) {
           setIsConnected(false);
           try {
             ws.close();
-          } catch (_) {}
+          } catch (_) { }
         };
       } catch (err) {
         scheduleReconnect();
@@ -101,12 +115,22 @@ export function useEnergyWebSocket(enabled: boolean = true) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (wsRef.current) {
-        try {
-          wsRef.current.close();
-        } catch (_) {}
+        const ws = wsRef.current;
+        wsRef.current = null;
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.close();
+          } catch (_) { }
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => {
+            try {
+              ws.close();
+            } catch (_) { }
+          };
+        }
       }
     };
-  }, [enabled]);
+  }, [enabled, email, isDemo]);
 
   return { latestReading, isConnected };
 }

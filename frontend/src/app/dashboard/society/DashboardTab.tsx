@@ -285,6 +285,7 @@ export function DashboardTab({
                     tick={{ fontSize: 11, fill: "#64748b" }}
                     axisLine={{ stroke: "#e2e8f0" }}
                     tickLine={false}
+                    minTickGap={16}
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: "#64748b" }}
@@ -306,8 +307,8 @@ export function DashboardTab({
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#colorTotal)"
-                    dot={{ r: 4, fill: "#0d9488" }}
-                    activeDot={{ r: 6 }}
+                    dot={false}
+                    activeDot={{ r: 5, fill: "#0d9488", strokeWidth: 2, stroke: "#fff" }}
                   />
                   <Area
                     type="monotone"
@@ -317,8 +318,8 @@ export function DashboardTab({
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorCommon)"
-                    dot={{ r: 4, fill: "#7c3aed" }}
-                    activeDot={{ r: 6 }}
+                    dot={false}
+                    activeDot={{ r: 5, fill: "#7c3aed", strokeWidth: 2, stroke: "#fff" }}
                   />
                 </AreaChart>
               </ResponsiveContainer>

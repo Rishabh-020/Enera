@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { RequireRole } from "./components/RequireRole";
 import Login from "./app/login/LogIn";
-import Demo from "./app/demo/DemoHub"
 import { EnergyWebSocketProvider } from "./context/WebSocketContext";
 import FlatOwnerDashboard from "./app/dashboard/FlatOwnerDashboard";
 import SocietyAdminDashboard from "./app/dashboard/SocietyAdminDashboard";
@@ -32,8 +31,6 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-
-            <Route path="/demo" element={<Demo />} />
 
             <Route path="/" element={<Root />} />
 

@@ -30,6 +30,24 @@ export async function login(email: string, password: string): Promise<Session> {
   };
 }
 
+export async function demoLogin(): Promise<Session> {
+  const response = await api.post("/auth/demo-login");
+  const data = response.data;
+
+  return {
+    token: data.token,
+    user: {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      flatId: data.flatId,
+      societyId: data.societyId,
+      builderId: data.builderId,
+    }
+  };
+}
+
 export async function changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<{ message: string }> {
   const response = await api.patch("/user/change-password", {
     currentPassword,
@@ -109,22 +127,16 @@ export async function getFlatDetail(flatId: string): Promise<FlatDetail> {
   }
 }
 
-function isDemoSession(): boolean {
-  return typeof window !== "undefined" && sessionStorage.getItem("is_demo_mode") === "true";
-}
-
 // ------------------------------------------------------- Society Admin ----
 export async function getSocietyOverview(societyId: string): Promise<SocietyOverview> {
-  const url = isDemoSession() ? `/demo/society/${societyId}/overview` : `/society/${societyId}/overview`;
-  const response = await api.get(url);
+  const response = await api.get(`/society/${societyId}/overview`);
   return response.data;
 }
 
 export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockRow[]> {
   try {
     if (!societyId) return [];
-    const url = isDemoSession() ? `/demo/society/${societyId}/blocks` : `/society/${societyId}/blocks`;
-    const response = await api.get(url);
+    const response = await api.get(`/society/${societyId}/blocks`);
     const data = response.data;
     const list = Array.isArray(data) ? data : (data?.blocks ?? []);
     return list.map((b: any) => {
@@ -142,14 +154,6 @@ export async function getSocietyBlocks(societyId: string): Promise<SocietyBlockR
 }
 
 export async function getBlockFloors(blockId: string): Promise<BlockFloorRow[]> {
-  if (isDemoSession()) {
-    return [
-      { id: "1", floorNumber: 1, flatCount: 8, mtdKwh: 1340 },
-      { id: "2", floorNumber: 2, flatCount: 8, mtdKwh: 1420 },
-      { id: "3", floorNumber: 3, flatCount: 8, mtdKwh: 1280 },
-      { id: "4", floorNumber: 4, flatCount: 8, mtdKwh: 1348 },
-    ];
-  }
   try {
     const response = await api.get(`/block/${blockId}/floors`);
     return response.data;
@@ -159,14 +163,6 @@ export async function getBlockFloors(blockId: string): Promise<BlockFloorRow[]> 
 }
 
 export async function getFloorFlatsList(floorId: string): Promise<FloorFlatRow[]> {
-  if (isDemoSession()) {
-    return [
-      { id: 1, flatNumber: "101", bhkType: "3 BHK", residentName: "Aarav Sharma", meterStatus: "live", mtdKwh: 168 },
-      { id: 2, flatNumber: "102", bhkType: "2 BHK", residentName: "Pooja Patel", meterStatus: "live", mtdKwh: 145 },
-      { id: 3, flatNumber: "103", bhkType: "3 BHK", residentName: "Rohan Verma", meterStatus: "live", mtdKwh: 182 },
-      { id: 4, flatNumber: "104", bhkType: "2 BHK", residentName: null, meterStatus: "offline", mtdKwh: 0 },
-    ];
-  }
   try {
     const response = await api.get(`/floor/${floorId}/flats`);
     return response.data;
@@ -176,34 +172,21 @@ export async function getFloorFlatsList(floorId: string): Promise<FloorFlatRow[]
 }
 
 export async function getSocietyCommonAreas(societyId: string): Promise<SocietyCommonAreaRow[]> {
-  const url = isDemoSession() ? `/demo/society/${societyId}/common_areas` : `/society/${societyId}/common_areas`;
-  const response = await api.get(url);
+  const response = await api.get(`/society/${societyId}/common_areas`);
   return response.data;
 }
 
 export async function getSocietyHeatmap(societyId: string, filter?: string): Promise<HeatmapGrid> {
-  if (isDemoSession()) {
-    return Array.from({ length: 7 }, (_, d) =>
-      Array.from({ length: 24 }, (_, h) => {
-        const isPeak = h >= 18 && h <= 22;
-        const isNight = h >= 0 && h <= 5;
-        const base = isNight ? 12 : isPeak ? 68 : 34;
-        const jitter = Math.floor(Math.sin(d + h) * 10);
-        return Math.max(5, base + jitter);
-      })
-    );
-  }
   const params = filter && filter !== "Whole society" && filter !== "All societies" ? { filter } : {};
   const response = await api.get(`/society/${societyId}/heatmap`, { params });
   return response.data;
 }
 
 export async function getSocietyHourlyBreakdown(societyId: string, filter?: string, date?: string): Promise<HourlyDataPoint[]> {
-  const url = isDemoSession() ? `/demo/society/${societyId}/hourly-breakdown` : `/society/${societyId}/hourly-breakdown`;
   const params: Record<string, string> = {};
   if (date) params.date = date;
   if (filter && filter !== "Whole society" && filter !== "All societies") params.filter = filter;
-  const response = await api.get(url, { params });
+  const response = await api.get(`/society/${societyId}/hourly-breakdown`, { params });
   return (response.data ?? []).map((d: any) => ({
     hour: d.hour,
     base: d.base ?? d.baseKwh ?? 0,
@@ -237,10 +220,9 @@ export async function getSocietyAnomalies(societyId: string, filter?: string): P
 }
 
 export async function getSocietyDailyTrend(societyId: string, days: number = 7, filter?: string): Promise<DailyTrendPoint[]> {
-  const url = isDemoSession() ? `/demo/society/${societyId}/daily-trend` : `/society/${societyId}/daily-trend`;
   const params: Record<string, any> = { days };
   if (filter && filter !== "Whole society" && filter !== "All societies") params.filter = filter;
-  const response = await api.get(url, { params });
+  const response = await api.get(`/society/${societyId}/daily-trend`, { params });
   return (response.data ?? []).map((d: any) => ({
     date: d.date,
     total: d.total ?? d.totalKwh ?? 0,
@@ -252,8 +234,7 @@ export async function getSocietyDailyTrend(societyId: string, days: number = 7, 
 
 export async function getSocietyFlatsList(societyId: string, { search = "", sortBy = "flatNumber" }:
   { search?: string; sortBy?: "flatNumber" | "mtdKwh" } = {}): Promise<SocietyFlatRow[]> {
-  const url = isDemoSession() ? `/demo/society/${societyId}/flats` : `/society/${societyId}/flats`;
-  const response = await api.get(url, { params: { search, sortBy } });
+  const response = await api.get(`/society/${societyId}/flats`, { params: { search, sortBy } });
   return response.data;
 }
 
@@ -269,17 +250,6 @@ export async function getBuilderSocieties(builderId: string): Promise<BuilderSoc
 }
 
 export async function getBuilderHeatmap(builderId: string, filter?: string): Promise<HeatmapGrid> {
-  if (isDemoSession()) {
-    return Array.from({ length: 7 }, (_, d) =>
-      Array.from({ length: 24 }, (_, h) => {
-        const isPeak = h >= 18 && h <= 22;
-        const isNight = h >= 0 && h <= 5;
-        const base = isNight ? 24 : isPeak ? 130 : 68;
-        const jitter = Math.floor(Math.sin(d + h) * 15);
-        return Math.max(10, base + jitter);
-      })
-    );
-  }
   const params = filter && filter !== "All societies" && filter !== "Whole society" ? { filter } : {};
   const response = await api.get(`/builder/${builderId}/heatmap`, { params });
   return response.data;
@@ -324,8 +294,7 @@ export async function getBuilderAnomalies(builderId: string, filter?: string): P
 
 // ------------------------------------------------------ Device Manager ----
 export async function getSocietyDevices(societyId: string): Promise<DeviceRow[]> {
-  const url = isDemoSession() ? `/demo/devices` : `/society/${societyId}/devices`;
-  const response = await api.get(url);
+  const response = await api.get(`/society/${societyId}/devices`);
   const data = response.data;
   return (data || []).map((point: any, index: number) => {
     let status: "live" | "offline" | "offline-long" = "offline";

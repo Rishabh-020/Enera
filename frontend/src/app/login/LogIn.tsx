@@ -13,15 +13,15 @@ interface RoleOption {
 }
 
 const ROLES: RoleOption[] = [
-  { key: "RESIDENT", label: "Flat Owner", demo: "owner001@enera.com" },
-  { key: "SOCIETY_ADMIN", label: "Society Admin", demo: "society1@enera.com" },
-  { key: "BUILDER_ADMIN", label: "Builder Admin", demo: "builder1@enera.com" },
+  { key: "RESIDENT", label: "Flat Owner", demo: "demoOwner@enera.com" },
+  { key: "SOCIETY_ADMIN", label: "Society Admin", demo: "demoSociety@enera.com" },
+  { key: "BUILDER_ADMIN", label: "Builder Admin", demo: "demoBuilder@enera.com" },
 ];
 
 const ROLE_PASSWORDS: Record<Role, string> = {
-  RESIDENT: "user1@user2007",
-  SOCIETY_ADMIN: "society1@Admin2007",
-  BUILDER_ADMIN: "builder1@Admin2007",
+  RESIDENT: "demoOwner@owner2007",
+  SOCIETY_ADMIN: "demoSociety1@society2007",
+  BUILDER_ADMIN: "demoBuilder1@builder2007",
   SUPER_ADMIN: "Super@Admin2007",
 };
 
@@ -32,7 +32,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [demoLoading, setDemoLoading] = useState(false);
+  const { login, demoLogin } = useAuth();
   const navigate = useNavigate();
 
   function pickRole(key: Role) {
@@ -70,6 +71,19 @@ export default function Login() {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleLaunchDemo() {
+    setError("");
+    setDemoLoading(true);
+    try {
+      const user = await demoLogin();
+      navigate(`/flat/${user.flatId || "1"}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to launch demo.");
+    } finally {
+      setDemoLoading(false);
     }
   }
 
@@ -138,21 +152,21 @@ export default function Login() {
               </div>
             </div>
             {error && <p className="text-xs font-medium text-high-500">{error}</p>}
-            <Button type="submit" variant="teal" disabled={loading} className="mt-2 w-full">
+            <Button type="submit" variant="teal" disabled={loading || demoLoading} className="mt-2 w-full">
               {loading ? "Signing in…" : "Sign in"} <ArrowRight size={15} />
             </Button>
           </form>
 
           <div>
             <p className="mt-4 text-center text-[11px] text-slate-400">
-              Want to see how it work?{" "}
+              Want to see how it works?{" "}
               <button
                 type="button"
-                onClick={() => {
-                  navigate("/demo")
-                }}
-                className="font-medium text-teal-400 hover:text-teal-600 cursor-pointer">
-                Launch Live Demo Dashboard &rarr;
+                disabled={demoLoading || loading}
+                onClick={handleLaunchDemo}
+                className="font-medium text-teal-400 hover:text-teal-600 cursor-pointer disabled:opacity-50"
+              >
+                {demoLoading ? "Launching Demo…" : "Launch Live Demo Dashboard →"}
               </button>
             </p>
           </div>
