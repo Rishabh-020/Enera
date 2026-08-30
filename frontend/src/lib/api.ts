@@ -7,45 +7,33 @@ import type {
 } from "./types";
 import api from '../api/api';
 
+function mapAuthResponseToSession(data: any): Session {
+  return {
+    token: data?.token,
+    user: {
+      id: data?.id,
+      name: data?.name,
+      email: data?.email,
+      role: data?.role,
+      flatId: data?.flatId,
+      societyId: data?.societyId,
+      builderId: data?.builderId,
+    }
+  };
+}
+
 // ------------------------------------------------------- Auth ----
 export async function login(email: string, password: string): Promise<Session> {
   const response = await api.post("/auth/login", {
     email,
     password
   });
-
-  const data = response.data;
-
-  return {
-    token: data.token,
-    user: {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      flatId: data.flatId,
-      societyId: data.societyId,
-      builderId: data.builderId,
-    }
-  };
+  return mapAuthResponseToSession(response.data);
 }
 
 export async function demoLogin(): Promise<Session> {
   const response = await api.post("/auth/demo-login");
-  const data = response.data;
-
-  return {
-    token: data.token,
-    user: {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      flatId: data.flatId,
-      societyId: data.societyId,
-      builderId: data.builderId,
-    }
-  };
+  return mapAuthResponseToSession(response.data);
 }
 
 export async function changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<{ message: string }> {

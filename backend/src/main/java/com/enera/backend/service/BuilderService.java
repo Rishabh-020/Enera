@@ -14,6 +14,9 @@ import org.hibernate.property.access.spi.BuiltInPropertyAccessStrategies;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.enera.backend.util.DateTimeUtils;
+import com.enera.backend.util.EnergyCalculationUtils;
+import com.enera.backend.util.EnergyConstants;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,11 +34,6 @@ public class BuilderService {
     public final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final SocietyService societyService;
-    private static final double BASE_KW_PERCENTAGE = 0.30;
-    private static final double SOCIETY_KW_PERCENTAGE = 0.50;
-    private static final double PEAK_KW_PERCENTAGE = 0.20;
-    private static final double ROUND_FACTOR = 0.10;
-    private static final int COST_PER_UNIT = 8;
 
     BuilderService(BuilderRepository builderRepository,
                    SocietyRepository societyRepository,
@@ -67,10 +65,7 @@ public class BuilderService {
 
         Integer onlineDeviceCount = deviceRepository.countBySocietyBuilderIdAndStatus(builderId,true);
 
-        LocalDateTime startDate = LocalDate.now()
-                .withDayOfMonth(1)
-                .atStartOfDay();
-
+        LocalDateTime startDate = DateTimeUtils.getStartOfCurrentMonth();
         LocalDateTime endDate = LocalDateTime.now();
 
         Double mtdKwh = readingRepository.getMonthKwh(
@@ -81,13 +76,12 @@ public class BuilderService {
 
         BuilderOverviewResponse response = new BuilderOverviewResponse();
 
-
         response.setName(builder.getName());
         response.setTotalSocieties(totalSocieties);
         response.setTotalBlocks(totalBlocks);
         response.setDevicesOnline(onlineDeviceCount);
         response.setMtdKwh(mtdKwh);
-        response.setMtdCost(mtdKwh * COST_PER_UNIT);
+        response.setMtdCost(mtdKwh * EnergyConstants.COST_PER_KWH);
 
         return response;
     }
@@ -103,7 +97,7 @@ public class BuilderService {
         for(Society society : societies){
             BuilderSocietyResponse response = new BuilderSocietyResponse();
 
-            LocalDateTime startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            LocalDateTime startDate = DateTimeUtils.getStartOfCurrentMonth();
             LocalDateTime endDate = LocalDateTime.now();
 
             Double mtdKwh = readingRepository.getMonthKwhBySociety(society.getId(),startDate,endDate);
@@ -117,8 +111,8 @@ public class BuilderService {
             double safeMtdKwh = mtdKwh != null ? mtdKwh : 0.0;
             double projectedMtdKwh = (safeMtdKwh / dayOfMonth) * lengthOfMonth;
 
-            LocalDateTime prevMonthStart = today.minusMonths(1).withDayOfMonth(1).atStartOfDay();
-            LocalDateTime prevMonthEnd = today.withDayOfMonth(1).atStartOfDay();
+            LocalDateTime prevMonthStart = DateTimeUtils.getStartOfPreviousMonth();
+            LocalDateTime prevMonthEnd = DateTimeUtils.getEndOfPreviousMonth();
             Double prevMonthKwh = readingRepository.getMonthKwhBySociety(society.getId(), prevMonthStart, prevMonthEnd);
 
             double minRealisticPrevMonth = occupiedFlat > 0 ? (double) occupiedFlat * 40.0 : 50.0;
@@ -127,7 +121,7 @@ public class BuilderService {
             }
 
             double mom = prevMonthKwh > 0 ? ((projectedMtdKwh - prevMonthKwh) / prevMonthKwh) * 100.0 : 0.0;
-            Double roundedMom = Math.round(mom * ROUND_FACTOR) / ROUND_FACTOR;
+            Double roundedMom = Math.round(mom * EnergyConstants.ROUND_ONE_DECIMAL) / EnergyConstants.ROUND_ONE_DECIMAL;
 
             response.setName(society.getName());
             response.setId(society.getId());
@@ -173,22 +167,7 @@ public class BuilderService {
             }
         }
 
-        for (Object[] row : rows) {
-            int hourNum = ((Number) row[0]).intValue();
-            String hour = hourNum + ":00";
-
-            double totalFlatKwh = ((Number) row[1]).doubleValue();
-            double commonKwh = ((Number) row[2]).doubleValue();
-
-            double baseKwh = Math.round(totalFlatKwh * BASE_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
-            double societyKwh = Math.round(totalFlatKwh * SOCIETY_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
-            double peekKwh = Math.round(totalFlatKwh * PEAK_KW_PERCENTAGE * ROUND_FACTOR) / ROUND_FACTOR;
-            double commonAreaKwh = Math.round(commonKwh * ROUND_FACTOR) / ROUND_FACTOR;
-
-            response.add(new HourlyBreakDownResponse(hour, baseKwh, societyKwh, commonAreaKwh, peekKwh));
-        }
-
-        return response;
+        return EnergyCalculationUtils.calculateHourlyBreakdown(rows);
     }
 
     public double[][] getHeatMap(Long builderId, String filter) {
@@ -211,19 +190,7 @@ public class BuilderService {
             }
         }
 
-        double[][] response = new double[7][24];
-
-        for (Object[] reading : readings) {
-            int day = ((Number) reading[0]).intValue();
-            int hour = ((Number) reading[1]).intValue();
-            double avg = ((Number) reading[2]).doubleValue();
-
-            if (day >= 0 && day < 7 && hour >= 0 && hour < 24) {
-                response[day][hour] = Math.round(avg * 100.0) / 100.0;
-            }
-        }
-
-        return response;
+        return EnergyCalculationUtils.buildHeatmapMatrix(readings);
     }
 
     public List<SocietyAnomaliesResponse> getAnomalies(Long builderId, String filter) {

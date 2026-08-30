@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.*;
 
+import com.enera.backend.util.EnergyConstants;
+
 @Service
 public class FlatService {
     private final FlatRepository flatRepository;
@@ -25,7 +27,6 @@ public class FlatService {
     private static final double LOW_KW_THRESHOLD = 2.0;
     private static final double MID_KW_THRESHOLD = 4.0;
     private static final double NEG_KW = 0.0;
-    private static final int COST_PER_UNIT = 8;
 
     FlatService(FlatRepository flatRepository,
                 ReadingRepository readingRepository,
@@ -146,8 +147,8 @@ public class FlatService {
 
         response.setPeakDay(peakDay);
         response.setTotalKwh(totalKwh);
-        response.setEstCost(totalKwh * COST_PER_UNIT);
-        response.setProjectedCost(projectedTotal * COST_PER_UNIT);
+        response.setEstCost(totalKwh * EnergyConstants.COST_PER_KWH);
+        response.setProjectedCost(projectedTotal * EnergyConstants.COST_PER_KWH);
         response.setProjectedTotal(projectedTotal);
         response.setSeries(seriesResponses);
 

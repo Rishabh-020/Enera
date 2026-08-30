@@ -11,25 +11,11 @@ import { Avatar, SearchBar, SwitchViewToggle } from "../ui/primitives";
 import { ChangePasswordModal } from "../auth/ChangePasswordModal";
 
 
-const ROLE_LABEL: Record<Role, string> = {
-  RESIDENT: "Resident",
-  SOCIETY_ADMIN: "Society Admin",
-  BUILDER_ADMIN: "Builder Admin",
-  SUPER_ADMIN: "Super Admin",
-};
-
-const ROLE_SECTION_LABEL: Record<Role, string> = {
-  RESIDENT: "RESIDENT",
-  SOCIETY_ADMIN: "SOCIETY ADMIN",
-  BUILDER_ADMIN: "BUILDER",
-  SUPER_ADMIN: "ADMIN",
-};
-
-const SWITCH_VIEW_OPTIONS: Record<Role, string> = {
-  RESIDENT: "Resident",
-  SOCIETY_ADMIN: "Admin",
-  BUILDER_ADMIN: "Builder",
-  SUPER_ADMIN: "Admin",
+const ROLE_CONFIG: Record<Role, { label: string; demoView: "Resident" | "Admin" | "Builder" }> = {
+  RESIDENT: { label: "Resident", demoView: "Resident" },
+  SOCIETY_ADMIN: { label: "Society Admin", demoView: "Admin" },
+  BUILDER_ADMIN: { label: "Builder Admin", demoView: "Builder" },
+  SUPER_ADMIN: { label: "Super Admin", demoView: "Admin" },
 };
 
 export interface NavItem {
@@ -93,7 +79,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
             {/* Section label */}
             {!collapsed && (
               <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500 sidebar-fade-in">
-                {user ? ROLE_SECTION_LABEL[user.role] : ""}
+                {user ? ROLE_CONFIG[user.role].label : ""}
               </p>
             )}
           </div>
@@ -126,20 +112,6 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
 
           {/* Bottom section */}
           <div className={cn("mt-auto px-3 pb-4 flex flex-col gap-3.5", collapsed && "px-2 pb-3")}>
-            {/* Switch View (only visible in Demo Mode) */}
-            {isDemoMode && !collapsed && (
-              <div className="sidebar-fade-in">
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                  Switch View (Demo)
-                </p>
-                <SwitchViewToggle
-                  options={["Resident", "Admin", "Builder"]}
-                  active={user ? SWITCH_VIEW_OPTIONS[user.role] : "Admin"}
-                  onChange={handleSwitchView}
-                />
-              </div>
-            )}
-
             {/* User card */}
             <div className={cn(
               "rounded-xl bg-grid-800/80 border border-white/5 p-3 transition-colors hover:bg-grid-800",
@@ -239,7 +211,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
 
           <div className="px-4 pt-3 pb-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-              {user ? ROLE_SECTION_LABEL[user.role] : ""}
+              {user ? ROLE_CONFIG[user.role].label : ""}
             </p>
           </div>
 
@@ -274,7 +246,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
                 </p>
                 <SwitchViewToggle
                   options={["Resident", "Admin", "Builder"]}
-                  active={user ? SWITCH_VIEW_OPTIONS[user.role] : "Admin"}
+                  active={user ? ROLE_CONFIG[user.role].demoView : "Admin"}
                   onChange={(opt) => {
                     handleSwitchView(opt);
                     setMobileOpen(false);
@@ -333,7 +305,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
                   </span>
                   <div className="flex items-center gap-1">
                     {(["Resident", "Admin", "Builder"] as const).map((opt) => {
-                      const isActive = user && SWITCH_VIEW_OPTIONS[user.role] === opt;
+                      const isActive = user && ROLE_CONFIG[user.role].demoView === opt;
                       return (
                         <button
                           key={opt}
@@ -357,7 +329,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
               {/* Role badge */}
               <div className="flex items-center gap-1.5 rounded-full bg-grid-900 px-3 py-1.5 text-xs font-medium text-slate-200">
                 <span className="text-teal-400">✦</span>
-                {user ? ROLE_LABEL[user.role] : ""}
+                {user ? ROLE_CONFIG[user.role].label : ""}
               </div>
               {/* Notification bell */}
               <button className="relative p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Notifications">
@@ -390,7 +362,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
                 className="rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 cursor-pointer flex items-center gap-1"
                 title="Change Password"
               >
-                <span>{user ? ROLE_LABEL[user.role] : ""}</span>
+                <span>{user ? ROLE_CONFIG[user.role].label : ""}</span>
                 <KeyRound size={12} className="text-slate-500" />
               </button>
               <button className="relative p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer">

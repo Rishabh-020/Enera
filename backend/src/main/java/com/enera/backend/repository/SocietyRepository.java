@@ -17,6 +17,10 @@ public interface SocietyRepository extends JpaRepository<Society,Long> {
 
     Optional<Society> findByBuilderAndName(Builder builder, String name);
 
+    Optional<Society> findFirstByBuilderAndName(Builder builder, String name);
+
+    Optional<Society> findFirstByBuilderAndNameOrderByIdAsc(Builder builder, String name);
+
     boolean existsByBuilderAndName(Builder builder, String name);
 
     Integer countByBuilderId(Long builderId);

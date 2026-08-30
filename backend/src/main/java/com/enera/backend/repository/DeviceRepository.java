@@ -41,6 +41,15 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
         """, nativeQuery = true)
     Optional<Device> findByFlatId(@Param("flatId") Long flatId);
 
+    @Query(value = """
+        SELECT d.*
+        FROM devices d
+        WHERE d.mapped_common_area_id = :commonAreaId
+        ORDER BY d.last_seen_at DESC NULLS LAST, d.id DESC
+        LIMIT 1
+        """, nativeQuery = true)
+    Optional<Device> findByCommonAreaId(@Param("commonAreaId") Long commonAreaId);
+
     Integer countBySocietyBuilderIdAndStatus(Long builderId,Boolean online);
 
     Integer countBySocietyIdAndStatus(Long societyId,Boolean online);
