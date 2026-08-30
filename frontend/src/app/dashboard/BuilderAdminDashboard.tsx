@@ -148,14 +148,6 @@ export default function BuilderAdminDashboard() {
     });
   }, [societies, sortField, sortDir]);
 
-  // Generate benchmark data from societies
-  const benchmarkData = useMemo(() => {
-    return (societies ?? []).map((s) => ({
-      name: s.name,
-      efficient: Math.round(s.mtdKwh * 0.7),
-      total: s.mtdKwh,
-    }));
-  }, [societies]);
 
   const handleNav = (key: string) => {
     if (key === "analytics") navigate(`/builder/${builderId}/analytics`);

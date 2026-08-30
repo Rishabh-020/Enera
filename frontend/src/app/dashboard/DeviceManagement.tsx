@@ -79,10 +79,10 @@ export default function DeviceManagement() {
     if (societyId) {
       api.getSocietyBlocks(societyId).then((data) => {
         if (Array.isArray(data)) setBlocks(data);
-      }).catch(() => {});
+      }).catch(() => { });
       api.getSocietyCommonAreas(societyId).then((data) => {
         if (Array.isArray(data)) setCommonAreas(data);
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [societyId]);
 
@@ -306,22 +306,20 @@ export default function DeviceManagement() {
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, deviceScope: "flat", commonAreaId: "", commonAreaName: "" })}
-                    className={`flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                      form.deviceScope === "flat"
-                        ? "bg-teal-600 text-white border-teal-600 shadow-xs"
-                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                    }`}
+                    className={`flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${form.deviceScope === "flat"
+                      ? "bg-teal-600 text-white border-teal-600 shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      }`}
                   >
                     <Home size={14} /> Flat Meter
                   </button>
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, deviceScope: "common_area", floorId: "", flatId: "", flatNumber: "" })}
-                    className={`flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                      form.deviceScope === "common_area"
-                        ? "bg-teal-600 text-white border-teal-600 shadow-xs"
-                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                    }`}
+                    className={`flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${form.deviceScope === "common_area"
+                      ? "bg-teal-600 text-white border-teal-600 shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      }`}
                   >
                     <Trees size={14} /> Common Area
                   </button>
@@ -454,8 +452,8 @@ export default function DeviceManagement() {
                       !form.floorId
                         ? "-- Select a Floor first --"
                         : loadingFlats
-                        ? "Loading flats on floor..."
-                        : "-- Choose Flat --"
+                          ? "Loading flats on floor..."
+                          : "-- Choose Flat --"
                     }
                     options={floorFlats.map((f) => ({
                       value: String(f.id),

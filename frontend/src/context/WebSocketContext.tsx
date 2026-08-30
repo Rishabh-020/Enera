@@ -4,29 +4,30 @@ import { useAuth } from "./AuthContext";
 import type { WebSocketReading } from "../lib/types";
 
 interface WebSocketContextType {
-    latestReading: WebSocketReading | null;
-    isConnected: boolean;
+  latestReading: WebSocketReading | null;
+  isConnected: boolean;
 }
 
 const WebSocketContext = createContext<WebSocketContextType>({
-    latestReading: null,
-    isConnected: false,
+  latestReading: null,
+  isConnected: false,
 });
 
 export function EnergyWebSocketProvider({ children }: { children: ReactNode }) {
-    const { isDemoMode } = useAuth();
+  const { user, isDemoMode } = useAuth();
 
-    const { latestReading, isConnected } = useEnergyWebSocket(isDemoMode);
+  const isEnabled = Boolean(user) || isDemoMode;
+  const { latestReading, isConnected } = useEnergyWebSocket(isEnabled, user?.email, isDemoMode);
 
-    return (
-        <WebSocketContext.Provider value={{
-            latestReading, isConnected
-        }}>
-            {children}
-        </WebSocketContext.Provider>
-    );
+  return (
+    <WebSocketContext.Provider value={{
+      latestReading, isConnected
+    }}>
+      {children}
+    </WebSocketContext.Provider>
+  );
 }
 
 export function useWebSocketReading() {
-    return useContext(WebSocketContext);
+  return useContext(WebSocketContext);
 }

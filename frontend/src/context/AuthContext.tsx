@@ -7,6 +7,8 @@ interface AuthContextValue {
   user: User | null;
   isDemoMode: boolean;
   login: (email: string, password: string) => Promise<User>;
+  demoLogin: () => Promise<User>;
+  switchDemoRole: (role: "Resident" | "Admin" | "Builder") => Promise<User>;
   loginDemo: (user: User) => void;
   logout: () => void;
 }
@@ -28,13 +30,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isDemoMode = Boolean(
     sessionStorage.getItem("is_demo_mode") === "true" ||
-    session?.token?.startsWith("demo-token-")
+    session?.token?.startsWith("demo-token-") ||
+    session?.user?.email?.toLowerCase().startsWith("demo")
   );
 
   const doLogin = useCallback(async (email: string, password: string) => {
-    sessionStorage.removeItem("is_demo_mode");
+    const isDemo = email.toLowerCase().startsWith("demo");
+    if (isDemo) {
+      sessionStorage.setItem("is_demo_mode", "true");
+    } else {
+      sessionStorage.removeItem("is_demo_mode");
+    }
     const { token, user } = await api.login(email, password);
     const next: Session = { token, user };
+    sessionStorage.setItem("energy_session", JSON.stringify(next));
+    setSession(next);
+    return user;
+  }, []);
+
+  const doDemoLogin = useCallback(async () => {
+    const { token, user } = await api.demoLogin();
+    const next: Session = { token, user };
+    sessionStorage.setItem("is_demo_mode", "true");
+    sessionStorage.setItem("energy_session", JSON.stringify(next));
+    setSession(next);
+    return user;
+  }, []);
+
+  const switchDemoRole = useCallback(async (targetRole: "Resident" | "Admin" | "Builder") => {
+    const creds: Record<string, { email: string; pass: string }> = {
+      Resident: { email: "demoOwner@enera.com", pass: "demoOwner@owner2007" },
+      Admin: { email: "demoSociety@enera.com", pass: "demoSociety1@society2007" },
+      Builder: { email: "demoBuilder@enera.com", pass: "demoBuilder1@builder2007" },
+    };
+
+    const target = creds[targetRole];
+    if (!target) throw new Error("Invalid role target");
+
+    const { token, user } = await api.login(target.email, target.pass);
+    const next: Session = { token, user };
+    sessionStorage.setItem("is_demo_mode", "true");
     sessionStorage.setItem("energy_session", JSON.stringify(next));
     setSession(next);
     return user;
@@ -61,6 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         isDemoMode,
         login: doLogin,
+        demoLogin: doDemoLogin,
+        switchDemoRole,
         loginDemo,
         logout,
       }}
