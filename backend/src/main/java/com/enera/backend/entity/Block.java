@@ -5,7 +5,9 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "blocks")
+@Table(name = "blocks", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_block_society_name", columnNames = {"society_id", "block_name"})
+})
 public class Block {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

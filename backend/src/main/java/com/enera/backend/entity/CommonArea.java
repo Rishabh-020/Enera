@@ -5,7 +5,9 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "common_areas")
+@Table(name = "common_areas", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_common_area_society_name", columnNames = {"society_id", "name"})
+})
 public class CommonArea {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

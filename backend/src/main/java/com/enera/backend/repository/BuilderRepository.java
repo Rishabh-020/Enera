@@ -10,5 +10,7 @@ import java.util.Optional;
 public interface BuilderRepository extends JpaRepository<Builder,Long> {
     Optional<Builder> findByEmail(String email);
 
+    Optional<Builder> findFirstByEmail(String email);
+
     boolean existsByEmail(String email);
 }

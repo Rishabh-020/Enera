@@ -4,7 +4,6 @@ import com.enera.backend.entity.*;
 import com.enera.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,12 +11,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class DemoUserInitializer {
+
+    public static final String DEMO_BUILDER_EMAIL = "demoBuilder@enera.com";
+    public static final String DEMO_SOCIETY_EMAIL = "demoSociety@enera.com";
+    public static final String DEMO_OWNER_EMAIL = "demoOwner@enera.com";
+    public static final String DEMO_SOCIETY_NAME = "Sunrise Heights";
 
     private final BuilderRepository builderRepository;
     private final SocietyRepository societyRepository;
@@ -32,31 +37,80 @@ public class DemoUserInitializer {
 
     @Transactional
     public synchronized void ensureDemoSeeded() {
+        if (isDemoFullySeeded()) {
+            log.debug("Demo users and all demo details already exist in database. Skipping insertion.");
+            return;
+        }
+
+        log.info("Demo user or details missing in database. Seeding demo environment...");
         Builder builder = seedBuilder();
         Society society = seedSociety(builder);
         seedBlocksFloorsFlats(society);
         seedCommonAreas(society);
-        
-        Flat flat1 = flatRepository.findAll().stream().findFirst().orElse(null);
-        seedDevices(society, flat1);
+
+        Flat flat1 = flatRepository.findByFloorBlockSocietyId(society.getId())
+                .stream()
+                .findFirst()
+                .orElse(null);
+
+        seedDevices(society);
         seedInitialReadings(society);
         seedDemoUsers(flat1, society, builder);
+        log.info("Demo environment seeding completed successfully.");
+    }
+
+    private boolean isDemoFullySeeded() {
+        boolean usersExist = userRepository.existsByEmail(DEMO_OWNER_EMAIL)
+                && userRepository.existsByEmail(DEMO_SOCIETY_EMAIL)
+                && userRepository.existsByEmail(DEMO_BUILDER_EMAIL);
+
+        if (!usersExist) {
+            return false;
+        }
+
+        Optional<Builder> builderOpt = builderRepository.findFirstByEmail(DEMO_BUILDER_EMAIL);
+        if (builderOpt.isEmpty()) {
+            return false;
+        }
+
+        Optional<Society> societyOpt = societyRepository.findFirstByBuilderAndName(builderOpt.get(), DEMO_SOCIETY_NAME);
+        if (societyOpt.isEmpty()) {
+            return false;
+        }
+
+        Society society = societyOpt.get();
+        List<Block> blocks = blockRepository.findBySocietyId(society.getId());
+        if (blocks.isEmpty()) {
+            return false;
+        }
+
+        List<Flat> flats = flatRepository.findByFloorBlockSocietyId(society.getId());
+        if (flats.isEmpty()) {
+            return false;
+        }
+
+        List<Device> devices = deviceRepository.findBySocietyId(society.getId());
+        if (devices.isEmpty()) {
+            return false;
+        }
+
+        return true;
     }
 
     private Builder seedBuilder() {
-        return builderRepository.findByEmail("demoBuilder@enera.com").orElseGet(() -> {
+        return builderRepository.findFirstByEmail(DEMO_BUILDER_EMAIL).orElseGet(() -> {
             Builder b = new Builder();
             b.setName("Enera Developments Ltd");
-            b.setEmail("demoBuilder@enera.com");
+            b.setEmail(DEMO_BUILDER_EMAIL);
             log.info("Seeding demo Builder: {}", b.getName());
             return builderRepository.save(b);
         });
     }
 
     private Society seedSociety(Builder builder) {
-        return societyRepository.findByBuilderAndName(builder,"Enera Developments Ltd").orElseGet(() -> {
+        return societyRepository.findFirstByBuilderAndName(builder, DEMO_SOCIETY_NAME).orElseGet(() -> {
             Society s = new Society();
-            s.setName("Sunrise Heights");
+            s.setName(DEMO_SOCIETY_NAME);
             s.setBuilder(builder);
             s.setAddress("104 Green Valley Boulevard");
             s.setCity("Bengaluru");
@@ -124,11 +178,18 @@ public class DemoUserInitializer {
         }
     }
 
-    private void seedDevices(Society society, Flat flat1) {
-        long flatSerial = 100001L;
+    private void seedDevices(Society society) {
+        List<Device> existingDevices = deviceRepository.findBySocietyId(society.getId());
+        if (!existingDevices.isEmpty()) {
+            return;
+        }
 
-        // Seed Flat meters for all flats in society
-        List<Flat> flats = flatRepository.findAll();
+        log.info("Seeding Devices for Society: {}", society.getName());
+        List<Device> toSave = new ArrayList<>();
+
+        // Seed Flat meters for all flats in demo society
+        List<Flat> flats = flatRepository.findByFloorBlockSocietyId(society.getId());
+        long flatSerial = 100001L;
         for (Flat f : flats) {
             Optional<Device> existing = deviceRepository.findByFlatId(f.getId());
             if (existing.isEmpty()) {
@@ -139,12 +200,12 @@ public class DemoUserInitializer {
                 dev.setSociety(society);
                 dev.setStatus(true);
                 dev.setLastSeenAt(LocalDateTime.now());
-                deviceRepository.save(dev);
+                toSave.add(dev);
             }
             flatSerial++;
         }
 
-        // Seed Common Area meters
+        // Seed Common Area meters for demo society
         long caSerial = 900001L;
         List<CommonArea> allCAs = commonAreaRepository.findBySocietyId(society.getId());
         for (CommonArea ca : allCAs) {
@@ -157,22 +218,31 @@ public class DemoUserInitializer {
                 caDev.setSociety(society);
                 caDev.setStatus(true);
                 caDev.setLastSeenAt(LocalDateTime.now());
-                deviceRepository.save(caDev);
+                toSave.add(caDev);
             }
             caSerial++;
+        }
+
+        if (!toSave.isEmpty()) {
+            deviceRepository.saveAll(toSave);
+            log.info("Saved {} new demo devices.", toSave.size());
         }
     }
 
     private void seedInitialReadings(Society society) {
-        if (readingRepository.count() >= 1000) {
-            return;
-        }
-
-        log.info("Generating and persisting realistic historical readings from Day 1 to Today in PostgreSQL...");
-        List<Device> devices = deviceRepository.findAll();
+        List<Device> devices = deviceRepository.findBySocietyId(society.getId());
         if (devices.isEmpty()) {
             return;
         }
+
+        // Check if readings already exist for this society's devices
+        boolean hasExistingReadings = devices.stream()
+                .anyMatch(d -> readingRepository.findTopByDeviceOrderByTimestampDesc(d).isPresent());
+        if (hasExistingReadings) {
+            return;
+        }
+
+        log.info("Generating and persisting realistic historical readings from Day 1 to Today for Demo Society...");
 
         LocalDateTime now = LocalDateTime.now();
         int dayOfMonth = now.getDayOfMonth();
@@ -208,14 +278,15 @@ public class DemoUserInitializer {
     }
 
     private void seedDemoUsers(Flat flat1, Society society, Builder builder) {
-        seedUserIfMissing("demoOwner@enera.com", "demoOwner@owner2007", "Aarav Sharma", Role.RESIDENT, flat1, society, builder);
-        seedUserIfMissing("demoSociety@enera.com", "demoSociety1@society2007", "Rajesh Mehta", Role.SOCIETY_ADMIN, null, society, builder);
-        seedUserIfMissing("demoBuilder@enera.com", "demoBuilder1@builder2007", "Vikram Singhania", Role.BUILDER_ADMIN, null, null, builder);
+        seedUserIfMissing(DEMO_OWNER_EMAIL, "demoOwner@owner2007", "Aarav Sharma", Role.RESIDENT, flat1, society, builder);
+        seedUserIfMissing(DEMO_SOCIETY_EMAIL, "demoSociety1@society2007", "Rajesh Mehta", Role.SOCIETY_ADMIN, null, society, builder);
+        seedUserIfMissing(DEMO_BUILDER_EMAIL, "demoBuilder1@builder2007", "Vikram Singhania", Role.BUILDER_ADMIN, null, null, builder);
     }
 
     private void seedUserIfMissing(String email, String rawPassword, String name,
                                    Role role, Flat flat, Society society, Builder builder) {
-        if (!userRepository.existsByEmail(email)) {
+        Optional<User> existing = userRepository.findFirstByEmail(email);
+        if (existing.isEmpty()) {
             User u = new User();
             u.setEmail(email);
             u.setPasswordHash(passwordEncoder.encode(rawPassword));
@@ -226,6 +297,26 @@ public class DemoUserInitializer {
             u.setBuilder(builder);
             userRepository.save(u);
             log.info("Seeded demo user: {} ({})", email, role);
+        } else {
+            // If demo user exists, ensure associations are correctly assigned
+            User u = existing.get();
+            boolean updated = false;
+            if (u.getBuilder() == null && builder != null) {
+                u.setBuilder(builder);
+                updated = true;
+            }
+            if (u.getSociety() == null && society != null && role != Role.BUILDER_ADMIN) {
+                u.setSociety(society);
+                updated = true;
+            }
+            if (u.getFlat() == null && flat != null && role == Role.RESIDENT) {
+                u.setFlat(flat);
+                updated = true;
+            }
+            if (updated) {
+                userRepository.save(u);
+                log.info("Updated existing demo user associations: {}", email);
+            }
         }
     }
 }

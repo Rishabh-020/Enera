@@ -21,6 +21,11 @@ export function formatCost(units: number | null | undefined, rate = 10): string 
   return `₹${Math.round(cost).toLocaleString("en-IN")}`;
 }
 
+export function formatCurrency(amount: number | null | undefined): string {
+  const val = typeof amount === "number" && !isNaN(amount) ? amount : Number(amount) || 0;
+  return `₹${Math.round(val).toLocaleString("en-IN")}`;
+}
+
 export function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "";
   const dateObj = d instanceof Date ? d : new Date(d);
