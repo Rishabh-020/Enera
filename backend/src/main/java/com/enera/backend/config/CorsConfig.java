@@ -1,5 +1,6 @@
 package com.enera.backend.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -10,6 +11,8 @@ import java.util.List;
 
 @Configuration
 public class CorsConfig {
+    @Value("${app.cors.frontend-url:https://enera-steel.vercel.app}")
+    private String frontendUrl;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -17,7 +20,7 @@ public class CorsConfig {
 
         config.addAllowedOrigin("http://localhost:5173");
         config.addAllowedOrigin("http://localhost:3000");
-        config.addAllowedOrigin("https://enera-steel.vercel.app");
+        config.addAllowedOrigin(frontendUrl);
         config.addAllowedOriginPattern("https://*.vercel.app");
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
