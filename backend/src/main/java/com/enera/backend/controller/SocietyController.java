@@ -7,7 +7,6 @@ import com.enera.backend.dto.device.RegisterDeviceRequest;
 import com.enera.backend.dto.device.RegisterDeviceResponse;
 import com.enera.backend.dto.society.*;
 import com.enera.backend.dto.user.CreateUserRequest;
-import com.enera.backend.dto.user.RegisterResidentResponse;
 import com.enera.backend.entity.Block;
 import com.enera.backend.entity.Role;
 import com.enera.backend.service.BlockService;
