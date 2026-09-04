@@ -3,12 +3,16 @@ import type { WebSocketReading } from "./types";
 
 function getWebSocketUrl(email?: string | null, isDemo?: boolean): string {
   let base = (import.meta as any)?.env?.PROD
-    ? "wss://backend-v0-0-2.onrender.com/ws/energy"
+    ? "wss://backend-v0-0-4.onrender.com/ws/energy"
     : "ws://localhost:8080/ws/energy";
   try {
-    const envUrl = (import.meta as any)?.env?.VITE_WS_URL;
-    if (envUrl) {
-      base = envUrl;
+    const envWsUrl = (import.meta as any)?.env?.VITE_WS_URL;
+    const envApiUrl = (import.meta as any)?.env?.VITE_API_BASE_URL;
+    if (envWsUrl) {
+      base = envWsUrl;
+    } else if (envApiUrl) {
+      const cleanApi = envApiUrl.replace(/\/+$/, "");
+      base = cleanApi.replace(/^http/, "ws") + "/ws/energy";
     }
   } catch (err) {
     console.warn("WebSocket URL detection fallback:", err);

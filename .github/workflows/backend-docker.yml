@@ -56,12 +56,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to Render
-        if: env.RENDER_DEPLOY_HOOK_URL != ''
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: |
-          IMAGE_URL=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
-          echo "Deploying image to Render: ${IMAGE_URL}"
-          curl --fail --request POST "${RENDER_DEPLOY_HOOK_URL}?imgURL=${IMAGE_URL}"
 

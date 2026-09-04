@@ -20,7 +20,11 @@ public class CorsConfig {
 
         config.addAllowedOrigin("http://localhost:5173");
         config.addAllowedOrigin("http://localhost:3000");
-        config.addAllowedOrigin(frontendUrl);
+        config.addAllowedOrigin("https://enera-steel.vercel.app");
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            String sanitized = frontendUrl.trim().replaceAll("/+$", "");
+            config.addAllowedOrigin(sanitized);
+        }
         config.addAllowedOriginPattern("https://*.vercel.app");
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
