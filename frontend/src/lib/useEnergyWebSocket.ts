@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { WebSocketReading } from "./types";
 
 function getWebSocketUrl(email?: string | null, isDemo?: boolean): string {
-  let base = (import.meta as any)?.env?.PROD
-    ? "wss://backend-v0-0-4.onrender.com/ws/energy"
-    : "ws://localhost:8080/ws/energy";
+  let base = "ws://localhost:8080/ws/energy";
   try {
     const envWsUrl = (import.meta as any)?.env?.VITE_WS_URL;
     const envApiUrl = (import.meta as any)?.env?.VITE_API_BASE_URL;
@@ -15,7 +13,7 @@ function getWebSocketUrl(email?: string | null, isDemo?: boolean): string {
       base = cleanApi.replace(/^http/, "ws") + "/ws/energy";
     }
   } catch (err) {
-    console.warn("WebSocket URL detection fallback:", err);
+    console.warn("WebSocket URL detection error:", err);
   }
 
   const params = new URLSearchParams();
