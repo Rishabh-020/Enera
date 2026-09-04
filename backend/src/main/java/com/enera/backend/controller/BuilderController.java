@@ -35,6 +35,7 @@ public class BuilderController {
     @GetMapping("/{id}/overview")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<BuilderOverviewResponse> getBuilderOverview(@PathVariable Long id){
+        builderService.validateBuilderAccess(id);
         return ResponseEntity.ok(
                 builderService.getBuilderOverview(id)
         );
@@ -43,6 +44,7 @@ public class BuilderController {
     @GetMapping("/{id}/societies")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<BuilderSocietyResponse>> getBuilderSocieties(@PathVariable Long id){
+        builderService.validateBuilderAccess(id);
         return ResponseEntity.ok(
                 builderService.getBuilderSocieties(id)
         );
@@ -52,6 +54,7 @@ public class BuilderController {
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<double[][]> getHeatMap(@PathVariable Long id,
                                                  @RequestParam(required = false,defaultValue = "All societies") String filter){
+        builderService.validateBuilderAccess(id);
         return ResponseEntity.ok(
                 builderService.getHeatMap(id,filter)
         );
@@ -61,6 +64,7 @@ public class BuilderController {
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<SocietyAnomaliesResponse>> getAnomalies(@PathVariable Long id,
                                                                        @RequestParam(required = false,defaultValue = "All societies") String filter){
+        builderService.validateBuilderAccess(id);
         return ResponseEntity.ok(
                 builderService.getAnomalies(id,filter)
         );
@@ -72,6 +76,7 @@ public class BuilderController {
             @PathVariable Long id,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false, defaultValue = "All societies") String filter) {
+        builderService.validateBuilderAccess(id);
         return ResponseEntity.ok(
                 builderService.getHourlyBreakDown(id, date, filter)
         );
@@ -80,6 +85,7 @@ public class BuilderController {
     @PostMapping("/{id}/society")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<SocietyResponse> createSociety(@PathVariable Long id, @Valid @RequestBody CreateSocietyRequest request) {
+        builderService.validateBuilderAccess(id);
         request.setBuilderId(id);
         return ResponseEntity.ok(
                 societyService.createSociety(request)
@@ -90,6 +96,8 @@ public class BuilderController {
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<Void> deleteSociety(@PathVariable Long builderId,
                                               @PathVariable Long societyId){
+        builderService.validateBuilderAccess(builderId);
+        societyService.validateSocietyAccess(societyId);
         societyService.deleteSociety(societyId);
         return ResponseEntity.noContent().build();
     }

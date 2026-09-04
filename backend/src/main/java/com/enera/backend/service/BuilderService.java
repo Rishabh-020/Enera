@@ -10,7 +10,9 @@ import com.enera.backend.exception.BuilderNotFoundException;
 import com.enera.backend.exception.SocietyNotFoundException;
 import com.enera.backend.exception.UserNotFoundException;
 import com.enera.backend.repository.*;
-import org.hibernate.property.access.spi.BuiltInPropertyAccessStrategies;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BuilderService {
@@ -55,7 +58,34 @@ public class BuilderService {
         this.societyService = societyService;
     }
 
+    public void validateBuilderAccess(Long builderId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return;
+        }
+        String email = auth.getName();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return;
+        }
+        User user = userOpt.get();
+
+        if (user.getRole() == Role.SUPER_ADMIN) {
+            return;
+        }
+
+        if (user.getRole() == Role.BUILDER_ADMIN) {
+            if (user.getBuilder() == null || !user.getBuilder().getId().equals(builderId)) {
+                throw new AccessDeniedException("Access denied: You are not authorized to view or manage this builder's properties");
+            }
+            return;
+        }
+
+        throw new AccessDeniedException("Access denied: Insufficient permissions for builder operations");
+    }
+
     public BuilderOverviewResponse getBuilderOverview(Long builderId){
+        validateBuilderAccess(builderId);
         Builder builder = builderRepository.findById(builderId).
                 orElseThrow(()-> new BuilderNotFoundException("Builder not found"));
 
@@ -87,6 +117,7 @@ public class BuilderService {
     }
 
     public List<BuilderSocietyResponse> getBuilderSocieties(Long builderId){
+        validateBuilderAccess(builderId);
         Builder builder = builderRepository.findById(builderId)
                 .orElseThrow(()-> new BuilderNotFoundException("Builder not found"));
 
@@ -140,6 +171,7 @@ public class BuilderService {
     }
 
     public List<HourlyBreakDownResponse> getHourlyBreakDown(Long builderId, LocalDate date, String filter) {
+        validateBuilderAccess(builderId);
         Builder builder = builderRepository.findById(builderId)
                 .orElseThrow(() -> new BuilderNotFoundException("Builder not found"));
 
@@ -171,6 +203,7 @@ public class BuilderService {
     }
 
     public double[][] getHeatMap(Long builderId, String filter) {
+        validateBuilderAccess(builderId);
         if (!builderRepository.existsById(builderId)) {
             throw new BuilderNotFoundException("Builder not found");
         }
@@ -194,6 +227,7 @@ public class BuilderService {
     }
 
     public List<SocietyAnomaliesResponse> getAnomalies(Long builderId, String filter) {
+        validateBuilderAccess(builderId);
         if (!builderRepository.existsById(builderId)) {
             throw new BuilderNotFoundException("Builder not found");
         }

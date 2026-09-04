@@ -16,6 +16,9 @@ import java.time.YearMonth;
 import java.util.*;
 
 import com.enera.backend.util.EnergyConstants;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class FlatService {
@@ -39,9 +42,53 @@ public class FlatService {
         this.userRepository = userRepository;
         this.floorRepository = floorRepository;
     }
+
+    private void validateFlatAccess(Flat flat) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return;
+        }
+        String email = auth.getName();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return;
+        }
+        User user = userOpt.get();
+
+        if (user.getRole() == Role.SUPER_ADMIN) {
+            return;
+        }
+
+        if (user.getRole() == Role.RESIDENT) {
+            if (user.getFlat() == null || !user.getFlat().getId().equals(flat.getId())) {
+                throw new AccessDeniedException("Access denied: You are not authorized to view another flat's data");
+            }
+            return;
+        }
+
+        Society flatSociety = (flat.getFloor() != null && flat.getFloor().getBlock() != null)
+                ? flat.getFloor().getBlock().getSociety() : null;
+
+        if (user.getRole() == Role.SOCIETY_ADMIN) {
+            if (user.getSociety() == null || flatSociety == null || !user.getSociety().getId().equals(flatSociety.getId())) {
+                throw new AccessDeniedException("Access denied: This flat does not belong to your society");
+            }
+            return;
+        }
+
+        if (user.getRole() == Role.BUILDER_ADMIN) {
+            Long flatBuilderId = (flatSociety != null && flatSociety.getBuilder() != null)
+                    ? flatSociety.getBuilder().getId() : null;
+            if (user.getBuilder() == null || flatBuilderId == null || !user.getBuilder().getId().equals(flatBuilderId)) {
+                throw new AccessDeniedException("Access denied: This flat does not belong to your builder properties");
+            }
+        }
+    }
+
     public FlatLiveResponse getFlatLive(Long flatId) {
         Flat flat = flatRepository.findById(flatId)
                 .orElseThrow(() -> new FlatNotFoundException("Flat not found"));
+        validateFlatAccess(flat);
 
         Optional<Reading> readingOpt = readingRepository.findLatestReadingByFlatId(flatId);
         Optional<Device> deviceOpt = deviceRepository.findByFlatId(flatId);
@@ -90,6 +137,7 @@ public class FlatService {
         Flat flat = flatRepository.findById(flatId).orElseThrow(
                 ()-> new FlatNotFoundException("Flat not found")
         );
+        validateFlatAccess(flat);
 
         FlatSummaryResponse response = new FlatSummaryResponse();
 
@@ -159,6 +207,7 @@ public class FlatService {
         Flat flat = flatRepository.findById(flatId).orElseThrow(
                 ()-> new FlatNotFoundException("Flat not found")
         );
+        validateFlatAccess(flat);
 
         LocalDate today = LocalDate.now();
 
@@ -254,6 +303,7 @@ public class FlatService {
         Flat flat = flatRepository.findById(flatId).orElseThrow(
                 ()-> new FlatNotFoundException("Flat not found")
         );
+        validateFlatAccess(flat);
 
         LocalDateTime st = LocalDate.now().atStartOfDay();
 
@@ -323,6 +373,7 @@ public class FlatService {
 
         Flat flat = flatRepository.findById(flatId)
                 .orElseThrow(() -> new FlatNotFoundException("Flat not found"));
+        validateFlatAccess(flat);
 
         User user = userRepository.findFirstByFlatAndRoleOrderByIdDesc(flat, Role.RESIDENT)
                 .orElse(null);

@@ -338,7 +338,9 @@ export async function getAllBuilders(): Promise<BuilderListItem[]> {
 }
 
 export async function createSociety(input: any): Promise<any> {
-  const response = await api.post("/superAdmin/societies", input);
+  const builderId = input.builderId;
+  const url = builderId ? `/builder/${builderId}/society` : "/superAdmin/societies";
+  const response = await api.post(url, input);
   return response.data;
 }
 

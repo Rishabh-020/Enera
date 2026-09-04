@@ -25,13 +25,19 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse getCurrentUser(){
+    public User getCurrentUserEntity() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("No authenticated user found");
+        }
         String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+    }
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @Transactional(readOnly = true)
+    public UserResponse getCurrentUser(){
+        User user = getCurrentUserEntity();
 
         return new UserResponse(
                 user.getId(),
