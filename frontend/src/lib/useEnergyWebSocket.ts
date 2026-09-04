@@ -2,15 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import type { WebSocketReading } from "./types";
 
 function getWebSocketUrl(email?: string | null, isDemo?: boolean): string {
-  let base = "ws://localhost:8080/ws/energy";
+  let base = (import.meta as any)?.env?.PROD
+    ? "wss://backend-v0-0-2.onrender.com/ws/energy"
+    : "ws://localhost:8080/ws/energy";
   try {
     const envUrl = (import.meta as any)?.env?.VITE_WS_URL;
     if (envUrl) {
       base = envUrl;
-    } else if (typeof window !== "undefined" && window && window.location) {
-      const isSecure = window.location.protocol === "https:";
-      const host = window.location.hostname || "localhost";
-      base = `${isSecure ? "wss" : "ws"}://${host}:8080/ws/energy`;
     }
   } catch (err) {
     console.warn("WebSocket URL detection fallback:", err);
