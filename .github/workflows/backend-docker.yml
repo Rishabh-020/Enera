@@ -57,5 +57,5 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             DB_URL=${{ vars.DB_URL }}
-            DB_USER=${{ vars.DB_USER }}
+            DB_USERNAME=${{ vars.DB_USER }}
             DB_PASSWORD=${{ vars.DB_PASSWORD }}
