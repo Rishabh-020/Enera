@@ -1,0 +1,18 @@
+# Target build directory
+target/
+
+# Sensitive configuration files
+.env.properties
+.env
+*.local
+
+# Git & IDE metadata
+.git/
+.gitignore
+.idea/
+*.iml
+.vscode/
+
+# Documentation and logs
+HELP.md
+*.log
