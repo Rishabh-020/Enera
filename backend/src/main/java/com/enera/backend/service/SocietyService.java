@@ -16,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.enera.backend.util.DateTimeUtils;
 import com.enera.backend.util.EnergyCalculationUtils;
 import com.enera.backend.util.EnergyConstants;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -59,7 +62,45 @@ public class SocietyService {
         this.demoUserInitializer = demoUserInitializer;
     }
 
+    public void validateSocietyAccess(Long societyId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return;
+        }
+        String email = auth.getName();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return;
+        }
+        User user = userOpt.get();
+
+        if (user.getRole() == Role.SUPER_ADMIN) {
+            return;
+        }
+
+        if (user.getRole() == Role.SOCIETY_ADMIN) {
+            if (user.getSociety() == null || !user.getSociety().getId().equals(societyId)) {
+                throw new AccessDeniedException("Access denied: You are not authorized to view or manage this society");
+            }
+            return;
+        }
+
+        if (user.getRole() == Role.BUILDER_ADMIN) {
+            Society s = societyRepository.findById(societyId).orElse(null);
+            Long sBuilderId = s != null && s.getBuilder() != null ? s.getBuilder().getId() : null;
+            if (user.getBuilder() == null || sBuilderId == null || !user.getBuilder().getId().equals(sBuilderId)) {
+                throw new AccessDeniedException("Access denied: This society does not belong to your builder properties");
+            }
+            return;
+        }
+
+        if (user.getRole() == Role.RESIDENT) {
+            throw new AccessDeniedException("Access denied: Residents cannot access society management endpoints");
+        }
+    }
+
     public SocietyOverviewResponse getSocietyOverview(Long societyId) {
+        validateSocietyAccess(societyId);
         Society society = societyRepository.findById(societyId).
                 orElseThrow(() -> new SocietyNotFoundException("Society not found"));
 

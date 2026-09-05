@@ -13,11 +13,8 @@ import com.enera.backend.service.BlockService;
 import com.enera.backend.service.SocietyService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.parameters.P;
-import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -38,6 +35,7 @@ public class SocietyController {
     @GetMapping("/{id}/overview")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<SocietyOverviewResponse> getSocietyOverview(@PathVariable Long id){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.getSocietyOverview(id)
         );
@@ -46,6 +44,7 @@ public class SocietyController {
     @GetMapping("/{id}/blocks")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<SocietyBlockResponse>> getSocietyBlocks(@PathVariable Long id){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.getSocietyBlocks(id)
         );
@@ -54,6 +53,7 @@ public class SocietyController {
     @GetMapping("/{id}/common_areas")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<SocietyCommonAreaResponse>> getSocietyCommonAreas(@PathVariable Long id){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.getSocietyCommonAreas(id)
         );
@@ -63,6 +63,7 @@ public class SocietyController {
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<double[][]> getSocietyHeatmap(@PathVariable Long id,
                                                         @RequestParam(required = false, defaultValue = "Whole society") String filter){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.getSocietyHeatmap(id,filter)
         );
@@ -71,6 +72,7 @@ public class SocietyController {
     @GetMapping("/{id}/flats")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<List<SocietyFlatResponse>> getSocietyFlatHeatmap(@PathVariable Long id){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.getSocietyFlatResponse(id)
         );
@@ -79,6 +81,7 @@ public class SocietyController {
     @GetMapping("/{id}/devices")
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<List<SocietyDeviceResponse>> getSocietyDevice(@PathVariable Long id){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.getSocietyDevice(id)
         );
@@ -88,6 +91,7 @@ public class SocietyController {
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<RegisterDeviceResponse> SocietyDeviceRegister(
             @PathVariable Long id, @RequestBody RegisterDeviceRequest request){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.registerDevice(id,request)
         );
@@ -98,6 +102,7 @@ public class SocietyController {
     public ResponseEntity<List<DailyTrendResponse>> getDailyTrend(@PathVariable Long id,
                                                                   @RequestParam(defaultValue = "7") int days,
                                                                   @RequestParam(required = false , defaultValue = "Whole society") String filter){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.getDailyTrend(id,days,filter)
         );
@@ -108,6 +113,7 @@ public class SocietyController {
     public ResponseEntity<List<HourlyBreakDownResponse>> getHourlyTrend(@PathVariable Long id,
 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                                                                         @RequestParam(required = false,defaultValue = "Whole society") String filter){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
             societyService.getHourlyBreakDown(id,date,filter)
         );
@@ -117,6 +123,7 @@ public class SocietyController {
     @PreAuthorize("hasAnyAuthority('SOCIETY_ADMIN', 'BUILDER_ADMIN')")
     public ResponseEntity<List<SocietyAnomaliesResponse>> getAnomalies(@PathVariable Long id,
                                                                        @RequestParam(required = false,defaultValue = "Whole society") String filter){
+        societyService.validateSocietyAccess(id);
         return ResponseEntity.ok(
                 societyService.getAnomalies(id,filter)
         );
@@ -125,6 +132,7 @@ public class SocietyController {
     @PostMapping("/{id}/block")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN','SOCIETY_ADMIN')")
     public ResponseEntity<Block> createBlock(@PathVariable Long id, @RequestBody CreateBlockRequest request) {
+        societyService.validateSocietyAccess(id);
         request.setSocietyId(id);
         return ResponseEntity.ok(
                 blockService.createBlock(request)
@@ -135,6 +143,7 @@ public class SocietyController {
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<Void> deleteBlock(@PathVariable Long societyId,
                                             @PathVariable Long blockId){
+        societyService.validateSocietyAccess(societyId);
         blockService.deleteBlock(blockId);
         return ResponseEntity.noContent().build();
     }
@@ -143,6 +152,7 @@ public class SocietyController {
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<RegisterResidentResponse> registerResident(@PathVariable Long id,
                                                                     @Valid @RequestBody CreateUserRequest request){
+        societyService.validateSocietyAccess(id);
         request.setSocietyId(id);
         request.setRole(Role.RESIDENT);
         return ResponseEntity.ok(
@@ -153,6 +163,7 @@ public class SocietyController {
     @DeleteMapping("/{societyId}/resident/{residentId}")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<Void> deleteResident(@PathVariable Long societyId,@PathVariable Long residentId){
+        societyService.validateSocietyAccess(societyId);
         societyService.deleteResident(societyId,residentId);
         return ResponseEntity.noContent().build();
     }
@@ -160,15 +171,16 @@ public class SocietyController {
     @PostMapping("/{societyId}/common-area")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<CommonAreaResponse> createCommonArea(@PathVariable Long societyId, @Valid @RequestBody CreateCommonAreaRequest request){
+        societyService.validateSocietyAccess(societyId);
         return ResponseEntity.ok(
                 societyService.createCommonArea(societyId,request)
         );
     }
 
-
     @DeleteMapping("/{societyId}/common-area/{commonAreaId}")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN','SOCIETY_ADMIN','BUILDER_ADMIN')")
     public ResponseEntity<Void> deleteCommonArea(@PathVariable Long societyId, @PathVariable Long commonAreaId){
+        societyService.validateSocietyAccess(societyId);
         societyService.deleteCommonArea(societyId, commonAreaId);
         return ResponseEntity.noContent().build();
     }

@@ -56,4 +56,11 @@ public class FlatController {
             flatService.getFlatDetail(id)
         );
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'BUILDER_ADMIN', 'SOCIETY_ADMIN')")
+    public ResponseEntity<Void> deleteFlat(@PathVariable Long id){
+        flatService.deleteFlat(id);
+        return ResponseEntity.noContent().build();
+    }
 }

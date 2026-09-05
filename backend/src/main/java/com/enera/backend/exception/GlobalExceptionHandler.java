@@ -76,6 +76,7 @@ public class GlobalExceptionHandler {
             UserNotFoundException.class,
             FlatNotFoundException.class,
             FloorNotFoundException.class,
+            SocietyNotFoundException.class,
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex){
         return buildErrorResponse(HttpStatus.NOT_FOUND,ex.getMessage());
