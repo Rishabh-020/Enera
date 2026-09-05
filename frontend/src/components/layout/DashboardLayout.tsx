@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Zap, LogOut, LayoutGrid, Cpu, Building2, Bell, ChevronLeft, ChevronRight, BarChart3, AlertTriangle, Users, CreditCard, Settings, Home, FileText, Menu, X, KeyRound } from "lucide-react";
+import { LogOut, LayoutGrid, Cpu, Building2, Bell, ChevronLeft, ChevronRight, BarChart3, AlertTriangle, Users, CreditCard, Settings, Home, FileText, Menu, X, KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
@@ -69,7 +69,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
             {/* Brand */}
             <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500 shrink-0">
-                <Zap size={18} className="text-white" strokeWidth={2.5} />
+                <img src="/efficiency.png" alt="Enera" className="h-5 w-5 object-contain" />
               </div>
               {!collapsed && (
                 <span className="font-display text-lg font-bold text-white sidebar-fade-in">Enera</span>
@@ -197,7 +197,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
           <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500">
-                <Zap size={18} className="text-white" strokeWidth={2.5} />
+                <img src="/efficiency.png" alt="Enera" className="h-5 w-5 object-contain" />
               </div>
               <span className="font-display text-lg font-bold text-white">Enera</span>
             </div>
@@ -351,7 +351,7 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
               </button>
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500">
-                  <Zap size={15} className="text-white" />
+                  <img src="/efficiency.png" alt="Enera" className="h-4.5 w-4.5 object-contain" />
                 </div>
                 <span className="font-display text-base font-bold text-grid-900">Enera</span>
               </div>

@@ -90,6 +90,7 @@ export function FlatDashboardView({ flatId }: { flatId: string }) {
         </div>
         {isConnected && (
           <span className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600 border border-emerald-200">
+            <Zap size={14} />
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             Live Stream
           </span>

@@ -108,8 +108,8 @@ export function BenchmarkChart({ societies, loading = false }: BenchmarkChartPro
             type="button"
             onClick={() => setMetric("avgPerFlat")}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${metric === "avgPerFlat"
-                ? "bg-white text-teal-700 shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+              ? "bg-white text-teal-700 shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
               }`}
           >
             Avg / Flat (kWh)
@@ -118,8 +118,8 @@ export function BenchmarkChart({ societies, loading = false }: BenchmarkChartPro
             type="button"
             onClick={() => setMetric("mtdKwh")}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${metric === "mtdKwh"
-                ? "bg-white text-teal-700 shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+              ? "bg-white text-teal-700 shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
               }`}
           >
             Total MTD (kWh)
