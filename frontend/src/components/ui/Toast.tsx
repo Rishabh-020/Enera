@@ -140,7 +140,7 @@ export function ToastContainer() {
         return (
           <div
             key={t.id}
-            role="alert"
+            role="status"
             className={`pointer-events-auto relative w-full overflow-hidden rounded-2xl border border-white/80 bg-white/75 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.12),0_2px_8px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.05] backdrop-blur-xl backdrop-saturate-180 transition-all duration-300 transform translate-y-0 opacity-100 hover:bg-white/85 hover:shadow-[0_16px_42px_rgba(15,23,42,0.16)] animate-toast-slide-in ${config.accentLeft}`}
           >
             {/* Specular glass highlight reflection */}
