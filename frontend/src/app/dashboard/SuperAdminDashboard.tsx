@@ -11,6 +11,7 @@ import {
 } from "../../components/ui/primitives";
 
 import type { SuperAdminOverview, BuilderListItem, BuilderSocietyRow } from "../../lib/types";
+import { toast } from "../../components/ui/Toast";
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -74,16 +75,19 @@ export default function SuperAdminDashboard() {
     e.preventDefault();
     try {
       await api.createBuilder(builderForm);
+      const builderName = builderForm.name;
       setShowBuilderModal(false);
       setBuilderForm({ name: "", email: "", password: "Builder@Admin2026" });
-      setActionSuccess(`Builder "${builderForm.name}" created successfully!`);
+      setActionSuccess(`Builder "${builderName}" created successfully!`);
+      toast.success(`Builder "${builderName}" created successfully!`);
       setTimeout(() => setActionSuccess(null), 4000);
       loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Create builder error:", err);
-      setShowBuilderModal(false);
-      setBuilderForm({ name: "", email: "", password: "Builder@Admin2026" });
-      loadData();
+      const msg = err?.message || "Failed to create builder.";
+      setActionError(msg);
+      toast.error(msg, "Creation Failed");
+      setTimeout(() => setActionError(null), 5000);
     }
   }
 
@@ -93,12 +97,14 @@ export default function SuperAdminDashboard() {
       await api.deleteBuilder(builderToDelete.id);
       setBuilders((prev) => prev.filter((b) => b.id !== builderToDelete.id));
       setActionSuccess(`Builder "${builderToDelete.name}" deleted successfully.`);
+      toast.success(`Builder "${builderToDelete.name}" deleted successfully.`);
       setTimeout(() => setActionSuccess(null), 4000);
       loadData();
     } catch (err: any) {
       console.error("Delete builder error:", err);
       const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to delete builder.");
       setActionError(msg);
+      toast.error(msg, "Deletion Failed");
       setTimeout(() => setActionError(null), 5000);
     }
   }
@@ -109,12 +115,14 @@ export default function SuperAdminDashboard() {
       await api.deleteSociety(societyToDelete.builderId, societyToDelete.id);
       setAllSocieties((prev) => prev.filter((s) => s.id !== societyToDelete.id));
       setActionSuccess(`Society "${societyToDelete.name}" deleted successfully.`);
+      toast.success(`Society "${societyToDelete.name}" deleted successfully.`);
       setTimeout(() => setActionSuccess(null), 4000);
       loadData();
     } catch (err: any) {
       console.error("Delete society error:", err);
       const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to delete society.");
       setActionError(msg);
+      toast.error(msg, "Deletion Failed");
       setTimeout(() => setActionError(null), 5000);
     }
   }

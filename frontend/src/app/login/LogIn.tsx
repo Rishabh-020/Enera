@@ -15,6 +15,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { cn } from "../../lib/utils";
 import type { Role, User } from "../../lib/types";
+import { toast } from "../../components/ui/Toast";
 
 // ==========================================
 // Types & Configuration Constants
@@ -193,18 +194,20 @@ export default function Login() {
 
       if (user.role !== role && user.role !== "SUPER_ADMIN") {
         const matched = ROLES.find((r) => r.key === user.role);
-        setError(
-          matched
-            ? `That account is registered as a ${matched.label}. Try the ${matched.label} tab.`
-            : "Role mismatch for this account."
-        );
+        const roleMismatchMsg = matched
+          ? `That account is registered as a ${matched.label}. Try the ${matched.label} tab.`
+          : "Role mismatch for this account.";
+        setError(roleMismatchMsg);
+        toast.warning(roleMismatchMsg, "Role Mismatch");
         setLoading(false);
         return;
       }
 
+      toast.success(`Welcome back, ${user.name || "User"}!`, "Signed In");
       navigate(getDestinationRoute(user));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -215,9 +218,11 @@ export default function Login() {
     setDemoLoading(true);
     try {
       const user = await demoLogin();
+      toast.info("Entering demo mode as Resident", "Demo Mode");
       navigate(`/flat/${user.flatId || "1"}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to launch demo.");
+      const msg = err instanceof Error ? err.message : "Failed to launch demo.";
+      setError(msg);
     } finally {
       setDemoLoading(false);
     }

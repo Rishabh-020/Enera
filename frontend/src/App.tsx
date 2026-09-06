@@ -9,6 +9,7 @@ import DeviceManagement from "./app/dashboard/DeviceManagement";
 import BuilderAdminDashboard from "./app/dashboard/BuilderAdminDashboard";
 import BuilderAnalytics from "./app/dashboard/BuilderAnalytics";
 import SuperAdminDashboard from "./app/dashboard/SuperAdminDashboard";
+import { ToastContainer } from "./components/ui/Toast";
 
 function Root() {
   const { user } = useAuth();
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <AuthProvider>
       <EnergyWebSocketProvider>
+        <ToastContainer />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />

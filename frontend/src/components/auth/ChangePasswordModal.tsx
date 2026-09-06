@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Lock, Eye, EyeOff, X, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
 import { changePassword } from "../../lib/api";
+import { toast } from "../ui/Toast";
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -28,14 +29,17 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
 
     if (!currentPassword) {
       setError("Current password is required");
+      toast.error("Current password is required", "Validation Error");
       return;
     }
     if (newPassword.length < 8) {
       setError("New password must be at least 8 characters");
+      toast.error("New password must be at least 8 characters", "Validation Error");
       return;
     }
     if (newPassword !== confirmPassword) {
       setError("New password and confirm password do not match");
+      toast.error("New password and confirm password do not match", "Validation Error");
       return;
     }
 
@@ -43,6 +47,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
       setLoading(true);
       await changePassword(currentPassword, newPassword, confirmPassword);
       setSuccess(true);
+      toast.success("Password changed successfully!");
       setTimeout(() => {
         setSuccess(false);
         setCurrentPassword("");
@@ -53,6 +58,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || "Failed to change password";
       setError(msg);
+      toast.error(msg, "Update Failed");
     } finally {
       setLoading(false);
     }

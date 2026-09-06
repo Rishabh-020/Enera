@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, Breadcrumb, Table, Thead,
 import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
 import { getErrorMessage } from "../../lib/utils";
 import type { BlockFloorRow, FloorFlatRow, SocietyFlatRow } from "../../lib/types";
+import { toast } from "../../components/ui/Toast";
 
 import { DashboardTab } from "./society/DashboardTab";
 import { AnalyticsTab } from "./society/AnalyticsTab";
@@ -141,18 +142,18 @@ function BlockFloorList({
       }
 
       setShowAddFloorModal(false);
-      if (floorsToCreate.length === 1) {
-        setActionSuccess(`Floor ${floorsToCreate[0]} created successfully.`);
-      } else {
-        setActionSuccess(
-          `Added ${floorsToCreate.length} floors (Floors ${floorsToCreate[0]} to ${floorsToCreate[floorsToCreate.length - 1]}) successfully.`
-        );
-      }
+      const succMsg = floorsToCreate.length === 1
+        ? `Floor ${floorsToCreate[0]} created successfully.`
+        : `Added ${floorsToCreate.length} floors (Floors ${floorsToCreate[0]} to ${floorsToCreate[floorsToCreate.length - 1]}) successfully.`;
+      setActionSuccess(succMsg);
+      toast.success(succMsg);
       setTimeout(() => setActionSuccess(null), 4000);
       await fetchFloors();
       onRefreshSociety?.();
     } catch (err: any) {
-      setActionError(getErrorMessage(err, "Failed to create floors."));
+      const msg = getErrorMessage(err, "Failed to create floors.");
+      setActionError(msg);
+      toast.error(msg, "Creation Failed");
     } finally {
       setActionLoading(false);
     }
@@ -163,11 +164,15 @@ function BlockFloorList({
     try {
       await api.deleteFloor(blockId, floorToDelete.id);
       setActionSuccess(`Floor ${floorToDelete.floorNumber} deleted.`);
+      toast.success(`Floor ${floorToDelete.floorNumber} deleted.`);
       setTimeout(() => setActionSuccess(null), 4000);
       await fetchFloors();
       onRefreshSociety?.();
     } catch (err) {
       console.error("Failed to delete floor", err);
+      const msg = getErrorMessage(err, "Failed to delete floor.");
+      setActionError(msg);
+      toast.error(msg, "Deletion Failed");
     }
   };
 
@@ -563,12 +568,15 @@ function FloorFlatList({
       });
       setShowAddFlatModal(false);
       setActionSuccess(`Flat ${newFlatNumber.trim()} added successfully.`);
+      toast.success(`Flat ${newFlatNumber.trim()} added successfully.`);
       setTimeout(() => setActionSuccess(null), 4000);
       setNewFlatNumber("");
       await fetchFlats();
       onRefreshSociety?.();
     } catch (err: any) {
-      setActionError(getErrorMessage(err, "Failed to create flat."));
+      const msg = getErrorMessage(err, "Failed to create flat.");
+      setActionError(msg);
+      toast.error(msg, "Creation Failed");
     } finally {
       setActionLoading(false);
     }
@@ -579,11 +587,15 @@ function FloorFlatList({
     try {
       await api.deleteFlat(floorId, flatToDelete.id);
       setActionSuccess(`Flat ${flatToDelete.flatNumber} deleted.`);
+      toast.success(`Flat ${flatToDelete.flatNumber} deleted.`);
       setTimeout(() => setActionSuccess(null), 4000);
       await fetchFlats();
       onRefreshSociety?.();
     } catch (err) {
       console.error("Failed to delete flat", err);
+      const msg = getErrorMessage(err, "Failed to delete flat.");
+      setActionError(msg);
+      toast.error(msg, "Deletion Failed");
     }
   };
 
