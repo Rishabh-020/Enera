@@ -73,8 +73,12 @@ api.interceptors.response.use(
     }
 
     // Determine whether to pop up toast notification
-    const shouldSkipToast = error.config?.skipToast === true || error.config?.headers?.['X-Skip-Toast'] === 'true';
-
+    const headers: any = error.config?.headers;
+    const skipToastHeader =
+      headers?.["x-skip-toast"] === "true" ||
+      headers?.["X-Skip-Toast"] === "true" ||
+      (typeof headers?.get === "function" && headers.get("X-Skip-Toast") === "true");
+    const shouldSkipToast = error.config?.skipToast === true || skipToastHeader;
     if (!shouldSkipToast) {
       const status = error.response?.status;
       const method = (error.config?.method || "GET").toUpperCase();
