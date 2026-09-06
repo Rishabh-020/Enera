@@ -210,7 +210,7 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
       setForm({
         name: "",
         email: "",
-        password: "Password@123",
+        password: "",
         flatId: "",
         flatNumber: "",
         bhkType: "2BHK",
