@@ -8,7 +8,10 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name= "readings")
+@Table(name = "readings", indexes = {
+    @Index(name = "idx_readings_device_timestamp", columnList = "device_id, timestamp DESC"),
+    @Index(name = "idx_readings_timestamp", columnList = "timestamp")
+})
 public class Reading {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

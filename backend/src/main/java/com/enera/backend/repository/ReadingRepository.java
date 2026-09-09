@@ -67,58 +67,16 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
     );
 
     @Query(value = """
-    SELECT COALESCE(SUM(r.kw), 0)
-    FROM readings r
-    JOIN devices d ON r.device_id = d.id
-    WHERE d.society_id = :societyId
-    AND r.timestamp = (
-        SELECT MAX(r2.timestamp)
-        FROM readings r2
-        WHERE r2.device_id = r.device_id
-    )
+    SELECT COALESCE(SUM(latest.kw), 0.0)
+    FROM (
+        SELECT DISTINCT ON (r.device_id) r.kw
+        FROM readings r
+        JOIN devices d ON r.device_id = d.id
+        WHERE d.society_id = :societyId
+        ORDER BY r.device_id, r.timestamp DESC
+    ) latest
     """, nativeQuery = true)
     Double getLiveKwBySocietyId(@Param("societyId") Long societyId);
-
-
-    @Query(value = """
-    SELECT COALESCE(SUM(r.kwh), 0)
-    FROM readings r
-    JOIN devices d ON r.device_id = d.id
-    JOIN flats f ON d.mapped_flat_id = f.id
-    JOIN floors fl ON f.floor_id = fl.id
-    WHERE fl.block_id = :blockId
-    AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
-    """, nativeQuery = true)
-    Double getMonthKwhBySocietyBlockId(
-            @Param("blockId") Long blockId);
-
-    @Query(value = """
-    SELECT COALESCE(SUM(r.kw), 0)
-    FROM readings r
-    JOIN devices d ON r.device_id = d.id
-    JOIN flats f ON d.mapped_flat_id = f.id
-    JOIN floors fl ON f.floor_id = fl.id
-    WHERE fl.block_id = :blockId
-    AND r.timestamp = (
-        SELECT MAX(r2.timestamp)
-        FROM readings r2
-        WHERE r2.device_id = r.device_id
-    )
-    """, nativeQuery = true)
-    Double getLiveKwBySocietyBlockId(
-            @Param("blockId") Long blockId);
-
-    @Query(value = """
-    SELECT COALESCE(AVG(r.kwh), 0)
-    FROM readings r
-    JOIN devices d ON r.device_id = d.id
-    JOIN flats f ON d.mapped_flat_id = f.id
-    JOIN floors fl ON f.floor_id = fl.id
-    WHERE fl.block_id = :blockId
-    AND r.timestamp >= DATE_TRUNC('month', CURRENT_DATE)
-    """, nativeQuery = true)
-    Double getAverageKwhBySocietyBlockId(
-            @Param("blockId") Long blockId);
 
     @Query(value = """
     SELECT COALESCE(SUM(r.kw), 0)
@@ -131,7 +89,7 @@ public interface ReadingRepository extends JpaRepository<Reading,Long> {
         WHERE r2.device_id = r.device_id
     )
     """, nativeQuery = true)
-    Double getCurrentKwByCommonAreaId(
+    Double  getCurrentKwByCommonAreaId(
             @Param("commonAreaId") Long commonAreaId);
 
     @Query(value = """

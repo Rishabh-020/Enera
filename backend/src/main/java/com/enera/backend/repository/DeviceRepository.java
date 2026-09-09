@@ -4,6 +4,7 @@ import com.enera.backend.entity.CommonArea;
 import com.enera.backend.entity.Device;
 import com.enera.backend.entity.Flat;
 import com.enera.backend.entity.Society;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -27,6 +28,7 @@ public interface DeviceRepository extends JpaRepository<Device,Long> {
 
     boolean existsBySocietyAndCommonAreaAndFlat(Society society,CommonArea  commonArea,Flat flat);
 
+    @EntityGraph(attributePaths = {"flat.floor.block", "commonArea"})
     List<Device> findBySocietyId(Long societyId);
 
     boolean existsByDeviceSerial(Long deviceSerial);

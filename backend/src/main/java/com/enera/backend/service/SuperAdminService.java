@@ -67,29 +67,22 @@ public class SuperAdminService {
     }
 
     public List<BuilderListResponse> getBuilders() {
-        List<Builder> builders = builderRepository.findAll();
-        List<BuilderListResponse> responses = new ArrayList<>();
-
         LocalDateTime startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime endDate = LocalDateTime.now();
 
-        for (Builder b : builders) {
-            int societyCount = societyRepository.countByBuilderId(b.getId());
-            Integer flatCount = flatRepository.countByFloorBlockSocietyBuilderId(b.getId());
-            if (flatCount == null) flatCount = 0;
+        List<SuperAdminBuilderProjection> builders = builderRepository.findBuildersWithStats(startDate, endDate);
+        List<BuilderListResponse> responses = new ArrayList<>(builders.size());
 
-            Double mtdKwh = readingRepository.getMonthKwh(b.getId(), startDate, endDate);
-            if (mtdKwh == null) mtdKwh = 0.0;
-
-            Double liveKw = readingRepository.getLiveKwByBuilderId(b.getId());
-            if (liveKw == null) liveKw = 0.0;
+        for (SuperAdminBuilderProjection b : builders) {
+            double liveKw = b.getLiveKw() != null ? b.getLiveKw() : 0.0;
+            double mtdKwh = b.getMtdKwh() != null ? b.getMtdKwh() : 0.0;
 
             responses.add(BuilderListResponse.builder()
                     .id(b.getId())
                     .name(b.getName())
                     .email(b.getEmail())
-                    .totalSocieties(societyCount)
-                    .totalFlats(flatCount)
+                    .totalSocieties(b.getTotalSocieties() != null ? b.getTotalSocieties() : 0)
+                    .totalFlats(b.getTotalFlats() != null ? b.getTotalFlats() : 0)
                     .liveKw(Math.round(liveKw * ROUND_FACTOR) / ROUND_FACTOR)
                     .mtdKwh(Math.round(mtdKwh * ROUND_FACTOR) / ROUND_FACTOR)
                     .build());
