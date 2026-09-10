@@ -286,13 +286,27 @@ export default function BuilderAdminDashboard() {
         />
         <StatCard
           label="Total kWh"
-          value={overview ? `${Math.round(overview.mtdKwh / 1000)}k` : "—"}
+          value={
+            overview
+              ? overview.mtdKwh >= 10000
+                ? (overview.mtdKwh / 1000).toFixed(1)
+                : Number(overview.mtdKwh.toFixed(1)).toLocaleString()
+              : "—"
+          }
+          unit={overview ? (overview.mtdKwh >= 10000 ? "k kWh" : "kWh") : undefined}
           icon={<Zap size={16} />}
           loading={!overview}
         />
         <StatCard
           label="CO₂ equiv."
-          value={overview ? `${(overview.mtdKwh * 0.82 / 1000).toFixed(1)}t` : "—"}
+          value={
+            overview
+              ? overview.mtdKwh * 0.82 >= 1000
+                ? (overview.mtdKwh * 0.82 / 1000).toFixed(2)
+                : (overview.mtdKwh * 0.82).toFixed(1)
+              : "—"
+          }
+          unit={overview ? (overview.mtdKwh * 0.82 >= 1000 ? "t" : "kg") : undefined}
           icon={<Leaf size={16} />}
           loading={!overview}
         />
@@ -413,128 +427,136 @@ export default function BuilderAdminDashboard() {
             className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
             onClick={() => !addLoading && setShowAddModal(false)}
           />
-          <div className="relative w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-scale-in z-10 overflow-hidden">
+          <div className="relative w-full max-w-[400px] max-h-[82vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-scale-in z-10 overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 p-6 pb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 border border-teal-200/60 text-teal-600">
-                  <Building2 size={20} />
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 border border-teal-200/60 text-teal-600">
+                  <Building2 size={16} />
                 </div>
                 <div>
-                  <h3 className="font-display text-base font-bold text-slate-900">Add Housing Society</h3>
-                  <p className="text-xs text-slate-500">Provision a new complex in your portfolio</p>
+                  <h3 className="font-display text-sm font-bold text-slate-900">Add Housing Society</h3>
+                  <p className="text-[11px] text-slate-500">Provision a new complex</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddModal(false)}
                 disabled={addLoading}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
             {/* Scrollable Form Body */}
             <form onSubmit={handleAddSociety} className="flex flex-col flex-1 min-h-0">
-              <div className="p-6 pt-3 space-y-4 overflow-y-auto flex-1 max-h-[calc(90vh-140px)]">
+              <div className="px-5 py-3 space-y-2.5 overflow-y-auto flex-1 max-h-[calc(82vh-105px)]">
                 {addError && (
-                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 font-medium animate-fade-in">
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700 font-medium animate-fade-in">
                     {addError}
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Society Name *</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Society Name *</label>
                   <Input
                     required
                     placeholder="e.g. Palm Grove Residency"
                     value={societyForm.name}
                     onChange={(e) => setSocietyForm({ ...societyForm, name: e.target.value })}
+                    className="text-xs h-8"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Street Address</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Street Address</label>
                   <Input
                     placeholder="e.g. Sector 14, Palm Avenue"
                     value={societyForm.address}
                     onChange={(e) => setSocietyForm({ ...societyForm, address: e.target.value })}
+                    className="text-xs h-8"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">City *</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">City *</label>
                     <Input
                       required
                       placeholder="e.g. Mumbai"
                       value={societyForm.city}
                       onChange={(e) => setSocietyForm({ ...societyForm, city: e.target.value })}
+                      className="text-xs h-8"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Total Blocks</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Total Blocks</label>
                     <Input
                       type="number"
                       min="1"
                       max="50"
                       value={societyForm.totalBlocks}
                       onChange={(e) => setSocietyForm({ ...societyForm, totalBlocks: Number(e.target.value) })}
+                      className="text-xs h-8"
                     />
                   </div>
                 </div>
 
                 {/* Society Admin Section */}
-                <div className="border-t border-slate-100 pt-3 space-y-3">
+                <div className="border-t border-slate-100 pt-2.5 space-y-2.5">
                   <div className="flex items-center gap-1.5">
-                    <Users size={14} className="text-teal-600" />
-                    <span className="text-xs font-bold text-slate-800">Appoint Society Admin (Optional)</span>
+                    <Users size={13} className="text-teal-600" />
+                    <span className="text-[11px] font-bold text-slate-800">Appoint Society Admin (Optional)</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Admin Full Name</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Admin Full Name</label>
                     <Input
                       placeholder="e.g. Rajesh Sharma"
                       value={societyForm.adminName}
                       onChange={(e) => setSocietyForm({ ...societyForm, adminName: e.target.value })}
+                      className="text-xs h-8"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Admin Email</label>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Admin Email</label>
                       <Input
                         type="email"
                         placeholder="admin@society.com"
                         value={societyForm.adminEmail}
                         onChange={(e) => setSocietyForm({ ...societyForm, adminEmail: e.target.value })}
+                        className="text-xs h-8"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Password</label>
                       <Input
                         type="password"
                         placeholder="••••••••"
                         autoComplete="new-password"
                         value={societyForm.adminPassword}
                         onChange={(e) => setSocietyForm({ ...societyForm, adminPassword: e.target.value })}
+                        className="text-xs h-8"
                       />
-                      <p className="mt-1 text-[10px] text-slate-400">
-                        Min 8 chars, 1 uppercase, 1 lowercase, 1 digit & 1 symbol
-                      </p>
                     </div>
                   </div>
+                  <p className="text-[10px] text-slate-400">
+                    Min 8 chars, 1 uppercase, 1 lowercase, 1 digit & 1 symbol
+                  </p>
                 </div>
               </div>
 
               {/* Fixed Footer */}
-              <div className="flex items-center justify-end gap-2.5 p-6 py-3.5 border-t border-slate-100 bg-slate-50/70 shrink-0">
+              <div className="flex items-center justify-end gap-2 px-5 py-2.5 border-t border-slate-100 bg-slate-50/70 shrink-0">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setShowAddModal(false)}
                   disabled={addLoading}
+                  className="h-8 text-xs"
                 >
                   Cancel
                 </Button>
@@ -543,7 +565,7 @@ export default function BuilderAdminDashboard() {
                   variant="teal"
                   size="sm"
                   disabled={addLoading}
-                  className="cursor-pointer"
+                  className="h-8 text-xs cursor-pointer"
                 >
                   {addLoading ? "Creating..." : "Create Society"}
                 </Button>
