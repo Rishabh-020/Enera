@@ -12,6 +12,7 @@ import { CustomSelect } from "../../components/ui/CustomSelect";
 import type { DeviceRow, DeviceType, MeterStatus, SocietyBlockRow, BlockFloorRow, FloorFlatRow, SocietyCommonAreaRow } from "../../lib/types";
 import { useWebSocketReading } from "../../context/WebSocketContext";
 import { useAuth } from "../../context/AuthContext";
+import { toast } from "../../components/ui/Toast";
 
 const STATUS_LABEL: Record<MeterStatus, string> = {
   live: "Live",
@@ -181,6 +182,7 @@ export default function DeviceManagement() {
       });
 
       setSuccessMessage(`Device "${form.deviceSerial}" registered successfully to ${mappedDescription}!`);
+      toast.success(`Device "${form.deviceSerial}" registered successfully!`);
       setTimeout(() => setSuccessMessage(null), 4000);
 
       setShowForm(false);
@@ -198,7 +200,9 @@ export default function DeviceManagement() {
       });
       refresh();
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to register device."));
+      const msg = getErrorMessage(err, "Failed to register device.");
+      setError(msg);
+      toast.error(msg, "Registration Failed");
     } finally {
       setSubmitting(false);
     }
@@ -209,10 +213,13 @@ export default function DeviceManagement() {
       await api.deregisterDevice(id);
       setConfirmId(null);
       setSuccessMessage(`Device ${id} deregistered.`);
+      toast.success(`Device ${id} deregistered.`);
       setTimeout(() => setSuccessMessage(null), 3000);
       refresh();
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to deregister device."));
+      const msg = getErrorMessage(err, "Failed to deregister device.");
+      setError(msg);
+      toast.error(msg, "Deregistration Failed");
     }
   }
 

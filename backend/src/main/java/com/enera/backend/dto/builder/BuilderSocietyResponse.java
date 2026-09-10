@@ -22,3 +22,4 @@ public class BuilderSocietyResponse {
 
     private Double prevMonthKwh;
 }
+

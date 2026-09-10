@@ -7,6 +7,7 @@ import type { SocietyFlatRow } from "../../../lib/types";
 import { useWebSocketReading } from "../../../context/WebSocketContext";
 import { getErrorMessage } from "../../../lib/utils";
 import * as api from "../../../lib/api";
+import { toast } from "../../../components/ui/Toast";
 
 interface ResidentsTabProps {
   societyId?: string;
@@ -101,7 +102,9 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
     const targetId = residentToDelete.residentId ?? residentToDelete.id;
     try {
       await api.deleteResident(societyId, targetId);
-      setActionSuccess(`Resident "${residentToDelete.residentName}" removed from Flat ${residentToDelete.flatNumber} and permanently deleted.`);
+      const succMsg = `Resident "${residentToDelete.residentName}" removed from Flat ${residentToDelete.flatNumber} and deleted.`;
+      setActionSuccess(succMsg);
+      toast.success(succMsg);
       setTimeout(() => setActionSuccess(null), 4000);
 
       // Optimistically update local state
@@ -127,7 +130,9 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
 
       onRefresh?.();
     } catch (err) {
-      setAddError(getErrorMessage(err, "Failed to remove resident."));
+      const msg = getErrorMessage(err, "Failed to remove resident.");
+      setAddError(msg);
+      toast.error(msg, "Deletion Failed");
     } finally {
       setResidentToDelete(null);
     }
@@ -138,6 +143,7 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
     e.preventDefault();
     if (!form.name || !form.email || !form.flatNumber) {
       setAddError("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.", "Validation Error");
       return;
     }
 
@@ -155,12 +161,16 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
     const targetFlatId = matchedFlat ? Number(matchedFlat.id) : (form.flatId ? Number(form.flatId) : null);
 
     if (!targetFlatId) {
-      setAddError("The specified flat was not found. Please create the flat in Society Blocks & Topology first.");
+      const errTxt = "The specified flat was not found. Please create the flat in Society Blocks & Topology first.";
+      setAddError(errTxt);
+      toast.error(errTxt, "Flat Not Found");
       return;
     }
 
     if (matchedFlat && matchedFlat.residentName) {
-      setAddError(`Flat ${matchedFlat.flatNumber} (${matchedFlat.blockName}) is already occupied by "${matchedFlat.residentName}". Please remove the existing resident first.`);
+      const errTxt = `Flat ${matchedFlat.flatNumber} (${matchedFlat.blockName}) is already occupied by "${matchedFlat.residentName}". Please remove the existing resident first.`;
+      setAddError(errTxt);
+      toast.error(errTxt, "Flat Occupied");
       return;
     }
 
@@ -193,16 +203,18 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
       );
 
       setShowAddModal(false);
-      setActionSuccess(`Resident "${form.name}" registered successfully for Flat ${form.flatNumber}!`);
+      const succMsg = `Resident "${form.name.trim()}" registered to Flat ${form.flatNumber} (${blockNameToUse}) successfully!`;
+      setActionSuccess(succMsg);
+      toast.success(succMsg);
       setTimeout(() => setActionSuccess(null), 4000);
       setForm({
         name: "",
         email: "",
-        password: "User@12345",
+        password: "",
         flatId: "",
         flatNumber: "",
         bhkType: "2BHK",
-        blockName: "Block A",
+        blockName: "",
       });
 
       // Refetch latest flats from server to guarantee sync
@@ -218,8 +230,10 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
       }
 
       onRefresh?.();
-    } catch (err) {
-      setAddError(getErrorMessage(err, "Failed to register resident."));
+    } catch (err: any) {
+      const msg = getErrorMessage(err, "Failed to register resident.");
+      setAddError(msg);
+      toast.error(msg, "Registration Failed");
     } finally {
       setAddLoading(false);
     }

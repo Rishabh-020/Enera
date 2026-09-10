@@ -136,32 +136,33 @@ public class SocietyService {
     }
 
     public List<SocietyBlockResponse> getSocietyBlocks(Long societyId) {
+        validateSocietyAccess(societyId);
+
         List<SocietyBlockResponse> responses = new ArrayList<>();
 
-        Society society = societyRepository.findById(societyId)
-                .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+        if(societyRepository.findById(societyId).isEmpty()){
+            throw new SocietyNotFoundException("Society not found");
+        }
 
-        List<Block> blocks = blockRepository.findBySocietyId(societyId);
+        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
-        // Calculate kWh for each block in a single pass, avoid double-querying
-        Map<Long, Double> blockKwhMap = new HashMap<>();
+        List<SocietyBlockProjection> blocks = blockRepository.findBlocksWithStatsBySocietyId(societyId, startOfMonth);
+
         double totalKwh = 0;
 
-        for (Block block : blocks) {
-            Double kwh = readingRepository.getMonthKwhBySocietyBlockId(block.getId());
-            blockKwhMap.put(block.getId(), kwh);
-            totalKwh += kwh;
+        for (SocietyBlockProjection block : blocks) {
+            totalKwh += block.getMtdKwh() != null ? block.getMtdKwh() : 0.0;
         }
 
         double averageKwh = blocks.isEmpty() ? 0 : totalKwh / blocks.size();
 
-        for (Block block : blocks) {
+        for (SocietyBlockProjection block : blocks) {
             SocietyBlockResponse response = new SocietyBlockResponse();
 
             Long id = block.getId();
-            Double mtdKwh = blockKwhMap.get(id);
-            Double liveKw = readingRepository.getLiveKwBySocietyBlockId(id);
-            Long flatCount = flatRepository.countByFloorBlockId(id);
+            Double mtdKwh = block.getMtdKwh() != null ? block.getMtdKwh() : 0.0;
+            Double liveKw = block.getLiveKw() != null ? block.getLiveKw() : 0.0;
+            Long flatCount = block.getFlatCount() != null ? block.getFlatCount() : 0L;
             Boolean aboveAvg = mtdKwh > averageKwh * 1.05;
 
             response.setId(id);
@@ -171,7 +172,6 @@ public class SocietyService {
             response.setLiveKw(liveKw);
             response.setFlatCount(flatCount);
             response.setAboveAverage(aboveAvg);
-            // todayKwh is not yet implemented — set to 0 for now
             response.setTodayKwh(0.0);
 
             responses.add(response);
@@ -181,25 +181,24 @@ public class SocietyService {
     }
 
     public List<SocietyCommonAreaResponse> getSocietyCommonAreas(Long societyId) {
+        validateSocietyAccess(societyId);
+
         List<SocietyCommonAreaResponse> responses = new ArrayList<>();
 
-        Society society = societyRepository.findById(societyId)
-                .orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+        if(!societyRepository.existsById(societyId)){
+            throw new SocietyNotFoundException("Society not found");
+        }
+        List<SocietyCommonAreaProjection> commonAreas = commonAreaRepository.findCommonAreasWithLiveKwBySocietyId(societyId);
 
-        List<CommonArea> commonAreas = commonAreaRepository.findBySocietyId(societyId);
-
-        for (CommonArea commonArea : commonAreas) {
+        for (SocietyCommonAreaProjection commonArea : commonAreas) {
             SocietyCommonAreaResponse response = new SocietyCommonAreaResponse();
 
-            Long id = commonArea.getId();
-            Double currentKw = readingRepository.getCurrentKwByCommonAreaId(id);
-
-            response.setId(id);
+            response.setId(commonArea.getId());
             response.setName(commonArea.getName());
             response.setCategory(commonArea.getCategory());
             response.setFloorOrLocation(commonArea.getFloorOrLocation());
             response.setType(commonArea.getCategory());
-            response.setCurrentKw(currentKw);
+            response.setCurrentKw(commonArea.getCurrentKw() != null ? commonArea.getCurrentKw() : 0.0);
 
             responses.add(response);
         }
@@ -226,35 +225,33 @@ public class SocietyService {
     }
 
     public List<SocietyFlatResponse> getSocietyFlatResponse (Long societyId){
-        List<SocietyFlatResponse> responses = new ArrayList<>();
+        validateSocietyAccess(societyId);
 
-        Society society = societyRepository.findById(societyId).
-                orElseThrow(() -> new SocietyNotFoundException("Society not found"));
+        if (!societyRepository.existsById(societyId)) {
+            throw new SocietyNotFoundException("Society not found");
+        }
 
-        List<Flat> flats = flatRepository.findByFloorBlockSocietyId(societyId);
+        LocalDateTime startDate = DateTimeUtils.getStartOfCurrentMonth();
+        LocalDateTime endDate = LocalDateTime.now();
 
-        for (Flat flat : flats) {
+        List<SocietyFlatProjection> flats = flatRepository.findFlatsWithDetailsBySocietyId(societyId, startDate, endDate);
+
+        List<SocietyFlatResponse> responses = new ArrayList<>(flats.size());
+
+        for (SocietyFlatProjection flat : flats) {
             SocietyFlatResponse response = new SocietyFlatResponse();
 
             response.setId(flat.getId());
             response.setFlatNumber(flat.getFlatNumber());
             response.setBhkType(flat.getBhkType());
-            response.setOccupied(flat.isStatus());
-
-            User resident = userRepository.findFirstByFlatAndRoleOrderByIdDesc(flat, Role.RESIDENT)
-                    .orElse(null);
-            response.setResidentId(resident != null ? resident.getId() : null);
-            response.setResidentName(resident != null ? resident.getName() : null);
-            response.setResidentEmail(resident != null ? resident.getEmail() : null);
-
-            response.setBlockName(flat.getFloor().getBlock().getBlockName());
-            response.setFloorNumber(flat.getFloor().getFloorNumber());
-
-            Double mtdKwh = readingRepository.getMonthKwhByFlatId(flat.getId());
-            response.setMtdKwh(mtdKwh);
-
-            Boolean deviceOnline = deviceRepository.getStatusByFlatId(flat.getId());
-            response.setMeterStatus(Boolean.TRUE.equals(deviceOnline) ? "live" : "offline");
+            response.setOccupied(Boolean.TRUE.equals(flat.getStatus()));
+            response.setResidentId(flat.getResidentId());
+            response.setResidentName(flat.getResidentName());
+            response.setResidentEmail(flat.getResidentEmail());
+            response.setBlockName(flat.getBlockName());
+            response.setFloorNumber(flat.getFloorNumber());
+            response.setMtdKwh(flat.getMtdKwh() != null ? flat.getMtdKwh() : 0.0);
+            response.setMeterStatus(Boolean.TRUE.equals(flat.getDeviceOnline()) ? "live" : "offline");
 
             responses.add(response);
         }

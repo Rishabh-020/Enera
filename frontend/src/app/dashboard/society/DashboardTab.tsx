@@ -16,8 +16,9 @@ import {
 } from "../../../components/ui/primitives";
 
 import type { SocietyOverview, SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, DailyTrendPoint } from "../../../lib/types";
-import { cn } from "../../../lib/utils";
+import { cn, getErrorMessage } from "../../../lib/utils";
 import { useWebSocketReading } from "../../../context/WebSocketContext";
+import { toast } from "../../../components/ui/Toast";
 
 interface DashboardTabProps {
   societyId: string;
@@ -778,9 +779,12 @@ export function DashboardTab({
             await api.deleteBlock(societyId, blockToDelete.id);
             setBlocks((prev) => (prev ? prev.filter((b) => b.id !== blockToDelete.id) : prev));
             setBlockSuccess(`Block "${blockToDelete.name}" deleted successfully.`);
+            toast.success(`Block "${blockToDelete.name}" deleted successfully.`);
             setTimeout(() => setBlockSuccess(null), 4000);
           } catch (err: any) {
             console.error("Failed to delete block", err);
+            const msg = getErrorMessage(err, "Failed to delete block.");
+            toast.error(msg, "Deletion Failed");
           }
         }}
         title="Delete Block"
@@ -829,10 +833,13 @@ export function DashboardTab({
                   setBlocks(updatedBlocks);
                   setShowAddBlockModal(false);
                   setBlockSuccess(`Block "${newBlockName.trim()}" added successfully.`);
+                  toast.success(`Block "${newBlockName.trim()}" added successfully.`);
                   setTimeout(() => setBlockSuccess(null), 4000);
                   setNewBlockName("");
                 } catch (err) {
                   console.error("Failed to add block:", err);
+                  const msg = getErrorMessage(err, "Failed to add block.");
+                  toast.error(msg, "Creation Failed");
                 } finally {
                   setBlockLoading(false);
                 }

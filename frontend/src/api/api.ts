@@ -1,4 +1,12 @@
 import axios from 'axios'
+import { toast } from '../components/ui/Toast'
+
+// Extend AxiosRequestConfig to support optional skipToast flag
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipToast?: boolean;
+  }
+}
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const baseURL = typeof rawBaseUrl === "string" ? rawBaseUrl.trim().replace(/\/+$/, "") : rawBaseUrl;
@@ -64,9 +72,36 @@ api.interceptors.response.use(
       error.message = serverMessage;
     }
 
+    // Determine whether to pop up toast notification
+    const headers: any = error.config?.headers;
+    const skipToastHeader =
+      headers?.["x-skip-toast"] === "true" ||
+      headers?.["X-Skip-Toast"] === "true" ||
+      (typeof headers?.get === "function" && headers.get("X-Skip-Toast") === "true");
+    const shouldSkipToast = error.config?.skipToast === true || skipToastHeader;
+    if (!shouldSkipToast) {
+      const status = error.response?.status;
+      const method = (error.config?.method || "GET").toUpperCase();
+
+      if (!error.response) {
+        toast.error("Unable to reach the backend server. Please check your network connection.", "Connection Error");
+      } else if (status === 401) {
+        toast.error(serverMessage || "Session expired or invalid credentials. Please log in again.", "Unauthorized");
+      } else if (status === 403) {
+        toast.error(serverMessage || "You do not have permission to perform this action.", "Access Denied");
+      } else if (status === 404 && method !== "GET") {
+        toast.error(serverMessage || "The requested item was not found.", "Not Found");
+      } else if (status && status >= 500) {
+        toast.error(serverMessage || "Server encountered an error. Please try again later.", "Server Error");
+      } else if (status && status >= 400 && (method !== "GET" || serverMessage)) {
+        toast.error(serverMessage || error.message || "An unexpected error occurred.", "Request Failed");
+      }
+    }
+
     return Promise.reject(error);
   }
 );
 
 export default api
+
 

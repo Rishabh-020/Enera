@@ -10,6 +10,7 @@ import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
 import type { BuilderOverview, BuilderSocietyRow } from "../../lib/types";
 import { useWebSocketReading } from "../../context/WebSocketContext";
 import { useAuth } from "../../context/AuthContext";
+import { toast } from "../../components/ui/Toast";
 
 export default function BuilderAdminDashboard() {
   const { builderId } = useParams<{ builderId: string }>();
@@ -200,6 +201,7 @@ export default function BuilderAdminDashboard() {
       setOverview((prev) => prev ? { ...prev, totalSocieties: prev.totalSocieties + 1 } : prev);
       setShowAddModal(false);
       setActionSuccess(`Society "${societyForm.name}" created successfully!`);
+      toast.success(`Society "${societyForm.name}" created successfully!`);
       setTimeout(() => setActionSuccess(null), 4000);
       setSocietyForm({
         name: "", address: "", city: "Mumbai", totalBlocks: 4, adminName: "", adminEmail: "", adminPassword: ""
@@ -208,6 +210,7 @@ export default function BuilderAdminDashboard() {
     } catch (err: any) {
       const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to create society.");
       setAddError(msg);
+      toast.error(msg, "Creation Failed");
     } finally {
       setAddLoading(false);
     }
@@ -221,12 +224,14 @@ export default function BuilderAdminDashboard() {
       setSocieties((prev) => (prev ? prev.filter((s) => s.id !== societyToDelete.id) : prev));
       setOverview((prev) => prev ? { ...prev, totalSocieties: Math.max(0, prev.totalSocieties - 1) } : prev);
       setActionSuccess(`Society "${societyToDelete.name}" has been deleted.`);
+      toast.success(`Society "${societyToDelete.name}" has been deleted.`);
       setTimeout(() => setActionSuccess(null), 4000);
       loadData();
     } catch (err: any) {
       console.error("Delete society error:", err);
       const msg = err?.response?.data?.message || (err instanceof Error ? err.message : "Failed to delete society.");
       setActionError(msg);
+      toast.error(msg, "Deletion Failed");
       setTimeout(() => setActionError(null), 5000);
     }
   };

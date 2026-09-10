@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { AlertTriangle, Trash2, X, Loader2 } from "lucide-react";
 import { Button } from "./primitives";
 import { getErrorMessage } from "../../lib/utils";
+import { toast } from "./Toast";
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
@@ -36,7 +37,9 @@ export function DeleteConfirmModal({
       await onConfirm();
       onClose();
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to delete. Please try again."));
+      const msg = getErrorMessage(err, "Failed to delete. Please try again.");
+      setError(msg);
+      toast.error(msg, "Action Failed");
     } finally {
       setLoading(false);
     }

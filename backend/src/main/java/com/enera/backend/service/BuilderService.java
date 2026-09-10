@@ -118,45 +118,53 @@ public class BuilderService {
 
     public List<BuilderSocietyResponse> getBuilderSocieties(Long builderId){
         validateBuilderAccess(builderId);
-        Builder builder = builderRepository.findById(builderId)
-                .orElseThrow(()-> new BuilderNotFoundException("Builder not found"));
 
-        List<Society> societies = societyRepository.findByBuilderId(builderId);
+        if(!builderRepository.existsById(builderId)){
+            throw  new BuilderNotFoundException("Builder not found");
+        }
+
+        LocalDateTime startDate = DateTimeUtils.getStartOfCurrentMonth();
+        LocalDateTime endDate = LocalDateTime.now();
+        LocalDateTime prevMonthStart = DateTimeUtils.getStartOfPreviousMonth();
+        LocalDateTime prevMonthEnd = DateTimeUtils.getEndOfPreviousMonth();
+
+        List<BuilderSocietyProjection> societies = societyRepository.
+                findSocietiesWithStatsByBuilderId(builderId,startDate,endDate,prevMonthStart,prevMonthEnd);
 
         List<BuilderSocietyResponse> responses = new ArrayList<>();
 
-        for(Society society : societies){
+        LocalDate today = LocalDate.now();
+        int dayOfMonth = today.getDayOfMonth();
+        int lengthOfMonth = today.lengthOfMonth();
+
+        for(BuilderSocietyProjection society : societies){
             BuilderSocietyResponse response = new BuilderSocietyResponse();
 
-            LocalDateTime startDate = DateTimeUtils.getStartOfCurrentMonth();
-            LocalDateTime endDate = LocalDateTime.now();
+            Double mtdKwh = society.getMtdKwh() != null ? society.getMtdKwh() : 0.0;
 
-            Double mtdKwh = readingRepository.getMonthKwhBySociety(society.getId(),startDate,endDate);
-            Integer totalFlat = flatRepository.countByFloorBlockSocietyId(society.getId());
-            Integer occupiedFlat = flatRepository.countByFloorBlockSocietyIdAndStatus(society.getId(),true);
+            Integer totalFlat = society.getTotalFlats() != null ? society.getTotalFlats() : 0;
+
+            Integer occupiedFlat = society.getOccupiedFlats() != null ? society.getOccupiedFlats() : 0;
+            Double prevMonthKwh = society.getPrevMonthKwh();
+
+            // In-memory calculations (0 extra DB queries)
             Double averagePerFlat = totalFlat == 0 ? 0.0 : mtdKwh / totalFlat;
-            LocalDate today = LocalDate.now();
-            int dayOfMonth = Math.max(1, today.getDayOfMonth());
-            int lengthOfMonth = today.lengthOfMonth();
 
-            double safeMtdKwh = mtdKwh != null ? mtdKwh : 0.0;
-            double projectedMtdKwh = (safeMtdKwh / dayOfMonth) * lengthOfMonth;
-
-            LocalDateTime prevMonthStart = DateTimeUtils.getStartOfPreviousMonth();
-            LocalDateTime prevMonthEnd = DateTimeUtils.getEndOfPreviousMonth();
-            Double prevMonthKwh = readingRepository.getMonthKwhBySociety(society.getId(), prevMonthStart, prevMonthEnd);
+            double projectedMtdKwh = (mtdKwh / dayOfMonth) * lengthOfMonth;
 
             double minRealisticPrevMonth = occupiedFlat > 0 ? (double) occupiedFlat * 40.0 : 50.0;
+
             if (prevMonthKwh == null || prevMonthKwh < minRealisticPrevMonth) {
                 prevMonthKwh = occupiedFlat > 0 ? (double) occupiedFlat * 120.0 : (projectedMtdKwh > 0 ? projectedMtdKwh : 100.0);
             }
 
             double mom = prevMonthKwh > 0 ? ((projectedMtdKwh - prevMonthKwh) / prevMonthKwh) * 100.0 : 0.0;
+
             Double roundedMom = Math.round(mom * EnergyConstants.ROUND_ONE_DECIMAL) / EnergyConstants.ROUND_ONE_DECIMAL;
 
             response.setName(society.getName());
             response.setId(society.getId());
-            response.setMtdKwh(safeMtdKwh);
+            response.setMtdKwh(mtdKwh);
             response.setOccupiedFlats(occupiedFlat);
             response.setTotalFlats(totalFlat);
             response.setAvgPerFlat(averagePerFlat);
