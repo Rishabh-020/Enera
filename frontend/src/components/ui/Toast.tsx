@@ -86,34 +86,34 @@ export const toast = new ToastManager();
 const TYPE_CONFIGS = {
   error: {
     icon: AlertCircle,
-    iconBg: "bg-rose-50 border border-rose-200/80 text-rose-600",
-    pill: "bg-rose-100/80 text-rose-800 border border-rose-200/60",
-    barColor: "bg-gradient-to-r from-rose-500 to-rose-600",
-    accentLeft: "border-l-4 border-l-rose-500",
+    iconBg: "bg-rose-50 text-rose-600 border border-rose-200/80",
+    pill: "bg-rose-50 text-rose-700 border border-rose-200/60",
+    barColor: "bg-rose-500",
+    accentLeft: "border-l-rose-500",
     defaultTitle: "Action Failed",
   },
   success: {
     icon: CheckCircle2,
-    iconBg: "bg-emerald-50 border border-emerald-200/80 text-emerald-600",
-    pill: "bg-emerald-100/80 text-emerald-800 border border-emerald-200/60",
-    barColor: "bg-gradient-to-r from-teal-500 to-emerald-500",
-    accentLeft: "border-l-4 border-l-emerald-500",
+    iconBg: "bg-emerald-50 text-emerald-600 border border-emerald-200/80",
+    pill: "bg-emerald-50 text-emerald-700 border border-emerald-200/60",
+    barColor: "bg-emerald-500",
+    accentLeft: "border-l-emerald-500",
     defaultTitle: "Success",
   },
   warning: {
     icon: AlertTriangle,
-    iconBg: "bg-amber-50 border border-amber-200/80 text-amber-600",
-    pill: "bg-amber-100/80 text-amber-800 border border-amber-200/60",
-    barColor: "bg-gradient-to-r from-amber-500 to-amber-600",
-    accentLeft: "border-l-4 border-l-amber-500",
+    iconBg: "bg-amber-50 text-amber-600 border border-amber-200/80",
+    pill: "bg-amber-50 text-amber-700 border border-amber-200/60",
+    barColor: "bg-amber-500",
+    accentLeft: "border-l-amber-500",
     defaultTitle: "Warning",
   },
   info: {
     icon: Info,
-    iconBg: "bg-blue-50 border border-blue-200/80 text-blue-600",
-    pill: "bg-blue-100/80 text-blue-800 border border-blue-200/60",
-    barColor: "bg-gradient-to-r from-blue-500 to-indigo-500",
-    accentLeft: "border-l-4 border-l-blue-500",
+    iconBg: "bg-blue-50 text-blue-600 border border-blue-200/80",
+    pill: "bg-blue-50 text-blue-700 border border-blue-200/60",
+    barColor: "bg-blue-500",
+    accentLeft: "border-l-blue-500",
     defaultTitle: "Notice",
   },
 };
@@ -130,7 +130,7 @@ export function ToastContainer() {
   return (
     <div
       aria-live="polite"
-      className="fixed bottom-6 right-6 z-[99999] flex flex-col-reverse gap-3 max-w-sm sm:max-w-md w-full pointer-events-none px-4 sm:px-0 items-end"
+      className="fixed bottom-4 right-4 z-[99999] flex flex-col-reverse gap-2 max-w-[250px] w-full pointer-events-none px-2 sm:px-0 items-end"
     >
       {toasts.map((t) => {
         const config = TYPE_CONFIGS[t.type] || TYPE_CONFIGS.info;
@@ -141,28 +141,25 @@ export function ToastContainer() {
           <div
             key={t.id}
             role="status"
-            className={`pointer-events-auto relative w-full overflow-hidden rounded-2xl border border-white/80 bg-white/75 p-4 shadow-[0_12px_36px_rgba(15,23,42,0.12),0_2px_8px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.05] backdrop-blur-xl backdrop-saturate-180 transition-all duration-300 transform translate-y-0 opacity-100 hover:bg-white/85 hover:shadow-[0_16px_42px_rgba(15,23,42,0.16)] animate-toast-slide-in ${config.accentLeft}`}
+            className={`pointer-events-auto relative w-full overflow-hidden rounded-lg border border-slate-200/90 bg-white/95 px-2.5 py-2 shadow-md shadow-slate-900/5 backdrop-blur-md transition-all duration-200 animate-toast-slide-in border-l-[3px] ${config.accentLeft}`}
           >
-            {/* Specular glass highlight reflection */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/60 to-transparent opacity-80" />
-
-            <div className="relative z-10 flex items-start gap-3.5">
-              {/* Icon Container */}
-              <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl backdrop-blur-md shadow-xs ${config.iconBg}`}>
-                <IconComponent className="w-5 h-5" />
+            <div className="flex items-start gap-1.5">
+              {/* Icon */}
+              <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded ${config.iconBg}`}>
+                <IconComponent className="w-3 h-3" />
               </div>
 
               {/* Text Body */}
-              <div className="flex-1 min-w-0 pr-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="text-sm font-bold text-slate-900 tracking-tight leading-none">
+              <div className="flex-1 min-w-0 pr-0.5">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <h4 className="text-[10px] font-bold text-slate-900 tracking-tight leading-none truncate">
                     {displayTitle}
                   </h4>
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs ${config.pill}`}>
+                  <span className={`inline-flex items-center px-1 py-0.2 rounded text-[7px] font-bold uppercase tracking-wider ${config.pill}`}>
                     {t.type}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed break-words font-medium">
+                <p className="text-[10px] text-slate-600 leading-tight break-words font-medium">
                   {t.message}
                 </p>
               </div>
@@ -171,16 +168,16 @@ export function ToastContainer() {
               <button
                 type="button"
                 onClick={() => toast.dismiss(t.id)}
-                className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 transition-colors focus:outline-none cursor-pointer"
+                className="shrink-0 rounded p-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer"
                 aria-label="Close notification"
               >
-                <X className="w-4 h-4" />
+                <X className="w-2.5 h-2.5" />
               </button>
             </div>
 
             {/* Countdown Progress Bar */}
             {t.duration && t.duration > 0 && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-200/60 overflow-hidden">
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-100 overflow-hidden">
                 <div
                   className={`h-full ${config.barColor} animate-toast-progress`}
                   style={{ animationDuration: `${t.duration}ms` }}
