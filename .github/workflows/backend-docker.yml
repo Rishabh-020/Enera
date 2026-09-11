@@ -57,7 +57,16 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trigger Render deployment
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Render deploy hook is not set; skipping deployment trigger."
+            exit 0
+          fi
 
+          if ! curl -fsS -X POST "$RENDER_DEPLOY_HOOK"; then
+            echo "Render deploy hook trigger failed; continuing because it is best-effort."
+          fi
 
 
