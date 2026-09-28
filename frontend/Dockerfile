@@ -6,8 +6,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package manifests and install dependencies
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json package-lock.json* ./
+RUN npm install
 
 # Accept build-time arguments for Vite environment variables
 ARG VITE_API_BASE_URL
