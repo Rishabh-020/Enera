@@ -52,10 +52,10 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
     setFlats((prev) =>
       prev
         ? prev.map((f) =>
-            String(f.id) === String(latestReading.flatId) || (latestReading.flatNumber && f.flatNumber === latestReading.flatNumber)
-              ? { ...f, meterStatus: "live", mtdKwh: Number((f.mtdKwh + (latestReading.kwh ?? 0.01)).toFixed(1)) }
-              : f
-          )
+          String(f.id) === String(latestReading.flatId) || (latestReading.flatNumber && f.flatNumber === latestReading.flatNumber)
+            ? { ...f, meterStatus: "live", mtdKwh: Number((f.mtdKwh + (latestReading.kwh ?? 0.01)).toFixed(1)) }
+            : f
+        )
         : prev
     );
   }, [latestReading]);
@@ -111,10 +111,10 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
       setFlats((prev) =>
         prev
           ? prev.map((f) =>
-              String(f.id) === String(residentToDelete.id)
-                ? { ...f, residentName: null, residentId: null, residentEmail: null, occupied: false }
-                : f
-            )
+            String(f.id) === String(residentToDelete.id)
+              ? { ...f, residentName: null, residentId: null, residentEmail: null, occupied: false }
+              : f
+          )
           : prev
       );
 
@@ -126,7 +126,7 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
             setFlats(fresh);
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       onRefresh?.();
     } catch (err) {
@@ -193,12 +193,12 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
       setFlats((prev) =>
         prev
           ? prev.map((f) =>
-              String(f.id) === String(targetFlatId) ||
+            String(f.id) === String(targetFlatId) ||
               (f.flatNumber.toLowerCase() === form.flatNumber.trim().toLowerCase() &&
                 f.blockName.toLowerCase() === blockNameToUse.toLowerCase())
-                ? { ...f, residentName: form.name.trim(), occupied: true }
-                : f
-            )
+              ? { ...f, residentName: form.name.trim(), occupied: true }
+              : f
+          )
           : prev
       );
 
@@ -323,7 +323,7 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
                         <StatusDot status={f.meterStatus} /> {f.meterStatus === "live" ? "Live" : "Offline"}
                       </Badge>
                     </Td>
-                    <Td className="font-mono-data font-semibold">{f.mtdKwh?.toFixed(0) ?? "0"} kWh</Td>
+                    <Td className="font-mono-data font-semibold">{f.mtdKwh?.toFixed(1) ?? "0"} kWh</Td>
                     <Td className="text-right">
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         {f.residentName && (
