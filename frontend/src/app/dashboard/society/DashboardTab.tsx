@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, type FormEvent } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap, Building2, Users, PlugZap, AlertTriangle, ChevronRight, Layers, Cpu, ShieldCheck, ArrowRight, Trash2, Plus, X, CheckCircle2 } from "lucide-react";
 import {
@@ -9,11 +9,12 @@ import * as api from "../../../lib/api";
 import { StatCard } from "../../../components/chart/StatCard";
 import { DonutChart } from "../../../components/chart/DonutChart";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-import { DeleteConfirmModal } from "../../../components/ui/DeleteConfirmModal";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent, Badge,
   Table, Thead, Th, Td, Tr, StatusDot, Button, Input
 } from "../../../components/ui/primitives";
+
+const DeleteConfirmModal = lazy(() => import("../../../components/ui/DeleteConfirmModal").then((m) => ({ default: m.DeleteConfirmModal })));
 
 import type { SocietyOverview, SocietyBlockRow, SocietyCommonAreaRow, SocietyFlatRow, DailyTrendPoint } from "../../../lib/types";
 import { cn, getErrorMessage } from "../../../lib/utils";
@@ -770,33 +771,37 @@ export function DashboardTab({
       </Card>
 
       {/* Delete Block Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={Boolean(blockToDelete)}
-        onClose={() => setBlockToDelete(null)}
-        onConfirm={async () => {
-          if (!blockToDelete) return;
-          try {
-            await api.deleteBlock(societyId, blockToDelete.id);
-            setBlocks((prev) => (prev ? prev.filter((b) => b.id !== blockToDelete.id) : prev));
-            setBlockSuccess(`Block "${blockToDelete.name}" deleted successfully.`);
-            toast.success(`Block "${blockToDelete.name}" deleted successfully.`);
-            setTimeout(() => setBlockSuccess(null), 4000);
-          } catch (err: any) {
-            console.error("Failed to delete block", err);
-            const msg = getErrorMessage(err, "Failed to delete block.");
-            toast.error(msg, "Deletion Failed");
-          }
-        }}
-        title="Delete Block"
-        itemName={blockToDelete?.name}
-        description={
-          <p>
-            Are you sure you want to delete <strong>"{blockToDelete?.name}"</strong>? All floors and flats inside this block will be deleted, and residents unlinked.
-          </p>
-        }
-        confirmText="Delete Block"
-        dangerNote="This action is permanent."
-      />
+      {blockToDelete && (
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            isOpen={Boolean(blockToDelete)}
+            onClose={() => setBlockToDelete(null)}
+            onConfirm={async () => {
+              if (!blockToDelete) return;
+              try {
+                await api.deleteBlock(societyId, blockToDelete.id);
+                setBlocks((prev) => (prev ? prev.filter((b) => b.id !== blockToDelete.id) : prev));
+                setBlockSuccess(`Block "${blockToDelete.name}" deleted successfully.`);
+                toast.success(`Block "${blockToDelete.name}" deleted successfully.`);
+                setTimeout(() => setBlockSuccess(null), 4000);
+              } catch (err: any) {
+                console.error("Failed to delete block", err);
+                const msg = getErrorMessage(err, "Failed to delete block.");
+                toast.error(msg, "Deletion Failed");
+              }
+            }}
+            title="Delete Block"
+            itemName={blockToDelete?.name}
+            description={
+              <p>
+                Are you sure you want to delete <strong>"{blockToDelete?.name}"</strong>? All floors and flats inside this block will be deleted, and residents unlinked.
+              </p>
+            }
+            confirmText="Delete Block"
+            dangerNote="This action is permanent."
+          />
+        </Suspense>
+      )}
 
       {/* Add Block Modal */}
       {showAddBlockModal && (

@@ -1,13 +1,14 @@
-import { useEffect, useState, useMemo, type FormEvent } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense, type FormEvent } from "react";
 import { Search, ChevronRight, UserPlus, Trash2, X, CheckCircle2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Input, Button, Table, Thead, Th, Td, Tr, StatusDot } from "../../../components/ui/primitives";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-import { DeleteConfirmModal } from "../../../components/ui/DeleteConfirmModal";
 import type { SocietyFlatRow } from "../../../lib/types";
 import { useWebSocketReading } from "../../../context/WebSocketContext";
 import { getErrorMessage } from "../../../lib/utils";
 import * as api from "../../../lib/api";
 import { toast } from "../../../components/ui/Toast";
+
+const DeleteConfirmModal = lazy(() => import("../../../components/ui/DeleteConfirmModal").then((m) => ({ default: m.DeleteConfirmModal })));
 
 interface ResidentsTabProps {
   societyId?: string;
@@ -355,22 +356,26 @@ export function ResidentsTab({ societyId = "1", flats: initialFlats, onSelectFla
       </Card>
 
       {/* Delete Resident Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={Boolean(residentToDelete)}
-        onClose={() => setResidentToDelete(null)}
-        onConfirm={handleDeleteResident}
-        title="Remove Resident"
-        itemName={residentToDelete ? `${residentToDelete.residentName} (Flat ${residentToDelete.flatNumber})` : undefined}
-        description={
-          <p>
-            Are you sure you want to remove resident{" "}
-            <strong>"{residentToDelete?.residentName}"</strong> from{" "}
-            <strong>Flat {residentToDelete?.flatNumber}</strong>? The flat will be marked as vacant and user account access will be revoked.
-          </p>
-        }
-        confirmText="Remove Resident"
-        dangerNote="The flat and meter telemetry history will be preserved."
-      />
+      {residentToDelete && (
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            isOpen={Boolean(residentToDelete)}
+            onClose={() => setResidentToDelete(null)}
+            onConfirm={handleDeleteResident}
+            title="Remove Resident"
+            itemName={residentToDelete ? `${residentToDelete.residentName} (Flat ${residentToDelete.flatNumber})` : undefined}
+            description={
+              <p>
+                Are you sure you want to remove resident{" "}
+                <strong>"{residentToDelete?.residentName}"</strong> from{" "}
+                <strong>Flat {residentToDelete?.flatNumber}</strong>? The flat will be marked as vacant and user account access will be revoked.
+              </p>
+            }
+            confirmText="Remove Resident"
+            dangerNote="The flat and meter telemetry history will be preserved."
+          />
+        </Suspense>
+      )}
 
       {/* Onboard Resident Modal */}
       {showAddModal && (

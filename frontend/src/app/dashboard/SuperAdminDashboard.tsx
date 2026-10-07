@@ -1,10 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, lazy, Suspense, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building2, Plus, Zap, Shield, Home, Cpu, CheckCircle2, ChevronRight, Layers, Trash2, Network, AlertTriangle } from "lucide-react";
 import * as api from "../../lib/api";
 import { DashboardLayout, NAV_ITEMS_SUPER_ADMIN } from "../../components/layout/DashboardLayout";
 import { StatCard } from "../../components/chart/StatCard";
-import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge,
   Table, Thead, Th, Td, Tr, Input, TabPills
@@ -12,6 +11,8 @@ import {
 
 import type { SuperAdminOverview, BuilderListItem, BuilderSocietyRow } from "../../lib/types";
 import { toast } from "../../components/ui/Toast";
+
+const DeleteConfirmModal = lazy(() => import("../../components/ui/DeleteConfirmModal").then((m) => ({ default: m.DeleteConfirmModal })));
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -668,36 +669,44 @@ export default function SuperAdminDashboard() {
       )}
 
       {/* Delete Builder Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={Boolean(builderToDelete)}
-        onClose={() => setBuilderToDelete(null)}
-        onConfirm={handleDeleteBuilder}
-        title="Delete Builder Organization"
-        itemName={builderToDelete?.name}
-        description={
-          <p>
-            Are you sure you want to permanently delete builder organization <strong>"{builderToDelete?.name}"</strong>? All housing societies, blocks, flats, and meters under this developer will be removed.
-          </p>
-        }
-        confirmText="Delete Builder"
-        dangerNote="This action is irreversible and affects all nested societies."
-      />
+      {builderToDelete && (
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            isOpen={Boolean(builderToDelete)}
+            onClose={() => setBuilderToDelete(null)}
+            onConfirm={handleDeleteBuilder}
+            title="Delete Builder Organization"
+            itemName={builderToDelete?.name}
+            description={
+              <p>
+                Are you sure you want to permanently delete builder organization <strong>"{builderToDelete?.name}"</strong>? All housing societies, blocks, flats, and meters under this developer will be removed.
+              </p>
+            }
+            confirmText="Delete Builder"
+            dangerNote="This action is irreversible and affects all nested societies."
+          />
+        </Suspense>
+      )}
 
       {/* Delete Society Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={Boolean(societyToDelete)}
-        onClose={() => setSocietyToDelete(null)}
-        onConfirm={handleDeleteSociety}
-        title="Delete Housing Society"
-        itemName={societyToDelete?.name}
-        description={
-          <p>
-            Are you sure you want to delete society <strong>"{societyToDelete?.name}"</strong>? All blocks, flats, and IoT smart meter configurations will be deleted.
-          </p>
-        }
-        confirmText="Delete Society"
-        dangerNote="This action is permanent and cannot be undone."
-      />
+      {societyToDelete && (
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            isOpen={Boolean(societyToDelete)}
+            onClose={() => setSocietyToDelete(null)}
+            onConfirm={handleDeleteSociety}
+            title="Delete Housing Society"
+            itemName={societyToDelete?.name}
+            description={
+              <p>
+                Are you sure you want to delete society <strong>"{societyToDelete?.name}"</strong>? All blocks, flats, and IoT smart meter configurations will be deleted.
+              </p>
+            }
+            confirmText="Delete Society"
+            dangerNote="This action is permanent and cannot be undone."
+          />
+        </Suspense>
+      )}
     </DashboardLayout>
   );
 }
