@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import * as api from "../lib/api";
-import { MonthlyBarChart } from "./chart/MonthlyBarChart";
-import { TrendLineChart } from "./chart/TrendLineChart";
-import { HourlyProfileChart } from "./chart/HourlyProfileChart";
 import { StatCard } from "./chart/StatCard";
 import { Zap, BarChart3, TrendingUp, Cpu } from "lucide-react";
 import { formatCost, timeAgo } from "../lib/utils";
 import type { FlatHourlyProfile, FlatLive, FlatSummary, FlatTrend, FlatDetail } from "../lib/types";
 import { useWebSocketReading } from "../context/WebSocketContext";
+
+// Dynamically imported chart components
+const MonthlyBarChart = lazy(() => import("./chart/MonthlyBarChart").then((m) => ({ default: m.MonthlyBarChart })));
+const TrendLineChart = lazy(() => import("./chart/TrendLineChart").then((m) => ({ default: m.TrendLineChart })));
+const HourlyProfileChart = lazy(() => import("./chart/HourlyProfileChart").then((m) => ({ default: m.HourlyProfileChart })));
 
 export function FlatDashboardView({ flatId }: { flatId: string }) {
   const { latestReading, isConnected } = useWebSocketReading();
@@ -137,27 +139,33 @@ export function FlatDashboardView({ flatId }: { flatId: string }) {
 
       {/* Row 2: Full-width Monthly Consumption Chart */}
       <div className="w-full">
-        <MonthlyBarChart
-          summary={summary}
-          loading={!summary}
-          selectedDayName={selectedDay}
-          onSelectDay={(dayKey) => {
-            setSelectedDay(dayKey);
-          }}
-        />
+        <Suspense fallback={<div className="h-64 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-xs text-slate-400">Loading monthly chart...</div>}>
+          <MonthlyBarChart
+            summary={summary}
+            loading={!summary}
+            selectedDayName={selectedDay}
+            onSelectDay={(dayKey) => {
+              setSelectedDay(dayKey);
+            }}
+          />
+        </Suspense>
       </div>
 
       {/* Row 3: Monthly Trend + Today's 24-Hour Profile */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <TrendLineChart
-          trend={trend}
-          loading={!trend && !summary}
-          summarySeries={summary?.series}
-        />
-        <HourlyProfileChart
-          data={hourly}
-          loading={hourlyLoading}
-        />
+        <Suspense fallback={<div className="h-64 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-xs text-slate-400">Loading trend chart...</div>}>
+          <TrendLineChart
+            trend={trend}
+            loading={!trend && !summary}
+            summarySeries={summary?.series}
+          />
+        </Suspense>
+        <Suspense fallback={<div className="h-64 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-xs text-slate-400">Loading hourly profile...</div>}>
+          <HourlyProfileChart
+            data={hourly}
+            loading={hourlyLoading}
+          />
+        </Suspense>
       </div>
     </div>
   );

@@ -1,14 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useState, lazy, Suspense, type ReactNode } from "react";
 import { LogOut, LayoutGrid, Cpu, Building2, Bell, ChevronLeft, ChevronRight, BarChart3, AlertTriangle, Users, CreditCard, Settings, Home, FileText, Menu, X, KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
-// This cn method is used to add flexibility in the css like when we have to make the website reponsive then we have
-// to select between the two css with respect to the width as we are use boolean to check for the colaps nav then
-// this is helpfull
 import type { Role } from "../../lib/types";
 import { Avatar, SearchBar, SwitchViewToggle } from "../ui/primitives";
-import { ChangePasswordModal } from "../auth/ChangePasswordModal";
+
+const ChangePasswordModal = lazy(() => import("../auth/ChangePasswordModal").then((m) => ({ default: m.ChangePasswordModal })));
 
 
 const ROLE_CONFIG: Record<Role, { label: string; demoView: "Resident" | "Admin" | "Builder" }> = {
@@ -379,10 +377,14 @@ export function DashboardLayout({ nav = [], activeKey, onNav, banner, children }
       </div>
 
       {/* Change Password Modal */}
-      <ChangePasswordModal
-        isOpen={showPasswordModal}
-        onClose={() => setShowPasswordModal(false)}
-      />
+      {showPasswordModal && (
+        <Suspense fallback={null}>
+          <ChangePasswordModal
+            isOpen={showPasswordModal}
+            onClose={() => setShowPasswordModal(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

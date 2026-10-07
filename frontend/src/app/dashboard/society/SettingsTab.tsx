@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Check, ShieldCheck, Lock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Button } from "../../../components/ui/primitives";
-import { ChangePasswordModal } from "../../../components/auth/ChangePasswordModal";
+
+const ChangePasswordModal = lazy(() => import("../../../components/auth/ChangePasswordModal").then((m) => ({ default: m.ChangePasswordModal })));
 
 export function SettingsTab() {
   const [peakThreshold, setPeakThreshold] = useState("50");
@@ -120,10 +121,14 @@ export function SettingsTab() {
         </CardContent>
       </Card>
 
-      <ChangePasswordModal
-        isOpen={showPasswordModal}
-        onClose={() => setShowPasswordModal(false)}
-      />
+      {showPasswordModal && (
+        <Suspense fallback={null}>
+          <ChangePasswordModal
+            isOpen={showPasswordModal}
+            onClose={() => setShowPasswordModal(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

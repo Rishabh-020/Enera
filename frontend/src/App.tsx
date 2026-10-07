@@ -1,15 +1,19 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { RequireRole } from "./components/RequireRole";
-import Login from "./app/login/LogIn";
 import { EnergyWebSocketProvider } from "./context/WebSocketContext";
-import FlatOwnerDashboard from "./app/dashboard/FlatOwnerDashboard";
-import SocietyAdminDashboard from "./app/dashboard/SocietyAdminDashboard";
-import DeviceManagement from "./app/dashboard/DeviceManagement";
-import BuilderAdminDashboard from "./app/dashboard/BuilderAdminDashboard";
-import BuilderAnalytics from "./app/dashboard/BuilderAnalytics";
-import SuperAdminDashboard from "./app/dashboard/SuperAdminDashboard";
 import { ToastContainer } from "./components/ui/Toast";
+import { PageLoadingFallback } from "./components/ui/LoadingFallback";
+
+// Dynamically imported route components for code-splitting
+const Login = lazy(() => import("./app/login/LogIn"));
+const FlatOwnerDashboard = lazy(() => import("./app/dashboard/FlatOwnerDashboard"));
+const SocietyAdminDashboard = lazy(() => import("./app/dashboard/SocietyAdminDashboard"));
+const DeviceManagement = lazy(() => import("./app/dashboard/DeviceManagement"));
+const BuilderAdminDashboard = lazy(() => import("./app/dashboard/BuilderAdminDashboard"));
+const BuilderAnalytics = lazy(() => import("./app/dashboard/BuilderAnalytics"));
+const SuperAdminDashboard = lazy(() => import("./app/dashboard/SuperAdminDashboard"));
 
 function Root() {
   const { user } = useAuth();
@@ -31,76 +35,78 @@ export default function App() {
       <EnergyWebSocketProvider>
         <ToastContainer />
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
 
-            <Route path="/" element={<Root />} />
+              <Route path="/" element={<Root />} />
 
-            <Route
-              path="/flat/:flatId"
-              element={
-                <RequireRole roles={["RESIDENT"]}>
-                  <FlatOwnerDashboard />
-                </RequireRole>
-              }
-            />
+              <Route
+                path="/flat/:flatId"
+                element={
+                  <RequireRole roles={["RESIDENT"]}>
+                    <FlatOwnerDashboard />
+                  </RequireRole>
+                }
+              />
 
-            <Route
-              path="/society/:societyId"
-              element={
-                <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
-                  <SocietyAdminDashboard />
-                </RequireRole>
-              }
-            />
+              <Route
+                path="/society/:societyId"
+                element={
+                  <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
+                    <SocietyAdminDashboard />
+                  </RequireRole>
+                }
+              />
 
-            <Route
-              path="/society/:societyId/devices"
-              element={
-                <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
-                  <DeviceManagement />
-                </RequireRole>
-              }
-            />
+              <Route
+                path="/society/:societyId/devices"
+                element={
+                  <RequireRole roles={["SOCIETY_ADMIN", "BUILDER_ADMIN"]}>
+                    <DeviceManagement />
+                  </RequireRole>
+                }
+              />
 
-            <Route
-              path="/builder/:builderId"
-              element={
-                <RequireRole roles={["BUILDER_ADMIN", "SUPER_ADMIN"]}>
-                  <BuilderAdminDashboard />
-                </RequireRole>
-              }
-            />
+              <Route
+                path="/builder/:builderId"
+                element={
+                  <RequireRole roles={["BUILDER_ADMIN", "SUPER_ADMIN"]}>
+                    <BuilderAdminDashboard />
+                  </RequireRole>
+                }
+              />
 
-            <Route
-              path="/builder/:builderId/analytics"
-              element={
-                <RequireRole roles={["BUILDER_ADMIN", "SUPER_ADMIN"]}>
-                  <BuilderAnalytics />
-                </RequireRole>
-              }
-            />
+              <Route
+                path="/builder/:builderId/analytics"
+                element={
+                  <RequireRole roles={["BUILDER_ADMIN", "SUPER_ADMIN"]}>
+                    <BuilderAnalytics />
+                  </RequireRole>
+                }
+              />
 
-            <Route
-              path="/superAdmin/:id"
-              element={
-                <RequireRole roles={["SUPER_ADMIN"]}>
-                  <SuperAdminDashboard />
-                </RequireRole>
-              }
-            />
+              <Route
+                path="/superAdmin/:id"
+                element={
+                  <RequireRole roles={["SUPER_ADMIN"]}>
+                    <SuperAdminDashboard />
+                  </RequireRole>
+                }
+              />
 
-            <Route
-              path="/superAdmin"
-              element={
-                <RequireRole roles={["SUPER_ADMIN"]}>
-                  <SuperAdminDashboard />
-                </RequireRole>
-              }
-            />
+              <Route
+                path="/superAdmin"
+                element={
+                  <RequireRole roles={["SUPER_ADMIN"]}>
+                    <SuperAdminDashboard />
+                  </RequireRole>
+                }
+              />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </EnergyWebSocketProvider>
     </AuthProvider>

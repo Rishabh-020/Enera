@@ -1,8 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import * as api from "../../../lib/api";
 import { useAuth } from "../../../context/AuthContext";
-import { AnalyticsView } from "../../../components/chart/AnalyticsView";
 import type { SocietyBlockRow } from "../../../lib/types";
+import { ComponentLoadingFallback } from "../../../components/ui/LoadingFallback";
+
+const AnalyticsView = lazy(() => import("../../../components/chart/AnalyticsView").then((m) => ({ default: m.AnalyticsView })));
 
 export function AnalyticsTab({ societyId }: { societyId: string }) {
   const { session, isDemoMode } = useAuth();
@@ -47,12 +49,14 @@ export function AnalyticsTab({ societyId }: { societyId: string }) {
         <h1 className="font-display text-2xl font-bold text-slate-900">Analytics</h1>
         <p className="text-sm text-slate-500">Deep dive into consumption patterns</p>
       </div>
-      <AnalyticsView
-        filters={filterOptions}
-        loadHeatmap={(filter) => api.getSocietyHeatmap(societyId, filter)}
-        loadHourlyBreakdown={(filter, date) => api.getSocietyHourlyBreakdown(societyId, filter, date)}
-        loadAnomalies={(filter) => api.getSocietyAnomalies(societyId, filter)}
-      />
+      <Suspense fallback={<ComponentLoadingFallback message="Loading analytics views..." />}>
+        <AnalyticsView
+          filters={filterOptions}
+          loadHeatmap={(filter) => api.getSocietyHeatmap(societyId, filter)}
+          loadHourlyBreakdown={(filter, date) => api.getSocietyHourlyBreakdown(societyId, filter, date)}
+          loadAnomalies={(filter) => api.getSocietyAnomalies(societyId, filter)}
+        />
+      </Suspense>
     </div>
   );
 }

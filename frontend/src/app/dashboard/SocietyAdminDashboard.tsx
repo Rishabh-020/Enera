@@ -1,22 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { Building2, ChevronRight, Plus, Trash2, X, Layers, Home, CheckCircle2 } from "lucide-react";
 import * as api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { DashboardLayout, NAV_ITEMS_SOCIETY } from "../../components/layout/DashboardLayout";
-import { FlatDashboardView } from "../../components/FlatDashboardView";
 import { Card, CardHeader, CardTitle, CardDescription, Breadcrumb, Table, Thead, Th, Td, Tr, Button, Input, Badge, type BreadcrumbItem } from "../../components/ui/primitives";
-import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
 import { getErrorMessage } from "../../lib/utils";
 import type { BlockFloorRow, FloorFlatRow, SocietyFlatRow } from "../../lib/types";
 import { toast } from "../../components/ui/Toast";
+import { ComponentLoadingFallback } from "../../components/ui/LoadingFallback";
 
-import { DashboardTab } from "./society/DashboardTab";
-import { AnalyticsTab } from "./society/AnalyticsTab";
-import { AlertsTab } from "./society/AlertsTab";
-import { ResidentsTab } from "./society/ResidentsTab";
-import { BillingTab } from "./society/BillingTab";
-import { SettingsTab } from "./society/SettingsTab";
+// Dynamically imported components & tabs
+const FlatDashboardView = lazy(() => import("../../components/FlatDashboardView").then((m) => ({ default: m.FlatDashboardView })));
+const DeleteConfirmModal = lazy(() => import("../../components/ui/DeleteConfirmModal").then((m) => ({ default: m.DeleteConfirmModal })));
+const DashboardTab = lazy(() => import("./society/DashboardTab").then((m) => ({ default: m.DashboardTab })));
+const AnalyticsTab = lazy(() => import("./society/AnalyticsTab").then((m) => ({ default: m.AnalyticsTab })));
+const AlertsTab = lazy(() => import("./society/AlertsTab").then((m) => ({ default: m.AlertsTab })));
+const ResidentsTab = lazy(() => import("./society/ResidentsTab").then((m) => ({ default: m.ResidentsTab })));
+const BillingTab = lazy(() => import("./society/BillingTab").then((m) => ({ default: m.BillingTab })));
+const SettingsTab = lazy(() => import("./society/SettingsTab").then((m) => ({ default: m.SettingsTab })));
 
 /* ──────────────────────── Drill-down Lists ──────────────────────── */
 
@@ -496,20 +498,24 @@ function BlockFloorList({
       )}
 
       {/* Delete Floor Modal */}
-      <DeleteConfirmModal
-        isOpen={Boolean(floorToDelete)}
-        onClose={() => setFloorToDelete(null)}
-        onConfirm={handleDeleteFloor}
-        title="Delete Floor"
-        itemName={floorToDelete ? `Floor ${floorToDelete.floorNumber}` : undefined}
-        description={
-          <p>
-            Are you sure you want to delete <strong>Floor {floorToDelete?.floorNumber}</strong> in {blockName}? All flats and meters on this floor will also be removed.
-          </p>
-        }
-        confirmText="Delete Floor"
-        dangerNote="This action is permanent."
-      />
+      {floorToDelete && (
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            isOpen={Boolean(floorToDelete)}
+            onClose={() => setFloorToDelete(null)}
+            onConfirm={handleDeleteFloor}
+            title="Delete Floor"
+            itemName={floorToDelete ? `Floor ${floorToDelete.floorNumber}` : undefined}
+            description={
+              <p>
+                Are you sure you want to delete <strong>Floor {floorToDelete?.floorNumber}</strong> in {blockName}? All flats and meters on this floor will also be removed.
+              </p>
+            }
+            confirmText="Delete Floor"
+            dangerNote="This action is permanent."
+          />
+        </Suspense>
+      )}
     </Card>
   );
 }
@@ -789,20 +795,24 @@ function FloorFlatList({
       )}
 
       {/* Delete Flat Modal */}
-      <DeleteConfirmModal
-        isOpen={Boolean(flatToDelete)}
-        onClose={() => setFlatToDelete(null)}
-        onConfirm={handleDeleteFlat}
-        title="Delete Flat"
-        itemName={flatToDelete ? `Flat ${flatToDelete.flatNumber}` : undefined}
-        description={
-          <p>
-            Are you sure you want to delete <strong>Flat {flatToDelete?.flatNumber}</strong>? Connected meter assignments and resident linkages will be unlinked.
-          </p>
-        }
-        confirmText="Delete Flat"
-        dangerNote="This action is permanent."
-      />
+      {flatToDelete && (
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            isOpen={Boolean(flatToDelete)}
+            onClose={() => setFlatToDelete(null)}
+            onConfirm={handleDeleteFlat}
+            title="Delete Flat"
+            itemName={flatToDelete ? `Flat ${flatToDelete.flatNumber}` : undefined}
+            description={
+              <p>
+                Are you sure you want to delete <strong>Flat {flatToDelete?.flatNumber}</strong>? Connected meter assignments and resident linkages will be unlinked.
+              </p>
+            }
+            confirmText="Delete Flat"
+            dangerNote="This action is permanent."
+          />
+        </Suspense>
+      )}
     </Card>
   );
 }
@@ -954,65 +964,67 @@ export default function SocietyAdminDashboard() {
         </div>
       )}
 
-      {flatId ? (
-        <FlatDashboardView flatId={flatId} />
-      ) : floorId ? (
-        <FloorFlatList
-          floorId={floorId}
-          floorLabel={floorLabel}
-          blockName={blockName}
-          onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)}
-          onRefreshSociety={refreshSocietyFlats}
-        />
-      ) : blockId ? (
-        <BlockFloorList
-          blockId={blockId}
-          blockName={blockName}
-          onSelectFloor={(id, floorNumber) => selectFloor(id, floorNumber)}
-          onRefreshSociety={refreshSocietyFlats}
-        />
-      ) : (
-        /* Render Sidebar Views */
-        <>
-          {activeKey === "dashboard" && (
-            <DashboardTab
-              societyId={societyId ?? ""}
-              onSelectBlock={selectBlock}
-              onSelectFlat={selectFlat}
-              anomalies={anomalies}
-              setAnomalies={setAnomalies}
-              flats={flats}
-            />
-          )}
+      <Suspense fallback={<ComponentLoadingFallback message="Loading tab..." />}>
+        {flatId ? (
+          <FlatDashboardView flatId={flatId} />
+        ) : floorId ? (
+          <FloorFlatList
+            floorId={floorId}
+            floorLabel={floorLabel}
+            blockName={blockName}
+            onSelectFlat={(id, flatNumber) => selectFlat(id, flatNumber)}
+            onRefreshSociety={refreshSocietyFlats}
+          />
+        ) : blockId ? (
+          <BlockFloorList
+            blockId={blockId}
+            blockName={blockName}
+            onSelectFloor={(id, floorNumber) => selectFloor(id, floorNumber)}
+            onRefreshSociety={refreshSocietyFlats}
+          />
+        ) : (
+          /* Render Sidebar Views */
+          <>
+            {activeKey === "dashboard" && (
+              <DashboardTab
+                societyId={societyId ?? ""}
+                onSelectBlock={selectBlock}
+                onSelectFlat={selectFlat}
+                anomalies={anomalies}
+                setAnomalies={setAnomalies}
+                flats={flats}
+              />
+            )}
 
-          {activeKey === "analytics" && (
-            <AnalyticsTab societyId={societyId ?? ""} />
-          )}
+            {activeKey === "analytics" && (
+              <AnalyticsTab societyId={societyId ?? ""} />
+            )}
 
-          {activeKey === "alerts" && (
-            <AlertsTab anomalies={anomalies} setAnomalies={setAnomalies} />
-          )}
+            {activeKey === "alerts" && (
+              <AlertsTab anomalies={anomalies} setAnomalies={setAnomalies} />
+            )}
 
-          {activeKey === "residents" && (
-            <ResidentsTab
-              societyId={societyId || "1"}
-              flats={flats}
-              onSelectFlat={selectFlat}
-              onRefresh={() => {
-                if (societyId) api.getSocietyFlatsList(societyId).then(setFlats);
-              }}
-            />
-          )}
+            {activeKey === "residents" && (
+              <ResidentsTab
+                societyId={societyId || "1"}
+                flats={flats}
+                onSelectFlat={selectFlat}
+                onRefresh={() => {
+                  if (societyId) api.getSocietyFlatsList(societyId).then(setFlats);
+                }}
+              />
+            )}
 
-          {activeKey === "billing" && (
-            <BillingTab flats={flats} />
-          )}
+            {activeKey === "billing" && (
+              <BillingTab flats={flats} />
+            )}
 
-          {activeKey === "settings" && (
-            <SettingsTab />
-          )}
-        </>
-      )}
+            {activeKey === "settings" && (
+              <SettingsTab />
+            )}
+          </>
+        )}
+      </Suspense>
     </DashboardLayout>
   );
 }

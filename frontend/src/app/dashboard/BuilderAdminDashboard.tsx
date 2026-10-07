@@ -1,16 +1,18 @@
-import { useEffect, useState, useMemo, type FormEvent } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense, type FormEvent } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { Building2, Users, Zap, Plus, Download, Leaf, Trash2, X, CheckCircle2, ChevronRight, AlertTriangle } from "lucide-react";
 import * as api from "../../lib/api";
 import { DashboardLayout, NAV_ITEMS_BUILDER } from "../../components/layout/DashboardLayout";
 import { StatCard } from "../../components/chart/StatCard";
-import { BenchmarkChart } from "../../components/chart/BenchmarkChart";
 import { Card, CardHeader, CardTitle, CardDescription, Button, Badge, Table, Thead, Th, Td, Tr, Input } from "../../components/ui/primitives";
-import { DeleteConfirmModal } from "../../components/ui/DeleteConfirmModal";
 import type { BuilderOverview, BuilderSocietyRow } from "../../lib/types";
 import { useWebSocketReading } from "../../context/WebSocketContext";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "../../components/ui/Toast";
+import { ComponentLoadingFallback } from "../../components/ui/LoadingFallback";
+
+const BenchmarkChart = lazy(() => import("../../components/chart/BenchmarkChart").then((m) => ({ default: m.BenchmarkChart })));
+const DeleteConfirmModal = lazy(() => import("../../components/ui/DeleteConfirmModal").then((m) => ({ default: m.DeleteConfirmModal })));
 
 export default function BuilderAdminDashboard() {
   const { builderId } = useParams<{ builderId: string }>();
@@ -314,7 +316,9 @@ export default function BuilderAdminDashboard() {
 
       {/* Benchmarking + All societies table */}
       <div className="flex flex-col gap-6">
-        <BenchmarkChart societies={societies} loading={!societies} />
+        <Suspense fallback={<ComponentLoadingFallback message="Loading benchmark analytics..." />}>
+          <BenchmarkChart societies={societies} loading={!societies} />
+        </Suspense>
 
         <Card>
           <CardHeader>
@@ -405,20 +409,24 @@ export default function BuilderAdminDashboard() {
       </div>
 
       {/* Delete Society Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={Boolean(societyToDelete)}
-        onClose={() => setSocietyToDelete(null)}
-        onConfirm={handleDeleteSociety}
-        title="Delete Housing Society"
-        itemName={societyToDelete?.name}
-        description={
-          <p>
-            Are you sure you want to delete <strong>"{societyToDelete?.name}"</strong>? All associated blocks, flats, smart meters, and historical telemetry data under this society will be deleted.
-          </p>
-        }
-        confirmText="Delete Society"
-        dangerNote="This action is permanent and cannot be undone."
-      />
+      {societyToDelete && (
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            isOpen={Boolean(societyToDelete)}
+            onClose={() => setSocietyToDelete(null)}
+            onConfirm={handleDeleteSociety}
+            title="Delete Housing Society"
+            itemName={societyToDelete?.name}
+            description={
+              <p>
+                Are you sure you want to delete <strong>"{societyToDelete?.name}"</strong>? All associated blocks, flats, smart meters, and historical telemetry data under this society will be deleted.
+              </p>
+            }
+            confirmText="Delete Society"
+            dangerNote="This action is permanent and cannot be undone."
+          />
+        </Suspense>
+      )}
 
       {/* Add Society Modal */}
       {showAddModal && (

@@ -1,10 +1,12 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import * as api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { DashboardLayout, NAV_ITEMS_BUILDER } from "../../components/layout/DashboardLayout";
-import { AnalyticsView } from "../../components/chart/AnalyticsView";
 import type { BuilderSocietyRow } from "../../lib/types";
+import { ComponentLoadingFallback } from "../../components/ui/LoadingFallback";
+
+const AnalyticsView = lazy(() => import("../../components/chart/AnalyticsView").then((m) => ({ default: m.AnalyticsView })));
 
 export default function BuilderAnalytics() {
   const { builderId } = useParams<{ builderId: string }>();
@@ -59,12 +61,14 @@ export default function BuilderAnalytics() {
         <h1 className="font-display text-2xl font-bold text-grid-900">Analytics</h1>
         <p className="text-sm text-slate-500">Deep dive into consumption patterns across your portfolio</p>
       </div>
-      <AnalyticsView
-        filters={filterOptions}
-        loadHeatmap={handleLoadHeatmap}
-        loadHourlyBreakdown={handleLoadHourlyBreakdown}
-        loadAnomalies={handleLoadAnomalies}
-      />
+      <Suspense fallback={<ComponentLoadingFallback message="Loading analytics dashboard..." />}>
+        <AnalyticsView
+          filters={filterOptions}
+          loadHeatmap={handleLoadHeatmap}
+          loadHourlyBreakdown={handleLoadHourlyBreakdown}
+          loadAnomalies={handleLoadAnomalies}
+        />
+      </Suspense>
     </DashboardLayout>
   );
 }
